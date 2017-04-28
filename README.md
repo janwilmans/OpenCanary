@@ -1,4 +1,4 @@
-# CanaryScripts
+# OpenCanary scripts
 Set of scripts for static analysis of source code and build results.
 
 Main focus is on C++ in an visual studio 2013+ environment however the priceples used should apply to any environment.
