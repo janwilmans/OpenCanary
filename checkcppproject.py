@@ -3,6 +3,7 @@
 - using namespace is not allowed in header files
 - treatwarningaserror should be true in all configurations
 - warninglevel should be 4 in all configurations
+- dont use make_unqiue without std:: prefix (prevents use of pre-std::make_unique custom solutions)
 
 """
 
@@ -32,7 +33,6 @@ def getCppFilesFromProject(projectRoot, projectDirectory):
     return result
 
 def checkCppSource(filename):
-    print (filename)
     lineNumber = 0
     for line in readLines(filename):
         lineNumber = lineNumber + 1
