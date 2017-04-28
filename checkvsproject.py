@@ -3,19 +3,33 @@
 - any file missing on disk but referenced in the project can cause a full rebuild 
 """
 
-import traceback
-import sys
-import os
+from __future__ import print_function
+import traceback, sys, os
 import xml.etree.ElementTree as ET
 
 fileNotFoundCount = 0
 projectWithNotFoundFilesCount = 0
 
-def checkproject(projectname):
+def reportIssue(filename ,line, rule, description):
+    reportIssue7(filename, line, "USERDEFINED", rule, "1", "USERDEFINED", description)
+
+def reportIssue7(filename, line, category, rule, level, group, description):
+    s = "|"
+    print (filename + s + line + s + category + s + rule + s + level + s + group + s + description)
+
+def isGenerated(filename):
+    dirname = os.path.dirname(filename)
+    basename = os.path.basename(os.path.normpath(dirname)).lower()
+    if (basename == "gen"):
+        return True
+    if (basename == "gen64"):
+        return True
+    return False
+    
+def checkproject(projectname, relpath):
     
     global fileNotFoundCount
     global projectWithNotFoundFilesCount
-    #print "Checking " + os.path.abspath(projectname)
     
     filtersname = projectname + ".filters"
     if not os.path.exists(filtersname):
@@ -40,7 +54,8 @@ def checkproject(projectname):
             missingDict[incFilter.text] = set([])
         incFile = os.path.abspath( os.path.dirname(projectname) +"\\"+ incFileRel )
         if not os.path.exists(incFile):
-            missingDict[incFilter.text].add(incFileRel)
+            if not isGenerated(incFile):
+                missingDict[incFilter.text].add(incFileRel)
     
     projTree = ET.parse(projectname)
     projRoot = projTree.getroot()
@@ -51,54 +66,37 @@ def checkproject(projectname):
         if incFileRel != None:
             incFile = os.path.abspath( os.path.dirname(projectname) +"\\"+ incFileRel )
             if not os.path.exists(incFile):
-                if incFileRel in filterDict:
-                    missingDict[filterDict[incFileRel]].add(incFileRel)
-                else:
-                    # this file from the project file is missing on disk and is not listed in any .filters entry.
-                    if "projectfile" not in missingDict:
-                        missingDict["projectfile"] = set([])
-                    missingDict["projectfile"].add(incFileRel)
-            
-    missingItems = 0;        
+                if not isGenerated(incFile):
+                    if incFileRel in filterDict:
+                        missingDict[filterDict[incFileRel]].add(incFileRel)
+                    else:
+                        # this file from the project file is missing on disk and is not listed in any .filters entry.
+                        if "projectfile" not in missingDict:
+                            missingDict["projectfile"] = set([])
+                        missingDict["projectfile"].add(incFileRel)
+           
     for (missingGroup, missingList) in missingDict.items():
         if len(missingList) > 0:
-            missingItems = 1
-            
-    if (missingItems > 0):
-        print "\nMissing item(s) in " + os.path.abspath(projectname)
-
-    fileNotFound = 0
-    for (missingGroup, missingList) in missingDict.items():
-        if len(missingList) > 0:
-            print("["+missingGroup+"]:")
             for missing in missingList:
-                print("  " + os.path.basename(missing) + " -> " + missing + " not found on disk")
-                fileNotFoundCount = fileNotFoundCount + 1
-                fileNotFound = 1
-    if (fileNotFound):
-        projectWithNotFoundFilesCount = projectWithNotFoundFilesCount + 1
-
-def checkProjectsRecursively():
-    global fileNotFoundCount
-    global projectWithNotFoundFilesCount
-    projectCount = 0
-    for root, dirs, files in os.walk("."):
+                reportIssue(relpath, "0", "UD#05", "File '" + missing + "' from filter [" + missingGroup + "] not found on disk")
+   
+def checkProjectsRecursively(path):
+    for root, dirs, files in os.walk(path):
         for file in files:
             if (file.endswith("proj")):
-                projectCount = projectCount + 1
-                project = os.path.abspath(root + "\\" + file)
-                checkproject(project)
-    print "Checking of " + str(projectCount) + " project(s) done, " + str(fileNotFoundCount) + " file(s) not found in " + str(projectWithNotFoundFilesCount) + " projects."
+                absfile = os.path.join(root, file)
+                checkproject(absfile, os.path.relpath(absfile, path))
 
 def main():
     try:
         if (len(sys.argv) < 2):
-            checkProjectsRecursively()
+            checkProjectsRecursively(".")
         else:
-            checkproject(sys.argv[1])
+            checkProjectsRecursively(sys.argv[1])
     except:
+        print ("exception")
         info = traceback.format_exc()
-        print info
+        print(info)
 
 if __name__ == "__main__":
     main()
