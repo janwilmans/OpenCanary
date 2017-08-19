@@ -88,6 +88,7 @@ def Convert(inputlines):
             # THE reason why this is slow is that every line in the input is (and has to be to determine the 'none' case) compared against every line in the componentMap
             # I tried a prefix-tree (trie) to make this faster, but than filling the collection takes even longer :)
             # also using a trie has a side-effect, none/none issues cannot be queried from it.
+            # alternative: if you want fast results, use pypy (https://pypy.org) using pypy this script runs in seconds instead of minutes
             #print(line[0] + " contains? " + needle)  
             if line[0].lower().startswith(needle):
                 component = componentMap[needle]
