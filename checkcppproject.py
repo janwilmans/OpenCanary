@@ -4,7 +4,6 @@
 - treatwarningaserror should be true in all configurations
 - warninglevel should be 4 in all configurations
 - dont use make_unqiue without std:: prefix (prevents use of pre-std::make_unique custom solutions)
-
 """
 
 from __future__ import print_function
@@ -33,6 +32,7 @@ def getCppFilesFromProject(projectRoot, projectDirectory):
     return result
 
 def checkCppSource(filename):
+    #print (filename)
     lineNumber = 0
     for line in readLines(filename):
         lineNumber = lineNumber + 1
@@ -46,12 +46,16 @@ def readLines(filename):
             result += [line]
     return result
 
-def reportIssue(filename ,line, rule, description):
-    reportIssue7(filename, line, "USERDEFINED", rule, "1", "USERDEFINED", description)
+def makeRelative(filename):
+    global rootpath
+    return os.path.relpath(filename, rootpath + "\\..").replace("\\", "/")  # include one level up prefix in the relative path (MOTION\)
+
+def reportIssue(filename, line, rule, description):
+    reportIssue7(filename, line, "opencanary", rule, "1", "cppproject", description)
 
 def reportIssue7(filename, line, category, rule, level, group, description):
     s = "|"
-    print (filename + s + line + s + category + s + rule + s + level + s + group + s + description)
+    print (makeRelative(filename) + s + line + s + category + s + rule + s + level + s + group + s + description + s)
 
 def isGenerated(filename):
     dirname = os.path.dirname(filename)
@@ -67,7 +71,7 @@ def checkCppHeader(filename):
     for line in readLines(filename):
         lineNumber = lineNumber + 1
         if "using namespace" in line:
-            reportIssue(filename, str(lineNumber), "UD#2", "Using namespace found in header file")
+            reportIssue(filename, str(lineNumber), "UD#3", "Using namespace found in header file")
 
 def checkproject(projectname):
     projectRoot = getProjectXMLRoot(projectname)
@@ -75,18 +79,12 @@ def checkproject(projectname):
     for filename in getIncludeFilesFromProject(projectRoot, projectDirectory):
         if os.path.exists(filename):
             checkCppHeader(filename)
-        else:
-            if not isGenerated(filename):
-                #reportIssue(filename, "0", "UD#1", "Missing file(s) in project cause unneeded rebuilds")
-                pass
 
     for filename in getCppFilesFromProject(projectRoot, projectDirectory):
         if os.path.exists(filename):
             checkCppSource(filename)
-        else:
-            if not isGenerated(filename):
-                #reportIssue(filename, "0", "UD#1", "Missing file(s) in project cause unneeded rebuilds")
-                pass
+
+# checks for missing files moved to checkvsproject.py since they are not c++ project specific.
 
     for itemDefinitionGroupNode in projectRoot.iter(ns+'ItemDefinitionGroup'):
         #print (itemDefinitionGroupNode.tag + " " + itemDefinitionGroupNode.get("Condition"))
@@ -97,7 +95,7 @@ def checkproject(projectname):
                 #print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
                 if warningAsErrorNode.text.lower() == "true":
                     continue
-        reportIssue(projectname, "0", "UD#3", "TreatWarningAsError is not set to true")
+        reportIssue(projectname, "0", "UD#4", "TreatWarningAsError is not set to true")
 
     for itemDefinitionGroupNode in projectRoot.iter(ns+'ItemDefinitionGroup'):
         #print (itemDefinitionGroupNode.tag + " " + itemDefinitionGroupNode.get("Condition"))
@@ -108,10 +106,13 @@ def checkproject(projectname):
                 #print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
                 if warningLevel.text.endswith("4"):
                     continue
-        reportIssue(projectname, "0", "UD#4", "Warning level is not set to 4")
+        reportIssue(projectname, "0", "UD#5", "Warning level is not set to 4")
 
 def getProjectsRecursively(path):
+    global rootpath
+    rootpath = os.path.abspath(path)
     result = []
+
     for root, dirs, files in os.walk(path):
         for file in files:
             if (file.endswith("proj")):
