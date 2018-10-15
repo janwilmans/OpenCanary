@@ -30,11 +30,28 @@ def isGenerated(filename):
         return True
     return False
     
+def printDict(d):
+    print ("DICT:")
+    for k in d.keys():
+        print ("k: ", k, "v: ", d[k])
+        
+def flatten(items):
+    r = []
+    for v in items:
+        for w in v:
+            r += w
+    return r
+
+def getRecursiveChilderen(namespace, tag):
+    return flatten(filterRoot.iter(namespace))
+
 def checkproject(projectname):
     
     global fileNotFoundCount
     global projectWithNotFoundFilesCount
 
+    #print (projectname)
+    
     filtersname = projectname + ".filters"
     if not os.path.exists(filtersname):
         return
@@ -48,41 +65,43 @@ def checkproject(projectname):
     filterDict = dict()                  # [file] -> [filter] all files in a map to lookup in what filter section a file was
     missingDict = dict()                 # [filter] -> [] per-filter map of files from .filters not on found on disk
 
-    for inc in filterRoot.iter(ns+'ClInclude'):
-        incFileRel = inc.get('Include')
-        incFilter = inc.find(ns+'Filter')
-        if incFileRel == None or incFilter == None:
-            continue
-        filterDict[incFileRel] = incFilter.text
-        if incFilter.text not in missingDict:
-            missingDict[incFilter.text] = set([])
-        incFile = os.path.abspath( os.path.dirname(projectname) +"\\"+ incFileRel )
-        if not os.path.exists(incFile):
-            if not isGenerated(incFile):
+    for g in filterRoot.iter(ns+'ItemGroup'):
+        for child in g:
+            for incFileRel in child.attrib.values():
+                incFilter = child.find(ns+'Filter')
+                if incFileRel == None or incFilter == None:
+                    continue
+                filterDict[incFileRel] = incFilter.text
+                if incFilter.text not in missingDict:
+                    missingDict[incFilter.text] = set([])
+                incFile = os.path.abspath( os.path.dirname(projectname) +"\\"+ incFileRel )
+                if os.path.exists(incFile) or isGenerated(incFile):
+                    continue
                 missingDict[incFilter.text].add(incFileRel)
 
     projTree = ET.parse(projectname)
     projRoot = projTree.getroot()
-    
-    for inc in projRoot.iter(ns+'ClInclude'):
-        incFileRel = inc.get('Include')
-       
-        if incFileRel != None:
-            incFile = os.path.abspath( os.path.dirname(projectname) +"\\"+ incFileRel )
-            #print (incFile)
-            if not os.path.exists(incFile):
-                if not isGenerated(incFile):
-                    if incFileRel in filterDict:
-                        missingDict[filterDict[incFileRel]].add(incFileRel)
-                    else:
-                        # this file from the project file is missing on disk and is not listed in any .filters entry.
-                        if "projectfile" not in missingDict:
-                            missingDict["projectfile"] = set([])
-                        missingDict["projectfile"].add(incFileRel)
-           
+
+    for g in projRoot.iter(ns+'ItemGroup'):
+        for child in g:
+            if child.tag.endswith("ProjectConfiguration"):
+                continue
+            for incFileRel in child.attrib.values():
+                #print (incFileRel)
+                incFile = os.path.abspath( os.path.dirname(projectname) + "\\"+ incFileRel)
+                #print (" ", incFile)
+                if os.path.exists(incFile) or isGenerated(incFile):
+                    continue
+                if incFileRel in filterDict:
+                    missingDict[filterDict[incFileRel]].add(incFileRel)
+                else:
+                    # this file from the project file is missing on disk and is not listed in any .filters entry.
+                    if "projectfile" not in missingDict:
+                        missingDict["projectfile"] = set([])
+                    missingDict["projectfile"].add(incFile)
     for (missingGroup, missingList) in missingDict.items():
         for missing in missingList:
-            reportIssue(projectname, "0", "UD#10", "File '" + missing + "' from filter [" + missingGroup + "] not found on disk, causes unneeded rebuilds")
+            reportIssue(projectname, "0", "UD#10", "File '" + makeRelative(missing) + "' from filter [" + missingGroup + "] not found on disk, causes unneeded rebuilds")
 
 def checkProjectsRecursively(path):
     global rootpath

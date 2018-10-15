@@ -3,7 +3,8 @@
 - using namespace is not allowed in header files
 - treatwarningaserror should be true in all configurations
 - warninglevel should be 4 in all configurations
-- dont use make_unqiue without std:: prefix (prevents use of pre-std::make_unique custom solutions)
+- use std::make_unique iso custom implementations
+
 """
 
 from __future__ import print_function
@@ -31,13 +32,21 @@ def getCppFilesFromProject(projectRoot, projectDirectory):
             result += [projectDirectory + "\\" + relativeFilename]
     return result
 
+def checkLine(filename, lineNumber, line):
+    if "/make_unique" in line:
+        reportIssue(filename, str(lineNumber), "UD#2", "For C++11 and later use #include <memory>")
+    if "make_unique" in line and not "std::make_unique" in line and not "/make_unique" in line:
+        reportIssue(filename, str(lineNumber), "UD#2", "For C++11 and later use std::make_unique")
+    #if "new" in line and not "#define new" in line:
+    #    reportIssue(filename, str(lineNumber), "UD#3", "Prefer std::make_unique over bare new/delete")
+    # too generic, but would be nice for new code.
+
 def checkCppSource(filename):
     #print (filename)
     lineNumber = 0
     for line in readLines(filename):
         lineNumber = lineNumber + 1
-        if "make_unique" in line and not "std::make_unique" in line:
-            reportIssue(filename, str(lineNumber), "UD#2", "For C++11 and later use std::make_unique")
+        checkLine(filename, lineNumber, line)
 
 def readLines(filename):
     result = []
@@ -70,6 +79,7 @@ def checkCppHeader(filename):
     lineNumber = 0
     for line in readLines(filename):
         lineNumber = lineNumber + 1
+        checkLine(filename, lineNumber, line)
         if "using namespace" in line:
             reportIssue(filename, str(lineNumber), "UD#3", "Using namespace found in header file")
 
