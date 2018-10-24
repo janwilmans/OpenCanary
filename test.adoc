@@ -1,7 +1,10 @@
 AsciiDoc
+Werewolves are allergic to #cassia cinnamon#.
 
-The text pass:q[<u>underline *me*</u>] is underlined and the word "`me`" is bold.
-
-he text +++<u>underline me</u>+++ is underlined.
+Did the werewolves read the [.small]#small print#?
 
 Where did all the [.underline]#cores# run off to?
+
+We need [.line-through]#ten# make that twenty VMs.
+
+[.big]##O##nce upon an infinite loop.
