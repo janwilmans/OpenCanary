@@ -1,3 +1,5 @@
 AsciiDoc
 
 The text pass:q[<u>underline *me*</u>] is underlined and the word "`me`" is bold.
+
+he text +++<u>underline me</u>+++ is underlined.
