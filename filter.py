@@ -1,9 +1,10 @@
-﻿import sys
-import os
-import re
+﻿from __future__ import print_function
+
+import sys, os, re, fnmatch
 import argparse
 import atexit
 import platform
+import glob
 
 # the line is a list of words separated by any non-word character (whitespace, tabs, or commas are all good)
 def SplitWords(line):
@@ -26,7 +27,27 @@ def LowerList(list):
         result += [entry.lower()]
     return result
 
+# get list files and/or folders, will return a non-recursive list of whatever matches
+# '.'     = return all file- and folder-names in the current directory
+# '*.*'   = return all file- and folder-names in the current directory
+# '..'    = return all file- and folder-names in the parent directory
+# 'foo*'  = return all file- and folder-names in the current directory that start with 'foo'
+# '*foo*' = return all file- and folder-names in the current directory that contains the word 'foo'
+# the result is always a list of strings that are full-real-paths 
+def listByWildcard(wildcard):
+    folder = os.path.realpath(wildcard)
+    mask = ""
+    if not os.path.isdir(folder):
+        folder, mask = os.path.split(folder)
+
+    result = []
+    for item in os.listdir(folder):
+        if mask == "" or fnmatch.fnmatch(item, mask):
+            result += [os.path.join(folder, item)]
+    return result
+
 def main():
+
     parser = argparse.ArgumentParser(description='Filter CSV files')
     parser.add_argument('-i', '--input', required=True, action='append', help="file(s) to use as input")
     parser.add_argument('-s', '--separator', default='|', help="character used as separator, defaults to a pipe symbol ( | )") 
@@ -67,12 +88,12 @@ def main():
 
     if useconsole:
         for line in lines:
-            print line,
+            print (line,)
     else:
         with open(outputfile, 'w') as f:
             for line in lines:
                 f.write(line)
 
-    print len(lines), " lines."
+    print (len(lines), " lines.")
 if __name__ == '__main__':
     main()
