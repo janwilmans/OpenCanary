@@ -19,7 +19,7 @@ The process works in a couple of steps that are executed as post-build steps as 
 Parse all warnings/issues into a single comma-separated format (actually | - pipe separated seems to work good, because ; and comma are sometimes used in messages.)
 
 format:
-priority | team | component | file | group | rule | level | type | message
+priority | team | component | file | source | rule | category | description | link
 
 * priority - team assigned priority
 * team - name of the team responsible
