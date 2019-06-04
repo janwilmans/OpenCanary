@@ -27,9 +27,10 @@ priority | team | component | file | group | rule | level | type | message
 * file - file + linenumber  "/path/foo:14"
 * source - the tools that produced the issue (gcc/coverage, cppcheck/opencanary,ubsan,etc.)
 * rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
-* wiki  - wiki link to gather typical solving strategies
+(* wiki - wiki link to gather typical solving strategies) 
 * category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * description - actual message the was reported
+* link - tool specific reference link (for example to an external issue tracker or the source tool web interface)
 
 ## Filter
 - Pre-filter: optionally remove non-team issue (doing this first prevent unneeded work in following steps) 
