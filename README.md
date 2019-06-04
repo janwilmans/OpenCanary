@@ -2,7 +2,7 @@
 set of scripts for static analysis of source code and build results
 
 The purpose of this repo is to provide a set of scripts that can be used to build your own build-canary.
-A build-canary is a system that gives you early warning when new problems have been introduced. (so code quality _as you define it_ has regressed)
+A build-canary is a system that gives you early warning when new problems have been introduced. (so code quality _as you define it_ has regressed). Also a (nighly?) report can be generated to provide you and your team guidenance to start improving you code base. The report is a prioritized list (_you define you own team priorities_) of issues to solve.
 
 The process works in a couple of steps that are executed as post-build steps as part of the CI build.
 
