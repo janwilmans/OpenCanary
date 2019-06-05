@@ -26,9 +26,9 @@ priority | team | component | file | source | rule | category | description | li
 * component - name of the component the issue is associated to 
 * file - file + linenumber  "/path/foo:14"
 * source - the tools that produced the issue (gcc/coverage, cppcheck/opencanary,ubsan,etc.)
+* category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
 * *wiki* - wiki link to gather typical solving strategies, note: generated from 'rule' 
-* category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * description - actual message the was reported
 * link - tool specific reference link (for example to an external issue tracker or the source tool web interface)
 
