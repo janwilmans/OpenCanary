@@ -19,16 +19,20 @@ The process works in a couple of steps that are executed as post-build steps as 
 Parse all warnings/issues into a single comma-separated format (actually | - pipe separated seems to work good, because ; and comma are sometimes used in messages.)
 
 format:
-priority | team | component | file | source | rule | category | description | link
+priority | team | component | file | source | category | rule | description | link
+
+where columns category -> rule -> description are in ordered from coarse to fine
+and the lines are ordered in order of priority first, and second in order of file(name)
+that way issues are clustered per-file as good as possible.
 
 * priority - team assigned priority
 * team - name of the team responsible
 * component - name of the component the issue is associated to 
 * file - file + linenumber  "/path/foo:14"
 * source - the tools that produced the issue (gcc/coverage, cppcheck/opencanary,ubsan,etc.)
+* category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
 * *wiki* - wiki link to gather typical solving strategies, note: generated from 'rule' 
-* category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * description - actual message the was reported
 * link - tool specific reference link (for example to an external issue tracker or the source tool web interface)
 
