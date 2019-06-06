@@ -8,15 +8,7 @@ import tempfile
 import traceback
 import subprocess
 from enum import IntEnum
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    
-def sprint(*args, **kwargs):
-    print(*args, file=sys.stdout, **kwargs)
-
-def scriptName():
-    return __file__.split(os.sep)[-1:][0]
+from util import *
 
 # see https://divtable.com/table-styler/
 # see https://validator.w3.org/nu/#textarea
@@ -108,7 +100,7 @@ class Column(IntEnum):
     File = 3
     Source = 4
     Rule = 5
-    Category = 6
+    Category = 6            # category and rule should be reversed (coarse -> fine)
     Description = 7
     Link = 8
 
@@ -205,7 +197,7 @@ def createHtmlReport(lines):
     f.close()
 
 def showUsage():
-    eprint("Usage: type <foo> | " + scriptName())
+    eprint("Usage: type <foo> | " + os.path.basename(__file__))
     eprint("   will create an html report from a opencanary-formatted CSV input")
     eprint("   opencanary-format: " )
     eprint("        priority|team |component|file|source|rule|category|description|link")

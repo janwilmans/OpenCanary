@@ -94,5 +94,6 @@ def main():
                 f.write(line)
 
     print (len(lines), " lines.")
+
 if __name__ == '__main__':
     main()

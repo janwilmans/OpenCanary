@@ -1,20 +1,11 @@
 """ replace all '\\' (single backslash) with a forward slash '/'
 """
 
-from __future__ import print_function
-import traceback, sys, os, time, re
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    
-def sprint(*args, **kwargs):
-    print(*args, file=sys.stdout, **kwargs)
-
-def scriptName():
-    return __file__.split(os.sep)[-1:][0]
+import traceback, sys, os
+from util import *
 
 def showUsage():
-    eprint("Usage: type <foo> | " + scriptName())
+    eprint("Usage: type <foo> | " + os.path.basename(__file__))
     eprint("   all \\ will be replaced with /")
 
 def main():

@@ -3,12 +3,13 @@
 
 import traceback, sys, os, time
 
-def main():
+def showUsage():
+    print ("tee - split stdin into stdout and a file")
+    print ("usage: tee <filename>")
 
+def main():
     if len(sys.argv) < 2:
-        print ("tee - split stdin into stdout and a file")
-        print ("usage: tee <filename>")
-        return
+        showUsage()
 
     global warnings
     warnings = open(sys.argv[1], 'w')
@@ -20,7 +21,10 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except SystemExit:
+        pass
     except:
         info = traceback.format_exc()
-        print(info)
-    sys.exit(0)
+        eprint(info)
+        showUsage()
+        sys.exit(1)
