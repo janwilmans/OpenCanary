@@ -13,8 +13,8 @@ def removetoken(line, tokens):
     return result
 
 def showUsage():
-    sprint("Usage: " + os.path.basename(__file__) + " <token> <token...>")
-    sprint("   <token> will be stripped from the data send to stdin")
+    eprint("Usage: " + os.path.basename(__file__) + " <token> <token...>")
+    eprint("   <token> will be stripped from the data send to stdin")
 
 def main():
 
@@ -33,5 +33,5 @@ if __name__ == "__main__":
         pass
     except:
         info = traceback.format_exc()
-        print(info)
+        eprint(info)
         sys.exit(1)

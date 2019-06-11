@@ -19,9 +19,9 @@ def filterMsvc(line):
     sys.stdout.write(line)
 
 def showUsage():
-    sprint("Usage: " + os.path.basename(__file__) + " [/msvc]")
-    sprint("   will filter all lines from 3rd party as hardcoded by you in this script")
-    sprint(r"   /msvc  - search for \ instead of / and also ignore messages from MSVC system headers")
+    eprint("Usage: " + os.path.basename(__file__) + " [/msvc]")
+    eprint("   will filter all lines from 3rd party as hardcoded by you in this script")
+    eprint(r"   /msvc  - search for \ instead of / and also ignore messages from MSVC system headers")
 
 def main():
     if len(sys.argv) < 2:
@@ -45,6 +45,6 @@ if __name__ == "__main__":
         pass
     except:
         info = traceback.format_exc()
-        print(info)
+        eprint(info)
         showUsage()
         sys.exit(1)

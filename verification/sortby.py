@@ -1,4 +1,5 @@
-﻿import os,sys,re
+﻿import os, sys, traceback
+from util import *
 
 # the tuple is used for a lexicographically sort by its fields
 def MakeTuple(line):
@@ -38,7 +39,7 @@ if __name__ == "__main__":
         pass
     except:
         info = traceback.format_exc()
-        print(info)
+        eprint(info)
         showUsage()
         sys.exit(1)
 

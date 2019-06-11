@@ -2,10 +2,11 @@
 """
 
 import traceback, sys, os, time
+from util import *
 
 def showUsage():
-    print ("tee - split stdin into stdout and a file")
-    print ("usage: tee <filename>")
+    eprint ("tee - split stdin into stdout and a file")
+    eprint ("usage: tee <filename>")
 
 def main():
     if len(sys.argv) < 2:
