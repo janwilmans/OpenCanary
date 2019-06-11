@@ -1,22 +1,12 @@
-"""Parse warnings and error messages from MSVC 
+#!/usr/bin/env python3
+"""Parse warnings and error messages from MSVC
 """
+
 
 from __future__ import print_function
 import traceback, sys, os
 from enum import IntEnum
 from util import *
-
-
-def stripPreFix(str):
-    directory = r"C:/gitlab-runner/builds/vwQLtCot/0/OOAKT/tin/"
-    project_dir = os.getenv('CI_PROJECT_DIR')
-    if not project_dir is None:
-        directory = project_dir
-
-    if len(directory) > 0:
-        return str.replace(directory, "")
-    return str
-
 
 class Column(IntEnum):
     Prio = 0
@@ -30,19 +20,25 @@ class Column(IntEnum):
     Link = 8
 
 
-def find_nth(s, substr, n):
-    i = 0
-    while n >= 0:
-        n -= 1
-        i = s.find(substr, i + 1)
-    return i
+def normpath(pathstr):
+    # os.path.normpath cant be used here, as it would also convert the / to \ on windows.
+    return pathstr.rstrip("/")
+
+# returns project directory _without_ trailing /
+def getProjectDir():
+    directory = r"C:/gitlab-runner11/builds/CKAzv-Sw/0/OOAKT/tin/"
+    project_dir = os.getenv('CI_PROJECT_DIR')
+    if not project_dir is None:
+        directory = project_dir
+    return normpath(directory)
 
 
-def makeRelative(v):
-    i = find_nth(v, "/", 5)
-    if i == -1:
-        return v
-    return v[i:]
+def removeProjectPath(str):
+    return str.replace(getProjectDir(), "")
+
+def removeBuildPath(str):
+    oneDirectoryUp = os.path.dirname(getProjectDir())
+    return str.replace(oneDirectoryUp, "")
 
 
 def reportIssue(filename, line, rule, description, component, category):
@@ -50,20 +46,15 @@ def reportIssue(filename, line, rule, description, component, category):
     project_url = os.getenv('CI_PROJECT_URL')
     if not project_url is None:
         url = project_url
+    url = normpath(url)
 
-    links = "[3](" + url + "/" + stripPreFix(filename) + "#L" + str(line) + ")"
+    links = "[3](" + url + removeProjectPath(filename) + "#L" + str(line) + ")"
     if not rule == "":
         links += "[5](https://duckduckgo.com/?q=!ducky+msdn+" + rule + ")"
 
-    report(10, "tin", component, makeRelative(filename), line, "msvc", rule, category, description, links)
-
-
-def report(priority, team, component, filename, line, source, rule, category, description, link):
     s = "|"  # csv separator
-    # sprint(s.join([str(priority), team, component, filename + ":" + str(line), source, rule, category, description, link))
-    print(str(priority) + s + team + s + component + s + filename + ":" + str(
-        line) + s + source + s + rule + s + category + s + description + s + link)
-
+    line = s.join(["10", "tin", component, filename + ":" + str(line), "msvc", rule, category, description, links])
+    sprint(removeBuildPath(line))
 
 def splitWarningLine(line):
     parts = line.split(": warning ")
@@ -83,7 +74,6 @@ def splitWarningLine(line):
 
 
 def splitMessageLine(line):
-    i = find_nth(line, ":", 1)
     parts = line.split(": message :")
     line = 88
     filepart = parts[0]
