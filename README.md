@@ -1,5 +1,6 @@
 # OpenCanary
-set of scripts for static analysis of source code and build results
+A set of scripts for aggregation, analysis and reporting of build and static analysis results.
+Its purpose is to give you a failing CI build if new issues are introduced and a team specific prioritized list of issue to work on.
 
 The purpose of this repo is to provide a set of scripts that can be used to build your own build-canary.
 A build-canary is a system that gives you early warning when new problems have been introduced. (so code quality _as you define it_ has regressed). Also a (nighly?) report can be generated to provide you and your team guidenance to start improving you code base. The report is a prioritized list (_you define you own team priorities_) of issues to solve.
@@ -16,10 +17,10 @@ The process works in a couple of steps that are executed as post-build steps as 
 - coverage results
 - more?
 
-Parse all warnings/issues into a single comma-separated format (actually | - pipe separated seems to work good, because ; and comma are sometimes used in messages.)
+Parse all warnings/issues into a single comma-separated format. Actually | - pipe separated seems to work good, because semicolons (;) and comma (,) are sometimes used in messages.
 
 format:
-priority | team | component | file | source | category | rule | description | link
+`priority | team | component | file | source | category | rule | description | link`
 
 where columns category -> rule -> description are in ordered from coarse to fine
 and the lines are ordered in order of priority first, and second in order of file(name)
