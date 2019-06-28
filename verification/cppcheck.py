@@ -1,102 +1,75 @@
-"""Parse warnings and error messages from MSVC 
+#!/usr/bin/env python3
+"""Parse issues from cppcheck
 """
 
-from __future__ import print_function
-import traceback, sys, os, time
-from enum import IntEnum
+import traceback, sys, os
 from subprocess import Popen, PIPE
 from util import *
 
-
-def stripPreFix(v):
-    return v
-
-
-class Column(IntEnum):
-    Prio = 0
-    Team = 1
-    Component = 2
-    File = 3
-    Source = 4
-    Rule = 5
-    Category = 6
-    Description = 7
-    Link = 8
-
-
-def find_nth(s, substr, n):
-    i = 0
-    while n >= 0:
-        n -= 1
-        i = s.find(substr, i + 1)
-    return i
-
-
-def makeRelative(v, index):
-    i = find_nth(v, os.sep, index)
+def shortenPathStem(v):
+    i = find_nth(v, "/", 2)
     if i == -1:
         return v
     return v[i:]
 
 
-def reportIssue(filename, line, rule, description, component, category):
-    links = "[3](https://gitlab.kindtechnologies.nl/OOAKT/tin/blob/master/"
-    links += makeRelative(stripPreFix(filename), 1) + "#L" + str(line) + ")"
+def report_issue(filename, line, rule, description, component, category):
+    links = "[3](" + get_git_url() + "/blob/master" + shortenPathStem(filename) + "#L" + str(line) + ")"
     if not rule == "":
         links += "[5](https://duckduckgo.com/?q=!ducky+msdn+" + rule + ")"
-
-    source = "cppcheck"  # os.path.splitext(os.path.basename(__file__))[0]
 
     priority = 10
     if int(line) == 0:
         priority = 1
-    relative = makeRelative(filename, 0)    # strip /project off, local fix
-    report(priority, "tin", component, relative, line, source, rule, category, description, links)
-
-
-def report(priority, team, component, filename, line, source, rule, category, description, link):
-    s = "|"  # csv separator
-    # sprint(s.join([str(priority), team, component, filename + ":" + str(line), source, rule, category, description, link))
-    sprint(str(priority) + s + team + s + component + s + filename + ":" +
-           str(line) + s + source + s + rule + s + category + s + description + s + link)
+    source = "cppcheck"
+    report(priority, "tin", component, filename + ":" + str(line), source, rule, category, description, links)
 
 
 def parse(msg):
-    s = msg[2:].split(":")
+    s = msg.split(":")
     if len(s) < 4:  # corresponds with the fields in the --template argument
         if len(msg.strip()) > 0:
             eprint("err:", msg)
         return
-    reportIssue(s[0], s[1], "rule", s[3], "tincomp", s[2])
+    report_issue(normpath(s[0]), s[1], "rule", s[3], "tincomp", s[2])
 
 
-def runcppcheck(path):
+def run_cppcheck(path):
     cmd = r'c:\Program Files\Cppcheck\cppcheck.exe'
     list = [cmd, os.path.realpath(path), '-q', '--template={file}:{line}:{severity}:{message}',
             '--enable=all']  # notice 4 fields in the --template argument
     process = Popen(list, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     (std_out, std_err) = process.communicate()
-    exit_code = process.wait()
+    process.wait()
     return std_out, std_err
 
 
-def showUsage():
-    eprint("Usage: " + os.path.basename(__file__) + " <path>")
-    eprint(r"   will run c:\Program Files\Cppcheck\cppcheck.exe on <path> and output report in open-canary format")
+def show_usage():
+    eprint("Usage: " + os.path.basename(__file__) + " <env.txt> <path> <basepath>")
+    eprint(r"  <env.txt> file containing CI environment variables")
+    eprint(r"  <path> is recursively processed by c:\Program Files\Cppcheck\cppcheck.exe and output reported in open-canary format")
+    eprint(r"  <basepath> files are shown as relative to this path")
 
 
 def main():
-    if not len(sys.argv) == 2:
+    if not len(sys.argv) == 4:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
-    std_out, std_err = runcppcheck(sys.argv[1])
-    # cppcheck report its own errors on stdout
+    read_envfile(sys.argv[1])
+
+    cpppath = os.path.abspath(sys.argv[2])
+    std_out, std_err = run_cppcheck(cpppath)
+
+    basepath = os.path.abspath(sys.argv[3])
+    pathlen = len(basepath)
+
+    # cppcheck report its own errors on stdout, we redirect them to stderr
     eprint(std_out)
 
-    for line in std_err.split("\n"):
-        parse(line)
+    for line in std_err.splitlines():
+        parse(line[pathlen:])
 
 
 if __name__ == "__main__":
@@ -107,5 +80,5 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
-        sys.exit(0)
+        show_usage()
+        sys.exit(1)

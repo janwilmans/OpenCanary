@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ filter script to select content from CSV files
 """
 
@@ -66,7 +67,7 @@ def main():
 
     includefilter = args.includefilter
     excludefilter = args.excludefilter
-    if (args.ignorecase):
+    if args.ignorecase:
         includefilter = LowerList(includefilter)
         excludefilter = LowerList(excludefilter)
 
@@ -78,7 +79,7 @@ def main():
                     matchtext = line.strip().split(args.separator)[args.column]
                 else:
                     matchtext = line.strip()
-                if (args.ignorecase):
+                if args.ignorecase:
                     if Match(matchtext.lower(), includefilter, excludefilter):
                         lines += [line]
                 else:

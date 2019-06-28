@@ -1,13 +1,9 @@
+#!/usr/bin/env python3
 """ report V3: takes a pre-filtered csv-file and create an html report
 """
 
-from __future__ import print_function
-import os, sys, re, urllib
-import getopt
-import tempfile
+import os, sys
 import traceback
-import subprocess
-from enum import IntEnum
 from util import *
 
 # see https://divtable.com/table-styler/
@@ -89,26 +85,6 @@ table.blueTable tfoot .links a{
 </style>
 </head>"""
 
-# _Issue_XXX_NN will be contatenated for issues specific pages
-# _Issues will be contatenated for the overview page 
-wiki_url_prefix = "https://wiki.kindtechnologies.nl/wiki/index.php?title=OpenCanary"
-
-class Column(IntEnum):
-    Prio = 0
-    Team = 1
-    Component = 2
-    File = 3
-    Source = 4
-    Rule = 5
-    Category = 6            # category and rule should be reversed (coarse -> fine)
-    Description = 7
-    Link = 8
-
-def getWikiUrl(issueId):
-    return wiki_url_prefix + "_Issue_" + issueId
-    
-def getWikiMainUrl():
-    return wiki_url_prefix + "_Issues"
 
 def stripSqlEscapingWord(word):
     result = word
@@ -147,14 +123,19 @@ def getLinkMap(parts):
 
     return zip(parts, links)
 
+# add a summary of nr of issues per rule
+# move the recipients out of git?
+
 def createHtmlReport(lines):
 
     f = sys.stdout
     f.write(r'<!DOCTYPE html><html lang="en">')
     f.write(getHtmlStyles())
     f.write(r'<body>')
+    f.write(r'<h2>Software Quality Report for ' + get_report_id() + '</h2>')
     f.write(str(len(lines)) + r' issues were found relevant for this report')
-    f.write(r'<a href="' + getWikiMainUrl() + '"><h2> Issues overview page </h2></a>')
+    f.write(r'<br/><a href="' + getWikiMainUrl() + '">Open-canary Wiki page</a>')
+    f.write(r'<br/><a href="' + get_job_url() + '">The CI job that generated this report</a>')
     f.write(r'<table class="blueTable">')
     f.write(r'<thead><tr>')
     f.write('<th title="Team assigned priority">Prio</th>\n')
@@ -197,18 +178,20 @@ def createHtmlReport(lines):
     f.close()
 
 def showUsage():
-    eprint("Usage: type <foo> | " + os.path.basename(__file__))
-    eprint("   will create an html report from a opencanary-formatted CSV input")
+    eprint("Usage: type <foo> | " + os.path.basename(__file__) + " <env.txt>")
+    eprint(r"  <env.txt> file containing CI environment variables")
+    eprint("   create an html report from a opencanary-formatted CSV input")
     eprint("   opencanary-format: " )
     eprint("        priority|team |component|file|source|rule|category|description|link")
     eprint("   see also: https://github.com/janwilmans/OpenCanary")
 
 def main():
-    if len(sys.argv) > 1:
+    if not len(sys.argv) == 2:
         eprint("error: invalid argument(s)\n")
         showUsage()
         sys.exit(1)
 
+    read_envfile(sys.argv[1])
     issues = []
     for raw in sys.stdin:
         issues += [raw]

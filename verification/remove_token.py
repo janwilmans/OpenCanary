@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ Removes a specific (set of) tokens
 """
 
@@ -9,7 +10,7 @@ def removetoken(line, tokens):
     result = line
     for token in tokens:
         pattern = re.compile(token)
-        result = pattern.sub('', result);
+        result = pattern.sub('', result)
     return result
 
 def showUsage():

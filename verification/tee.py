@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ tee - split stdin into stdout and a file
 """
 

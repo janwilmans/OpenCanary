@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Filter thrid party warnings
 """
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ replace all '\\' (single backslash) with a forward slash '/'
 """
 
@@ -15,7 +16,8 @@ def main():
         sys.exit(1)
 
     for raw in sys.stdin:
-        sys.stdout.write(raw.replace('\\', '/'));
+        sys.stdout.write(raw.replace('\\', '/'))
+
 
 if __name__ == "__main__":
     try:
