@@ -12,19 +12,28 @@ def showUsage():
 def main():
     if len(sys.argv) < 2:
         showUsage()
+        sys.exit(1)
 
-    global warnings
-    warnings = open(sys.argv[1], 'w')
+    eprint("tee default encoding: ", sys.getdefaultencoding())
 
-    for line in sys.stdin:
-        warnings.write(line)
-        print(line.strip())
+    lastline = ""
+
+    with open(sys.argv[1], 'w', encoding="utf-8") as outputfile:
+        for line in sys.stdin:
+            try:
+                outputfile.write(line)
+                sys.stdout.write(get_timestamp() + " " + line)
+                lastline = line
+            except Exception as ex:
+                eprint("TEE ERROR: ", ex)
+                eprint("## last: ", lastline)
+                eprint("## now : ", line)
 
 if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)

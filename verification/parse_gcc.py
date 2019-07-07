@@ -5,19 +5,44 @@
 import traceback, sys, os
 from util import *
 
+def isValidRule(rule):
+    if rule == "":
+        return False
+    if rule == "rule":
+        return False
+    if rule == "unused":
+        return False
+    if rule == "uninitialized":
+        return False
+    if rule == "cmdline":
+        return False
+    if rule == "warning":
+        return False
+    return True
+
+
+def create_default_link(filename, line):
+    if "/ui_" in filename:
+        return ""
+    url = urljoin(get_git_url(), "/blob/master", remove_project_path(filename).replace("../", ""))
+    if line == 0:
+        links = create_link(3, url)
+    else:
+        links = create_link(3, url + "#L" + line)
+    return links
+
 # fileref can include a colomn number (or any other postfixed information)
 # eg. fileref:   /component/inc/foo.h:127:23
 #     filename:  /component/inc/foo.h
 #     line:      127
 def report_issue(fileref, filename, line, rule, description, component, category):
-    if line == 0:
-        url = get_job_url()
-        links = "[3](" + get_job_url()  + ")"
-    else:
-        links = "[3](" + get_git_url() + "/blob/master" + remove_project_path(filename) + "#L" + line + ")"
+    links = create_default_link(filename, line)
 
-    if not rule == "":
-        links += "[5](" + getFeelingDuckyUrl(rule) + ")"
+    if isValidRule(rule):
+        links += create_link(5, getFeelingDuckyUrl(rule))
+
+    if "/ui_" in filename:
+        fileref = fileref + " (generated)"
 
     fileref = remove_build_path(fileref)
     description = remove_build_path(description)
@@ -81,7 +106,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)

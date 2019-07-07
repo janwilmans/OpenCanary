@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys, os, re
 from enum import IntEnum
+from datetime import datetime
 
 # global variable used to query env.txt that is read at main()
 envfile = {}
@@ -130,3 +131,16 @@ def get_or_default(list, index, default):
     if index < len(list):
         return list[index]
     return default
+
+
+def urljoin(*args):
+    trailing_slash = '/' if args[-1].endswith('/') else ''
+    return "/".join(map(lambda x: str(x).strip('/'), args)) + trailing_slash
+
+
+def create_link(index, url):
+    return "[" + str(index) + "]{" + url + "}"
+    
+def get_timestamp():
+    now = datetime.now()
+    return now.strftime("%H:%M:%S.%f")[:12]

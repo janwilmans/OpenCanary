@@ -73,9 +73,12 @@ def sendReport(bodyfile, attachments = []):
     #server.ehlo()
     if len(login_password) > 0:
         server.login(login_name, login_password)
-    server.sendmail(sender_email, recipients, message.as_string())
-    sprint("Email [" + subject + "] was send to", recipients)
-    server.quit()
+    try:
+        server.sendmail(sender_email, recipients, message.as_string())
+        sprint("Email [" + subject + "] was send to", recipients)
+        server.quit()
+    except smtplib.SMTPRecipientsRefused as ex:
+        sprint("Email [" + subject + "] was NOT send, exception caught:", getattr(ex, 'message', repr(ex)))
 
 def showUsage():
     eprint("Usage: " + os.path.basename(__file__) + " <bodyfile> <attachments...> [-s <subject>]")

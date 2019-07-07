@@ -85,7 +85,7 @@ def stripPreFix(filename):
 
 def reportIssue(filename, line, rule, description):
     report(10, "tin", "tin", filename + ":" + str(line), "opencanary", rule, "oc_cpp_issues", description, \
-           "[3](https://gitlab.kindtechnologies.nl/OOAKT/tin/blob/master/" + stripPreFix(filename) + "#L" + str(line) + ")")
+           create_link(3,"[3](https://gitlab.kindtechnologies.nl/OOAKT/tin/blob/master/" + stripPreFix(filename) + "#L" + str(line)))
 
 
 def isGenerated(filename):
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)

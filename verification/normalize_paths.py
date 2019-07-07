@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """ replace all '\\' (single backslash) with a forward slash '/'
+    notice: filter_thirdparty.py /msvc already does this, so don't use both
 """
 
 import traceback, sys, os
@@ -23,7 +24,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)

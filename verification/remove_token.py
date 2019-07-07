@@ -31,7 +31,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# makeUniq is a workaround for issues being gathered from multiple sources containing duplicate information 
-# for example compilation results from debug/debug64/release/release64
+# sortby.py will sort the input from stdin and filter out all duplicate entries
+# for example compilation results from debug/debug64/release/release64 or central header files included in many translation units
+# cause duplicate entries to be reported
 
 import os, sys, traceback
 from util import *
@@ -26,16 +27,6 @@ def getStdinLines():
     return lines
 
 
-# guaranteed to keep the first result
-def makeUniq(lines):
-    result = []
-    lines_seen = set() # holds lines already seen
-    for line in lines:
-        if line not in lines_seen: # not a duplicate
-            result += [line]
-            lines_seen.add(line)
-    return result
-
 def show_usage():
     eprint(r"Usage: type <file> | " + os.path.basename(__file__))
     eprint(r"  will sort the input from stdin and filter out all duplicate entries")
@@ -46,17 +37,17 @@ def main():
         show_usage()
         sys.exit(1)
 
-    for line in SortBy(makeUniq(getStdinLines())):
-        print(line)
+    for line in SortBy(set(getStdinLines())):
+        sprint(line)
 
 if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)
 

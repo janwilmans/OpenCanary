@@ -5,21 +5,30 @@
 import traceback, sys, os
 from util import *
 
+def create_default_link(filename, line):
+    project_relative_filename = remove_project_path(filename)
+    if project_relative_filename.startswith("C:/"):
+        return ""
 
-def report_issue(filename, line, rule, description, component, category):
-    if line == 0:
-        url = get_job_url()
-        links = "[3](" + get_job_url()  + ")"
-    else:
-        links = "[3](" + get_git_url() + "/blob/master" + remove_project_path(filename) + "#L" + str(line) + ")"
-        filename = filename + ":" + str(line)
+    url = urljoin(get_git_url(), "/blob/master", project_relative_filename)
+    links = create_link(3, url)
 
+    # check for positive line number
+    if str.isdigit(line):
+        links = create_link(3, url + "#L" + str(line))
+    return links
+
+
+def report_issue(fileref, filename, line, rule, description, component, category):
+    links = create_default_link(filename, line)
     if not rule == "":
-        links += "[5](" + getFeelingDuckyUrl(rule) + ")"
+        links += create_link(5, getFeelingDuckyUrl(rule))
 
-    filename = remove_build_path(filename)
+    links += create_link(6, getWikiUrl(rule.replace("#", "_")))
+
+    fileref = remove_build_path(fileref)
     description = remove_build_path(description)
-    report(10, "tin", component, filename, "msvc", rule, category, description, links)
+    report(10, "tin", component, fileref, "msvc", rule, category, description, links)
 
 
 def split_warning_line(line):
@@ -35,8 +44,9 @@ def split_warning_line(line):
     filename = filepart[:lastbrace]
     remaining = filepart[lastbrace:]
     parts = remaining.rstrip().rstrip(")")
-    line = int(parts.split(",")[0][1:])
-    return filename, line, rule, description, component
+    line = parts.split(",")[0][1:]
+    fileref = filename + ":" + line
+    return fileref, filename, line, rule, description, component
 
 
 def split_message_line(line):
@@ -53,8 +63,8 @@ def parse_msvc(line):
         # message lines sometimes seem to contain ": warning", this seem to be caused by compilers writing interleaved to stdout ??
         return
     if ": warning" in line:
-        filename, line, rule, description, component = split_warning_line(line)
-        report_issue(filename, line, rule, description, component, "warning")
+        fileref, filename, line, rule, description, component = split_warning_line(line)
+        report_issue(fileref, filename, line, rule, description, component, "warning")
         return
     # if ": message" in line:
     #    filename, line, rule, description, component = split_message_line(line)
@@ -67,7 +77,7 @@ def parse_msvc(line):
         i = line.find(cmdlineMarker) + len(cmdlineMarker)
         filename = line[:i].strip()
         s = line[i:].split(":")
-        report_issue(filename, 0, s[0].strip(), s[1].strip(), "compiler", "cmdline")
+        report_issue(filename, filename, 0, s[0].strip(), s[1].strip(), "compiler", "cmdline")
         return
 
 
@@ -99,7 +109,7 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)

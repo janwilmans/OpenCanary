@@ -108,34 +108,39 @@ def getPart(list, column):
         return "<missing " + str(column) + ">" 
     return list[column]
 
-# transform the Column.Link field "[1](URL_1)[2](URL_2)"
-# [index](URL)  # the index is a 0-indexed reference to the fields the URL if for.
-# to a sequence of parts where the first is the value/text and the second is an optional URL
-# 
+# transform the Column.Link field "[1]{URL_1}[2]{URL_2}"
+# [index]{URL}  # the index is a 0-indexed reference to the fields the URL if for.
+#
 def getLinkMap(parts):
     links = [""] * (len(parts)-1)   # initialize a list of empty strings ["", "", ...]
-    
-    linkString = parts[Column.Link].split(")")
+
+    linktexts = parts[Column.Link]
+    if (linktexts == ""):
+        return zip(parts, links)    # no links, just return
+
+    linkString = parts[Column.Link].rstrip("}").split("}")
     for indexWithLink in linkString:
-        kv = indexWithLink[1:].split("](")
+        kv = indexWithLink[1:].split("]{")
         if len(kv) == 2:
             links[int(kv[0])] = kv[1]
-
+        else:
+            eprint("PYTHON ERROR: assumed we would get a key/value pair, got ", kv)
+            sys.exit(1)
     return zip(parts, links)
 
-# add a summary of nr of issues per rule
-# move the recipients out of git?
 
-def createHtmlReport(lines):
+def createHtmlReport(lines, count):
+    displayLines = lines[:count]
 
     f = sys.stdout
     f.write(r'<!DOCTYPE html><html lang="en">')
     f.write(getHtmlStyles())
     f.write(r'<body>')
-    f.write(r'<h2>Software Quality Report for ' + get_report_id() + '</h2>')
-    f.write(str(len(lines)) + r' issues were found relevant for this report')
+    f.write(str(len(lines)) + r' issues were found relevant for this Software Quality Report (SQR)')
     f.write(r'<br/><a href="' + getWikiMainUrl() + '">Open-canary Wiki page</a>')
     f.write(r'<br/><a href="' + get_job_url() + '">The CI job that generated this report</a>')
+    f.write(r'<h2>SQR for: ' + get_report_id() + '</h2>')
+    f.write(r'<br/>Listing ' + str(len(displayLines)) + ' out of ' + str(len(lines)) + ' issues.')
     f.write(r'<table class="blueTable">')
     f.write(r'<thead><tr>')
     f.write('<th title="Team assigned priority">Prio</th>\n')
@@ -151,11 +156,8 @@ def createHtmlReport(lines):
 
     td = '<td><div>'   # class="hideextra"
     tdend = '</div></td>\n'
-    
-    # urls for the wiki should be created in the Column.Link field in a separate tool
-    # todo: move wiki-links out of here and create two scripts to add the links to rule reference-pages and wiki-pages
 
-    for line in lines:
+    for line in displayLines:
         f.write('<tr>')
         parts = stripSqlEscaping(line.strip().split("|"))
         linkMap = getLinkMap(parts)
@@ -165,11 +167,7 @@ def createHtmlReport(lines):
             if not link == "":
                 f.write(td + r'<a href="' + link + '">' + value + '</a>' + tdend)
             else:
-                if index == Column.Rule:
-                    rule = value.replace("#", "_")
-                    f.write(td + r'<a href="' + getWikiUrl(rule) + '">' + value + '</a>' + tdend)
-                else:
-                    f.write(td + value + tdend)
+                f.write(td + value + tdend)
             index = index + 1
         f.write('</tr>\n')
 
@@ -177,8 +175,8 @@ def createHtmlReport(lines):
     f.write('</body></html>\n')
     f.close()
 
-def showUsage():
-    eprint("Usage: type <foo> | " + os.path.basename(__file__) + " <env.txt>")
+def show_usage():
+    eprint("Usage: type <foo> | " + os.path.basename(__file__) + " <env.txt> [/all]")
     eprint(r"  <env.txt> file containing CI environment variables")
     eprint("   create an html report from a opencanary-formatted CSV input")
     eprint("   opencanary-format: " )
@@ -186,25 +184,29 @@ def showUsage():
     eprint("   see also: https://github.com/janwilmans/OpenCanary")
 
 def main():
-    if not len(sys.argv) == 2:
+    if len(sys.argv) < 2:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     read_envfile(sys.argv[1])
     issues = []
     for raw in sys.stdin:
         issues += [raw]
-    createHtmlReport(issues)
+        
+    if len(sys.argv) > 2:
+        createHtmlReport(issues, len(issues))
+    else:
+        createHtmlReport(issues, 50)
 
 if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        pass
+        raise
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)
 
