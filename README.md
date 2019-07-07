@@ -37,6 +37,9 @@ that way issues are clustered per-file as good as possible.
 * description - actual message the was reported
 * link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.)
 
+## category and rule 
+Its important the rule is specific enough to advice can be offered on how to handle a particular issue. This is because the rule is what makes links to the Wiki pages unique. Conversely the category must be broad enough to group silimar issues together, but typically only issues with the same priority. However, the latter is not strictly required, specfic rules _can_ have a different priority from their category. 
+
 ## links
 The links are intended to be combined in the report in such a way that when the value in 'priority' is clicked, it is linking to the url in [0]{url} etc. This way any tool can add custom links into the report.
 
