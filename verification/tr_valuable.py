@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
-"""Filter third party warnings
+""" filter out what are not errors, but the team should ignore (unmaintained code for example)
+assign priorities according to the teams judgement
+the result of this yields a prioritized work-list for the team
 """
 
 import traceback, sys, os
 from util import *
 
+reported_issues = 0
+
+def write_issue(line):
+    global reported_issues
+    reported_issues = reported_issues + 1
+    sys.stdout.write(line)
+
 
 def filter(line):
     if "external/" in line:
         return
-    sys.stdout.write(line)
+    write_issue(line)
 
 
 def filterAndNormalizeMsvc(line):
@@ -20,29 +29,28 @@ def filterAndNormalizeMsvc(line):
         return
     if "D9025" in result:
         return
-    sys.stdout.write(result)
+    write_issue(result)
 
 
 def showUsage():
-    eprint("Usage: " + os.path.basename(__file__) + " [/msvc]")
-    eprint("   will filter all lines from 3rd party as hardcoded by you in this script")
-    eprint(r"   /msvc  - also ignore messages from MSVC system headers and normalize paths, replacing \ with /")
+    eprint("Usage: <input> | " + os.path.basename(__file__))
+    eprint("   The 'valuable' transformation will yields only issues considered valuable to solve by the team")
 
 
 def main():
-    if len(sys.argv) < 2:
-        for line in sys.stdin:
-            filter(line)
-        sys.exit(0)
+    global reported_issues
 
-    if len(sys.argv) == 2 and sys.argv[1] == "/msvc":
-        for line in sys.stdin:
-            filterAndNormalizeMsvc(line)
-        sys.exit(0)
+    if len(sys.argv) != 1:
+        eprint("error: invalid argument(s)\n")
+        showUsage()
+        sys.exit(1)
 
-    eprint("error: invalid argument(s)\n")
-    showUsage()
-    sys.exit(1)
+    for line in sys.stdin:
+         filter(line)
+
+    if reported_issues > 0:
+        sys.exit(1)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Filter third party warnings
+"""include all categories that should currently have zero issues
+exclude all projects that do not comply yet
+any issues that pass this filter fail the build
 """
 
 import traceback, sys, os
@@ -24,25 +26,19 @@ def filterAndNormalizeMsvc(line):
 
 
 def showUsage():
-    eprint("Usage: " + os.path.basename(__file__) + " [/msvc]")
-    eprint("   will filter all lines from 3rd party as hardcoded by you in this script")
-    eprint(r"   /msvc  - also ignore messages from MSVC system headers and normalize paths, replacing \ with /")
+    eprint("Usage: <input> | " + os.path.basename(__file__))
+    eprint("   When the 'regression' transformation yields any results new issues have be introduced and the build should fail!")
 
 
 def main():
-    if len(sys.argv) < 2:
-        for line in sys.stdin:
-            filter(line)
-        sys.exit(0)
+    if len(sys.argv) != 1:
+        eprint("error: invalid argument(s)\n")
+        showUsage()
+        sys.exit(1)
 
-    if len(sys.argv) == 2 and sys.argv[1] == "/msvc":
-        for line in sys.stdin:
-            filterAndNormalizeMsvc(line)
-        sys.exit(0)
-
-    eprint("error: invalid argument(s)\n")
-    showUsage()
-    sys.exit(1)
+    for line in sys.stdin:
+        filter(line)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
