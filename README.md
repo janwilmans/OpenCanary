@@ -43,8 +43,8 @@ Its important the rule is specific enough to advice can be offered on how to han
 ## links
 The links are intended to be combined in the report in such a way that when the value in 'priority' is clicked, it is linking to the url in [0]{url} etc. This way any tool can add custom links into the report.
 
-## Filter
-- Pre-filter: optionally remove non-team issue (doing this first prevent unneeded work in following steps) 
+## Transformations 
+- Pre-filter: optional step; remove non-team issues (doing this first prevent unneeded work in following steps) 
 - Interest
   - filter out false positives, tooling errors and 3rd party paths
 - Valuable
