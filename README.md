@@ -20,7 +20,7 @@ The process works in a couple of steps that are executed as post-build steps as 
 Parse all warnings/issues into a single comma-separated format. Actually | - pipe separated seems to work good, because semicolons (;) and comma (,) are sometimes used in messages.
 
 format:
-`priority | team | component | file | source | category | rule | description | link`
+`priority | team | component | fileref | source | category | rule | description | [n]{url}[n]{url}... `
 
 where columns category -> rule -> description are in ordered from coarse to fine
 and the lines are ordered in order of priority first, and second in order of file(name)
@@ -29,13 +29,16 @@ that way issues are clustered per-file as good as possible.
 * priority - team assigned priority
 * team - name of the team responsible
 * component - name of the component the issue is associated to 
-* file - file + linenumber  "/path/foo:14"
+* fileref - file + linenumber "/path/foo:14" with optional columnnumber "/path/foo:14:35"
 * source - the tools that produced the issue (gcc/coverage, cppcheck/opencanary,ubsan,etc.)
 * category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
 * *wiki* - wiki link to gather typical solving strategies, note: generated from 'rule' 
 * description - actual message the was reported
-* link - tool specific reference link (for example to an external issue tracker or the source tool web interface)
+* link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.)
+
+## links
+The links are intended to be combined in the report in such a way that when the value in 'priority' is clicked, it is linking to the url in [0]{url} etc. This way any tool can add custom links into the report.
 
 ## Filter
 - Pre-filter: optionally remove non-team issue (doing this first prevent unneeded work in following steps) 
