@@ -52,8 +52,7 @@ The links are intended to be combined in the report in such a way that when the 
   - assign priorities according to the teams judgement
   - **the result of this yields a prioritized work-list for the team**
 - Regression
-  - include all categories that should currently have zero issues
-  - exclude all projects that do not comply yet
+   - exclude all projects or categories of issues that are not at zero yet
   - **any issues that pass this filter fail the build**
 
 
