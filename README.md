@@ -59,7 +59,7 @@ The links are intended to be combined in the report in such a way that when the 
 tricks for finding high-priority issues
 - three (or more) consecutive lines with the same error
 - the same class name mentioned more then three times
-- assert(pointer); to detect null-pointers will prevent crash and cause a hanging process?
+- assert(pointer); to detect null-pointers will prevent crash and cause a hang that delays CI tests
 
 ## Failure is an option
 
