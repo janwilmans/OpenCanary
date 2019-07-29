@@ -61,7 +61,7 @@ def split_warning_line(line):
 
 
 def parse(line):
-    rule = "warning"
+    rule = "rule-missing"
     category = "warning"
     if "this will be reported only once per input file" in line:
         return
@@ -75,6 +75,12 @@ def parse(line):
         if description.startswith("command line"):
             rule = "cmdline"
             component = "compiler"
+
+        rule_parts = description.split("[-W")
+        if len(rule_parts) > 1:
+            description = rule_parts[0]
+            rule = rule_parts[-1].rstrip("]")
+
         report_issue(fileref, filename, line, rule, description, component, category)
 
 

@@ -11,11 +11,10 @@ from util import *
 def MakeTuple(line):
     data = line.split("|")
     
-    # sort the first colomn by its integer-representation
+    # sort the first colomn by its integer-representation, colomn[0] (prio) and colomn[3] (filename)
     return int(data[0]), data[3]
 
 
-# we should sort numerically by colomn 1 (prio) and then textually by colomn 4 (filename)
 def SortBy(inputlines):
     return sorted(inputlines, key=MakeTuple)
 

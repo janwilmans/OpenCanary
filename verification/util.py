@@ -22,6 +22,18 @@ def on_ci_server():
     return "CI_SERVER" in os.environ
 
 
+def is_scheduled_build():
+    if "CI_PIPELINE_SOURCE" in os.environ:
+        return "schedule" in os.environ["CI_PIPELINE_SOURCE"]
+    return False
+
+
+def is_part_of_project(name):
+    if "CI_PROJECT_PATH" in os.environ:
+        return name in os.environ["CI_PROJECT_PATH"]
+    return False
+
+
 def normpath(pathstr):
     # os.path.normpath cant be used here, as it would convert the / back to \ on windows.
     return pathstr.replace("\\", r"/").rstrip("/")
@@ -71,6 +83,25 @@ def report(priority, team, component, filename, source, rule, category, descript
     s = "|"  # csv separator
     sprint(
         s.join([str(priority), team, component, filename, source, rule, category, description, link]))
+
+def stripSqlEscapingWord(word):
+    result = word
+    if word.startswith('b"'):
+        result = word[1:]
+    if word.startswith("b'"):
+        result = word[1:]
+    return result.strip('"').strip("'")
+
+
+def stripSqlEscaping(line):
+    result = []
+    for word in line:
+        result += [stripSqlEscapingWord(word)]
+    return result
+
+
+def readIssuesParts(line):
+    return stripSqlEscaping(line.strip().split("|"))
 
 
 class KeyNotInEnvironmentFile:

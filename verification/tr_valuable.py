@@ -7,30 +7,24 @@ the result of this yields a prioritized work-list for the team
 import traceback, sys, os
 from util import *
 
-reported_issues = 0
+categoryMap = {}    # rule -> category
 
-def write_issue(line):
-    global reported_issues
-    reported_issues = reported_issues + 1
-    sys.stdout.write(line)
+categoryMap.update('C4838', 'conversions')
+categoryMap.update('C4312', 'conversions')
 
+def filter(linetext):
+    line = splitline(linetext)
 
-def filter(line):
-    if "external/" in line:
-        return
-    write_issue(line)
+    # add filters here for what the team should ignore / currently has no focus
+    
+    # categorize issues here
+    v = categoryMap.get(line[Column.Rule], None)
+    if v is not None:
+        line[Column.Category] = v
+    
+    # prioritize issues here
 
-
-def filterAndNormalizeMsvc(line):
-    result = line.replace('\\', '/')
-    if "external/" in result:
-        return
-    if "/MSVC/" in result:
-        return
-    if "D9025" in result:
-        return
-    write_issue(result)
-
+    sys.stdout.write(joinline(line))
 
 def showUsage():
     eprint("Usage: <input> | " + os.path.basename(__file__))
@@ -47,10 +41,6 @@ def main():
 
     for line in sys.stdin:
          filter(line)
-
-    if reported_issues > 0:
-        sys.exit(1)
-    sys.exit(0)
 
 
 if __name__ == "__main__":

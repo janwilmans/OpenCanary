@@ -3,6 +3,7 @@
 """
 
 import traceback, sys, os, time
+from subprocess import Popen, PIPE
 
 import email, smtplib
 
@@ -28,11 +29,57 @@ def CreateBinaryPayload(content, ctype, filename = ''):
         img.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(filename))
     return img
 
+
+def execute_popen(list):
+    sub_process = Popen(list,  stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    (std_out, std_err) = sub_process.communicate()
+    sub_process.wait()
+    exitcode = sub_process.returncode
+    return std_out, std_err, exitcode
+
+def getRecentEditors():
+    list = ['git', 'log', '--since', '2.week']
+    stdout, stderr, returncode =  execute_popen(list)
+    result = []
+    for line in set(stdout.splitlines()):
+        if 'Author:' in line:
+            parts = line.replace(">", "").split("<")
+            if len(parts) == 2:
+                result += [parts[1]]
+    return result
+
+def filterList(editors):
+    auto_send_authors = ["firstname1.lastname1", "firstname2.lastname2"]
+    result = []
+    for item in editors:
+        for author in auto_send_authors:
+            if author in item:
+                result += [item]
+    return result
+
+def listContains(list, name):
+    for item in list:
+        if name in item:
+            return True
+    return False
+
 def sendReport(bodyfile, attachments = []):
     global recipients
-    # send to admin only for testing 
+
+    recipients = filterList(getRecentEditors())
+    if len(recipients) < 1:
+        recipients = ["some@email.address.com"]
+
+    if is_scheduled_build():
+        recipients = ["some1@email.address.com"]
+
+    if is_part_of_project("tin"):
+        recipients = ["some3@email.address.com"]
+
     if not on_ci_server():
-         recipients = ["jan.wilmans@kindtechnologies.nl"]
+        # send to admin only for testing
+        recipients = ["someadmin@email.address.com"]
+
 
     # Create a multipart message and set headers
     message = MIMEMultipart()
@@ -74,8 +121,9 @@ def sendReport(bodyfile, attachments = []):
     if len(login_password) > 0:
         server.login(login_name, login_password)
     try:
+        sprint("Sending email [" + subject + "] to", recipients)
         server.sendmail(sender_email, recipients, message.as_string())
-        sprint("Email [" + subject + "] was send to", recipients)
+        sprint("Done.")
         server.quit()
     except smtplib.SMTPRecipientsRefused as ex:
         sprint("Email [" + subject + "] was NOT send, exception caught:", getattr(ex, 'message', repr(ex)))

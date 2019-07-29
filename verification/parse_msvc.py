@@ -2,12 +2,12 @@
 """Parse warnings and error messages from MSVC
 """
 
-import traceback, sys, os
+import traceback, sys, os, pathlib
 from util import *
 
 def create_default_link(filename, line):
     project_relative_filename = remove_project_path(filename)
-    if project_relative_filename.startswith("C:/"):
+    if project_relative_filename.lower().startswith("c:/"):
         return ""
 
     url = urljoin(get_git_url(), "/blob/master", project_relative_filename)
@@ -31,6 +31,12 @@ def report_issue(fileref, filename, line, rule, description, component, category
     report(10, "tin", component, fileref, "msvc", rule, category, description, links)
 
 
+# this gets the filename as it is actually stored on the filesystem, with correct capitalization
+def get_real_filename(filename):
+    fs_filename = str(pathlib.Path(filename).resolve())
+    return fs_filename.replace('\\', '/')
+
+
 def split_warning_line(line):
     parts = line.split(": warning ")
     filepart = parts[0]
@@ -41,7 +47,7 @@ def split_warning_line(line):
     component = ""
 
     lastbrace = filepart.rfind("(")
-    filename = filepart[:lastbrace]
+    filename = get_real_filename(filepart[:lastbrace])
     remaining = filepart[lastbrace:]
     parts = remaining.rstrip().rstrip(")")
     line = parts.split(",")[0][1:]
@@ -59,6 +65,9 @@ def split_message_line(line):
 
 
 def parse_msvc(line):
+    if line.startswith(" "): # strip out notes
+        return
+
     if ": message" in line:
         # message lines sometimes seem to contain ": warning", this seem to be caused by compilers writing interleaved to stdout ??
         return
@@ -100,8 +109,7 @@ def main():
     if len(sys.argv) > 2:
         sys.stdin = open(sys.argv[2], 'r')
 
-    for raw in sys.stdin:
-        line = raw.strip()
+    for line in sys.stdin:
         parse_msvc(line)
 
 

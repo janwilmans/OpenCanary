@@ -86,23 +86,10 @@ table.blueTable tfoot .links a{
 </head>"""
 
 
-def stripSqlEscapingWord(word):
-    result = word
-    if word.startswith('b"'):
-        result = word[1:]
-    if word.startswith("b'"):
-        result = word[1:]
-    return result.strip('"').strip("'")
-
-def stripSqlEscaping(line):
-    result = []
-    for word in line:
-        result += [stripSqlEscapingWord(word)]
-    return result
-    
 def hasIndex(list, column):
     return len(list) > column
-    
+
+
 def getPart(list, column):
     if not hasIndex(list, column):
         return "<missing " + str(column) + ">" 
@@ -159,7 +146,7 @@ def createHtmlReport(lines, count):
 
     for line in displayLines:
         f.write('<tr>')
-        parts = stripSqlEscaping(line.strip().split("|"))
+        parts = readIssuesParts(line)
         linkMap = getLinkMap(parts)
         
         index = 0

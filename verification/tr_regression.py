@@ -5,24 +5,45 @@ any issues that pass this filter fail the build
 """
 
 import traceback, sys, os
-from util import *
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 
-def filter(line):
-    if "external/" in line:
-        return
-    sys.stdout.write(line)
+def sprint(*args, **kwargs):
+    print(*args, file=sys.stdout, **kwargs)
 
 
-def filterAndNormalizeMsvc(line):
-    result = line.replace('\\', '/')
-    if "external/" in result:
-        return
-    if "/MSVC/" in result:
-        return
-    if "D9025" in result:
-        return
-    sys.stdout.write(result)
+def filter():
+    results = []
+    for line in sys.stdin:
+        # filter out all issues that currently exist, so we know when to fail the build (when new issues are introduced)
+        if "format-extra-args" in line:
+            continue
+        if "format=" in line:
+            continue
+        if "ignored-qualifiers" in line:
+            continue
+        if "missing-field-initializers" in line:
+            continue
+        if "overflow" in line:
+            continue
+        if "rule-missing" in line:
+            continue
+        if "sign-compare" in line:
+            continue
+        if "unused-but-set-variable" in line:
+            continue
+        if "unused-function" in line:
+            continue
+        if "unused-parameter" in line:
+            continue
+        if "vla" in line:
+            continue
+        if "write-strings" in line:
+            continue
+        results += [line]
+    return results
 
 
 def showUsage():
@@ -36,8 +57,13 @@ def main():
         showUsage()
         sys.exit(1)
 
-    for line in sys.stdin:
-        filter(line)
+    regression_issues = filter()
+
+    if len(regression_issues) > 0:
+        eprint(len(regression_issues), "new issue(s) where introduced!\n")
+        for line in regression_issues:
+            sprint(line.strip())
+        sys.exit(1)
     sys.exit(0)
 
 
