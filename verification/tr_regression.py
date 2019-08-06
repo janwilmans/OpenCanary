@@ -46,7 +46,7 @@ def filter():
     return results
 
 
-def showUsage():
+def show_usage():
     eprint("Usage: <input> | " + os.path.basename(__file__))
     eprint("   When the 'regression' transformation yields any results new issues have be introduced and the build should fail!")
 
@@ -54,7 +54,7 @@ def showUsage():
 def main():
     if len(sys.argv) != 1:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     regression_issues = filter()
@@ -75,5 +75,5 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)

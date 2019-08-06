@@ -28,12 +28,29 @@ def report_issue(fileref, filename, line, rule, description, component, category
 
     fileref = remove_build_path(fileref)
     description = remove_build_path(description)
-    report(10, "tin", component, fileref, "msvc", rule, category, description, links)
+    report(50, "tin", component, fileref, "msvc", rule, category, description, links)
+
+
+def could_not_resolve(filename):
+    lower_filename = filename.lower()
+    if lower_filename.endswith(".obj"):
+        return
+    if lower_filename.endswith(".lib"):
+        return
+    eprint("--- Could not resolve:")
+    eprint("File: '" + filename + "'")
+    eprint("---")
 
 
 # this gets the filename as it is actually stored on the filesystem, with correct capitalization
 def get_real_filename(filename):
-    fs_filename = str(pathlib.Path(filename).resolve())
+    if not on_ci_server():
+        return filename
+    fs_filename = filename
+    if os.path.isfile(filename):
+        fs_filename = str(pathlib.Path(filename).resolve())
+    else:
+        could_not_resolve(filename)
     return fs_filename.replace('\\', '/')
 
 
@@ -67,10 +84,14 @@ def split_message_line(line):
 def parse_msvc(line):
     if line.startswith(" "): # strip out notes
         return
-
     if ": message" in line:
         # message lines sometimes seem to contain ": warning", this seem to be caused by compilers writing interleaved to stdout ??
         return
+
+    line = line.strip()
+
+    if ": error" in line:
+        eprint("-- error found:" + line)
     if ": warning" in line:
         fileref, filename, line, rule, description, component = split_warning_line(line)
         report_issue(fileref, filename, line, rule, description, component, "warning")

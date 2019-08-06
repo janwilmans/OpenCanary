@@ -128,7 +128,7 @@ def sendReport(bodyfile, attachments = []):
     except smtplib.SMTPRecipientsRefused as ex:
         sprint("Email [" + subject + "] was NOT send, exception caught:", getattr(ex, 'message', repr(ex)))
 
-def showUsage():
+def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " <bodyfile> <attachments...> [-s <subject>]")
     eprint("   will send an email to hardcoded recipients ")
 
@@ -136,7 +136,7 @@ def main():
     global subject
     if len(sys.argv) < 2:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     att = []
@@ -164,6 +164,6 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)
 

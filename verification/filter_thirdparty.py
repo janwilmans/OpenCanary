@@ -5,20 +5,20 @@
 import traceback, sys, os
 from util import *
 
-
 def filter(line):
     if "external/" in line:
         return
     sys.stdout.write(line)
 
 
-def filterAndNormalizeMsvc(line):
+def filter_and_normalize_msvc(line):
     result = line.replace('\\', '/')
-    if "external/" in result:
+    result_lower = result.lower()
+    if "external/" in result_lower:
         return
-    if "/MSVC/" in result:
+    if "/msvc/" in result_lower:
         return
-    if "D9025" in result:
+    if "/sdk/" in result_lower[:20]:
         return
     sys.stdout.write(result)
 
@@ -37,7 +37,7 @@ def main():
 
     if len(sys.argv) == 2 and sys.argv[1] == "/msvc":
         for line in sys.stdin:
-            filterAndNormalizeMsvc(line)
+            filter_and_normalize_msvc(line)
         sys.exit(0)
 
     eprint("error: invalid argument(s)\n")

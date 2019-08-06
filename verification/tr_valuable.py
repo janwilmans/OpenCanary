@@ -26,7 +26,7 @@ def filter(linetext):
 
     sys.stdout.write(joinline(line))
 
-def showUsage():
+def show_usage():
     eprint("Usage: <input> | " + os.path.basename(__file__))
     eprint("   The 'valuable' transformation will yields only issues considered valuable to solve by the team")
 
@@ -36,7 +36,7 @@ def main():
 
     if len(sys.argv) != 1:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     for line in sys.stdin:
@@ -51,5 +51,5 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)

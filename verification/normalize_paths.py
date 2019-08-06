@@ -6,14 +6,14 @@
 import traceback, sys, os
 from util import *
 
-def showUsage():
+def show_usage():
     eprint("Usage: type <foo> | " + os.path.basename(__file__))
     eprint("   all \\ will be replaced with /")
 
 def main():
     if len(sys.argv) > 1:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     for raw in sys.stdin:
@@ -28,5 +28,5 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)

@@ -30,7 +30,7 @@ def is_scheduled_build():
 
 def is_part_of_project(name):
     if "CI_PROJECT_PATH" in os.environ:
-        return name in os.environ["CI_PROJECT_PATH"]
+        return name.lower() in os.environ["CI_PROJECT_PATH"].lower()
     return False
 
 
@@ -51,7 +51,10 @@ def get_project_dir():
 
 # returns projects GIT url _without_ trailing /
 def get_git_url():
-    return normpath(get_from_envfile('CI_PROJECT_URL'))
+    if on_ci_server():
+        return normpath(get_from_envfile('CI_PROJECT_URL'))
+    else:
+        return "local_dummy"
 
 
 # returns projects JOB url _without_ trailing /
@@ -63,11 +66,18 @@ def get_user_email():
     return get_from_envfile('GITLAB_USER_EMAIL')
 
 
-def get_report_id():
-    return get_from_envfile('CI_COMMIT_TITLE')
+def get_user_name():
+    if is_scheduled_build():
+        return "Scheduled build"
+    return get_from_envfile('GITLAB_USER_NAME')
 
-def get_subject_postfix():
-    return get_from_envfile('CI_COMMIT_TITLE')
+
+def get_last_commit():
+    return get_from_envfile('CI_COMMIT_MESSAGE')
+
+
+def get_report_id():
+    return get_from_envfile('CI_BUILD_REF_NAME')
 
 
 def remove_project_path(pathstr):
@@ -78,11 +88,18 @@ def remove_build_path(pathstr):
     parent = os.path.dirname(get_project_dir())
     return replace_no_case(pathstr, parent, "")
 
+def join_report_line(parts):
+    s = "|"  # csv separator
+    return s.join(parts)
+
 
 def report(priority, team, component, filename, source, rule, category, description, link):
-    s = "|"  # csv separator
-    sprint(
-        s.join([str(priority), team, component, filename, source, rule, category, description, link]))
+    sprint(join_report_line([str(priority), team, component, filename, source, rule, category, description, link]))
+
+
+def reportList(list):
+    sprint(join_report_line(list))
+
 
 def stripSqlEscapingWord(word):
     result = word

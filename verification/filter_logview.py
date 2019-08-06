@@ -14,7 +14,7 @@ def filter(line):
     sys.stdout.write(line)
 
 
-def showUsage():
+def show_usage():
     eprint("Usage: " + os.path.basename(__file__))
     eprint("   will filter lines as hardcoded by you in this script")
 
@@ -26,7 +26,7 @@ def main():
         sys.exit(0)
 
     eprint("error: invalid argument(s)\n")
-    showUsage()
+    show_usage()
     sys.exit(1)
 
 
@@ -38,5 +38,5 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)

@@ -52,6 +52,8 @@ def run_cppcheck(path):
 def run_cppcheck_compile_db():
     list = [cppcheck_cmd, '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
             '--enable=all', '--project=build_cppcheck/compile_commands.json']
+    if os.path.exists( './suppressions.xml'):
+       list +=[ '--suppress-xml=./suppressions.xml']
     return execute_popen(list)
 
 def execute_popen(list):

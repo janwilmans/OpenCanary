@@ -13,7 +13,7 @@ def removetoken(line, tokens):
         result = pattern.sub('', result)
     return result
 
-def showUsage():
+def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " <token> <token...>")
     eprint("   <token> will be stripped from the data send to stdin")
 
@@ -21,7 +21,7 @@ def main():
 
     if len(sys.argv) < 2:
         eprint("error: missing argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     for raw in sys.stdin:

@@ -154,14 +154,14 @@ def getProjectsRecursively(path):
 def scriptName():
     return __file__.split(os.sep)[-1:][0]
 
-def showUsage():
+def show_usage():
     eprint("Usage: " + scriptName() + " <path>")
     eprint("   path: location to search for c++ sources recursively")
 
 def main():
     if not len(sys.argv) == 2:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     try:
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)
 
 	

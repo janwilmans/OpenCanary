@@ -150,7 +150,7 @@ def getProjectsRecursively(path):
     return result
 
 
-def showUsage():
+def show_usage():
     eprint(r"Usage: " + os.path.basename(__file__) + " <path>")
     eprint(r"  <path>: location to search for c++ sources recursively")
 
@@ -158,7 +158,7 @@ def showUsage():
 def main():
     if not len(sys.argv) == 2:
         eprint("error: invalid argument(s)\n")
-        showUsage()
+        show_usage()
         sys.exit(1)
 
     eprint("checking folder (recursively) " + sys.argv[1])
@@ -198,5 +198,5 @@ if __name__ == "__main__":
     except:
         info = traceback.format_exc()
         eprint(info)
-        showUsage()
+        show_usage()
         sys.exit(1)
