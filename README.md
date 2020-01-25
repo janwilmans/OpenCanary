@@ -69,3 +69,7 @@ tricks for finding high-priority issues
 
 - send out nightly emails with a report showing the prioritized list of issues
 
+# References
+
+- https://github.com/mherrmann/gitignore_parser
+
