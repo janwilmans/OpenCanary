@@ -87,6 +87,7 @@ def remove_project_path(pathstr):
 def remove_build_path(pathstr):
     parent = os.path.dirname(get_project_dir())
     return replace_no_case(pathstr, parent, "")
+    
 
 def join_report_line(parts):
     s = "|"  # csv separator
@@ -156,19 +157,6 @@ def find_nth(string, substring, n):
         return string.find(substring)
     else:
         return string.find(substring, find_nth(string, substring, n - 1) + 1)
-
-
-# _Issue_XXX_NN will be concatenated for issues specific pages
-# _Issues will be concatenated for the overview page
-wiki_url_prefix = "https://wiki.kindtechnologies.nl/wiki/index.php?title=OpenCanary"
-
-
-def getWikiUrl(issueId):
-    return wiki_url_prefix + "_Issue_" + issueId
-
-
-def getWikiMainUrl():
-    return wiki_url_prefix + "_Issues"
 
 
 def getFeelingDuckyUrl(term):

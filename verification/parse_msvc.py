@@ -10,7 +10,7 @@ def create_default_link(filename, line):
     if project_relative_filename.lower().startswith("c:/"):
         return ""
 
-    url = urljoin(get_git_url(), "/blob/master", project_relative_filename)
+    url = urljoin("[[permalink-prefix]]", project_relative_filename)
     links = create_link(3, url)
 
     # check for positive line number
@@ -19,16 +19,62 @@ def create_default_link(filename, line):
     return links
 
 
+def get_priority(rule):
+    if "C4100" in rule:
+        return 70
+    if "C4127" in rule:
+        return 15
+    if "C4211" in rule:
+        return 20
+    if "C4239" in rule:
+        return 20
+    if "C4244" in rule:
+        return 40
+    if "C4245" in rule:
+        return 50
+    if "C4310" in rule:
+        return 15
+    if "C4324" in rule:
+        return 20
+    if "C4389" in rule:
+        return 50
+    if "C4456" in rule:
+        return 10
+    if "C4457" in rule:
+        return 10
+    if "C4458" in rule:
+        return 10
+    if "C4499" in rule:
+        return 55
+    if "C4505" in rule:
+        return 60
+    if "C4611" in rule:
+        return 60
+    if "C4505" in rule:
+        return 60
+    if "C4611" in rule:
+        return 20
+    if "C4701" in rule:
+        return 16
+    if "C4706" in rule:
+        return 30
+    if "C4714" in rule:
+        return 17
+    if "C4918" in rule:
+        return 5
+    # prime number 3 means: no specific priority assigned
+    return 3
+
 def report_issue(fileref, filename, line, rule, description, component, category):
     links = create_default_link(filename, line)
     if not rule == "":
-        links += create_link(5, getFeelingDuckyUrl(rule))
+        links += create_link(5, get_feeling_ducky_url(rule))
 
-    links += create_link(6, getWikiUrl(rule.replace("#", "_")))
+    links += create_link(6, "[[wiki-issue-prefix]]" + rule.replace("#", "_"))
 
     fileref = remove_build_path(fileref)
     description = remove_build_path(description)
-    report(50, "tin", component, fileref, "msvc", rule, category, description, links)
+    report(get_priority(rule), "tin", component, fileref, "msvc", rule, category, description, links)
 
 
 def could_not_resolve(filename):
@@ -37,9 +83,7 @@ def could_not_resolve(filename):
         return
     if lower_filename.endswith(".lib"):
         return
-    eprint("--- Could not resolve:")
-    eprint("File: '" + filename + "'")
-    eprint("---")
+    eprint("--- Could not resolve:", filename, "(can be ignored when running without source files present)")
 
 
 # this gets the filename as it is actually stored on the filesystem, with correct capitalization
@@ -87,6 +131,9 @@ def parse_msvc(line):
     if ": message" in line:
         # message lines sometimes seem to contain ": warning", this seem to be caused by compilers writing interleaved to stdout ??
         return
+    if "class template optional is only available with C++17 or later." in line:
+        # workaround bug where this warning is falsely reported on an unrelated line
+        return 
 
     line = line.strip()
 
@@ -110,8 +157,10 @@ def parse_msvc(line):
         report_issue(filename, filename, 0, s[0].strip(), s[1].strip(), "compiler", "cmdline")
         return
 
-
 def show_usage():
+    if len(sys.argv) > 1:
+        eprint("  I got:", sys.argv)
+        eprint("")
     eprint(r"Usage: type <filename> | " + os.path.basename(__file__) + " <env.txt> [<inputfile>]")
     eprint(r"  <env.txt> file containing CI environment variables")
     eprint(r"  <inputfile> if the second argument is omitted stdin is used")
@@ -120,7 +169,7 @@ def show_usage():
 def main():
     # only used for debugging
     if len(sys.argv) < 2:
-        eprint("error: invalid argument(s)\n")
+        eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
@@ -137,7 +186,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except SystemExit:
+    except (KeyboardInterrupt, SystemExit):
         raise
     except:
         info = traceback.format_exc()

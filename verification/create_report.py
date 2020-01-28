@@ -9,10 +9,13 @@ from util import *
 # see https://divtable.com/table-styler/
 # see https://validator.w3.org/nu/#textarea
 # see https://validator.github.io/validator/ (integrate into build as a test)
+
+# use https://jinja.palletsprojects.com/en/2.10.x/ for html generation
+
 def getHtmlStyles():
     return """
-    <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Issue report</title>
 <style>
 body { font-family: Calibri, Arial;}
@@ -111,7 +114,7 @@ def getLinkMap(parts):
         if len(kv) == 2:
             links[int(kv[0])] = kv[1]
         else:
-            eprint("PYTHON ERROR: assumed we would get a key/value pair, got ", kv)
+            eprint("REPORT ERROR: assumed we would get a key/value pair, got ", kv)
             sys.exit(1)
     return zip(parts, links)
 
@@ -124,10 +127,10 @@ def createHtmlReport(lines, count):
     f.write(getHtmlStyles())
     f.write(r'<body>')
     f.write(str(len(lines)) + r' issues were found relevant for this Software Quality Report (SQR)')
-    f.write(r'<br/><a href="' + getWikiMainUrl() + '">Open-canary Wiki page</a>')
-    f.write(r'<br/><a href="' + get_job_url() + '">The CI job that generated this report</a>')
-    f.write(r'<h2>SQR for branch: "' + get_report_id() + '" on behalf of ' + get_user_name() + '</h2>')
-    f.write(r'Last commit message: ' + get_last_commit() + '<br/>')
+    f.write(r'<br/><a href="[[wiki-url]]">Open-canary Wiki page</a>')
+    f.write(r'<br/><a href="[[job-url]]">The CI job that generated this report</a>')
+    f.write(r'<h2>SQR for branch: "[[branch-id]]" on behalf of [[user-name]]</h2>')
+    f.write(r'Last commit message: [[commit-message]]<br/>')
     f.write(r'Listing ' + str(len(displayLines)) + ' out of ' + str(len(lines)) + ' issues.')
     f.write(r'<table class="blueTable">')
     f.write(r'<thead><tr>')
@@ -163,38 +166,48 @@ def createHtmlReport(lines, count):
     f.write('</body></html>\n')
     f.close()
 
+
 def show_usage():
-    eprint("Usage: type <foo> | " + os.path.basename(__file__) + " <env.txt> [/all]")
-    eprint(r"  <env.txt> file containing CI environment variables")
-    eprint("   create an html report from a opencanary-formatted CSV input")
+    if len(sys.argv) > 1:
+        eprint("  I got:", sys.argv)
+        eprint("")
+    eprint("Usage: type <foo> | " + os.path.basename(__file__) + " [/limit=N]")
+    eprint("   create an html report from a opencanary-formatted CSV input, optionally limiting the output")
     eprint("   opencanary-format: " )
-    eprint("        priority|team |component|file|source|rule|category|description|link")
+    eprint("        priority|team|component|file|source|rule|category|description|link-info")
     eprint("   see also: https://github.com/janwilmans/OpenCanary")
+    eprint("")
+
 
 def main():
-    if len(sys.argv) < 2:
-        eprint("error: invalid argument(s)\n")
+
+    limit = 0
+
+    if len(sys.argv) == 2 and "/limit=" in sys.argv[1].lower():
+        limit = int(sys.argv[1].split("=")[1])
+
+    if len(sys.argv) != 1 and limit == 0:
+        eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
-    read_envfile(sys.argv[1])
     issues = []
     for raw in sys.stdin:
         issues += [raw]
         
-    if len(sys.argv) > 2:
+    if limit == 0:
         createHtmlReport(issues, len(issues))
     else:
-        createHtmlReport(issues, 50)
+        createHtmlReport(issues, limit)
+
 
 if __name__ == "__main__":
     try:
         main()
-    except SystemExit:
+    except (KeyboardInterrupt, SystemExit):
         raise
     except:
         info = traceback.format_exc()
         eprint(info)
-        show_usage()
         sys.exit(1)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" re-prioritize rules that have less then 5 issues to top-priority
+""" re-prioritize rules that have less then 5 issues to top priority
 """
 
 import traceback, sys, os
@@ -10,6 +10,7 @@ def read():
     for line in sys.stdin:
         results += [readIssuesParts(line)]
     return results
+
 
 def countRules(lines):
     results = {}
@@ -23,13 +24,16 @@ def countRules(lines):
 
 
 def show_usage():
+    if len(sys.argv) > 1:
+        eprint("  I got:", sys.argv)
+        eprint("")
     eprint("Usage: <input> | " + os.path.basename(__file__))
     eprint("   re-prioritize rules that have less then 5 issues to top-priority")
 
 
 def main():
     if len(sys.argv) != 1:
-        eprint("error: invalid argument(s)\n")
+        eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
@@ -44,13 +48,14 @@ def main():
     for line in lines:
         rule = line[Column.Rule]
         if rule in ruleSet:
-            line[Column.Prio] = "10"
+            # prime number 7 means: priority overridden automatically to solve 'low hanging fruit' first
+            line[Column.Prio] = "7"
         reportList(line)
 
 if __name__ == "__main__":
     try:
         main()
-    except SystemExit:
+    except (KeyboardInterrupt, SystemExit):
         raise
     except:
         info = traceback.format_exc()

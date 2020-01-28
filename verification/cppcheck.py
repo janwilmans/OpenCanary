@@ -17,7 +17,7 @@ def shortenPathStem(v):
 
 
 def report_issue(filename, line, rule, description, component, category):
-    links = create_link(3, get_git_url() + "/blob/master" + shortenPathStem(filename) + "#L" + str(line))
+    links = create_link(3, urljoin("[[permalink-prefix]]", shortenPathStem(filename) + "#L" + str(line)))
     if not rule == "":
         links += create_link(5, "https://duckduckgo.com/?q=!ducky+msdn+" + rule)
 

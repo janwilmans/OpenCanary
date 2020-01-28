@@ -94,6 +94,8 @@ def main():
                 outputfile.write(line)
                 process(line)
                 lastline = line
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except Exception as ex:
                 eprint("PYPE", type(ex).__name__ + ":", ex)
                 eprint("## last: ", lastline)
@@ -114,7 +116,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except SystemExit:
+    except (KeyboardInterrupt, SystemExit):
         raise
     except:
         info = traceback.format_exc()
