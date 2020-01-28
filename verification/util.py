@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-import sys, os, re
+import sys, os, re, html
 from enum import IntEnum
 from datetime import datetime
 
 # global variable used to query env.txt that is read at main()
 envfile = {}
 
+class Priority(IntEnum):
+    Unassigned = 3
 
 class Column(IntEnum):
     Prio = 0
@@ -49,14 +51,6 @@ def get_project_dir():
     return normpath(get_from_envfile('CI_PROJECT_DIR'))
 
 
-# returns projects GIT url _without_ trailing /
-def get_git_url():
-    if on_ci_server():
-        return normpath(get_from_envfile('CI_PROJECT_URL'))
-    else:
-        return "local_dummy"
-
-
 # returns projects JOB url _without_ trailing /
 def get_job_url():
     return normpath(get_from_envfile('CI_JOB_URL'))
@@ -72,30 +66,37 @@ def get_user_name():
     return get_from_envfile('GITLAB_USER_NAME')
 
 
-def get_last_commit():
-    return get_from_envfile('CI_COMMIT_MESSAGE')
+def get_commit_message():
+    return get_from_envfile('CI_COMMIT_TITLE')
 
 
-def get_report_id():
-    return get_from_envfile('CI_BUILD_REF_NAME')
+def get_branch_id():
+    return get_from_envfile('CI_BUILD_REF_NAME')    # remove get_from_envfile and move it into apply_environment.py
 
 
 def remove_project_path(pathstr):
     return replace_no_case(pathstr, get_project_dir(), "")
 
 
-def remove_build_path(pathstr):
+def remove_build_path(pathstr):                     # remove this and strip out file-prefix in apply_environment.py
     parent = os.path.dirname(get_project_dir())
     return replace_no_case(pathstr, parent, "")
-    
+
+
+def replace_pipe(parts):
+    result = []
+    for part in parts:
+        result += [part.replace("|", "[[pipe]]")]
+    return result
+
 
 def join_report_line(parts):
     s = "|"  # csv separator
-    return s.join(parts)
+    return s.join(replace_pipe(parts))
 
 
 def report(priority, team, component, filename, source, rule, category, description, link):
-    sprint(join_report_line([str(priority), team, component, filename, source, rule, category, description, link]))
+    sprint(join_report_line([str(priority), team, component, filename, source, rule, category, html.escape(description), link]))
 
 
 def reportList(list):
@@ -130,6 +131,10 @@ def get_from_envfile(key):
     return envfile.get(key, KeyNotInEnvironmentFile)
 
 
+def get_from_envfile_or(key, default_value):
+    return envfile.get(key, default_value)
+
+
 def read_envfile(filename):
     global envfile
     lines = open(filename, "r").read().splitlines()
@@ -159,7 +164,7 @@ def find_nth(string, substring, n):
         return string.find(substring, find_nth(string, substring, n - 1) + 1)
 
 
-def getFeelingDuckyUrl(term):
+def get_feeling_ducky_url(term):
     return r"https://duckduckgo.com/?q=!ducky+msdn+" + term
 
 
@@ -176,7 +181,8 @@ def urljoin(*args):
 
 def create_link(index, url):
     return "[" + str(index) + "]{" + url + "}"
-    
+
+
 def get_timestamp():
     now = datetime.now()
     return now.strftime("%H:%M:%S.%f")[:12]
