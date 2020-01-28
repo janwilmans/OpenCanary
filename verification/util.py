@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import sys, os, re, html
 from enum import IntEnum
 from datetime import datetime
@@ -19,6 +20,7 @@ class Column(IntEnum):
     Category = 6
     Description = 7
     Link = 8
+
 
 def on_ci_server():
     return "CI_SERVER" in os.environ

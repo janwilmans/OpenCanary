@@ -9,8 +9,7 @@ from util import *
 # see https://divtable.com/table-styler/
 # see https://validator.w3.org/nu/#textarea
 # see https://validator.github.io/validator/ (integrate into build as a test)
-
-# use https://jinja.palletsprojects.com/en/2.10.x/ for html generation
+# use https://jinja.palletsprojects.com/en/2.10.x/ for html generation?
 
 def getHtmlStyles():
     return """

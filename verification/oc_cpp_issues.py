@@ -4,8 +4,8 @@
 - treatwarningaserror should be true in all configurations
 - warninglevel should be 4 in all configurations
 - use std::make_unique iso custom implementations
+- see https://github.com/janwilmans/OpenCanary/issues/4
 
--
 """
 
 import traceback, sys, os, time

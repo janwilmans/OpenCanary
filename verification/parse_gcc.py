@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Parse warnings and error messages from MSVC
+"""Parse warnings and error messages from gcc (clang outputs the same format)
 """
 
 import traceback, sys, os
