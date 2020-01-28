@@ -1,5 +1,8 @@
+type vs2019_build.log | parse_msvc.py env.txt | apply_team_priorities.py | apply_low_hanging_fruit.py | sortby.py > issues.txt
+type issues.txt | create_report.py | apply_environment.py > report.html
 
-type windows_job.log | normalize_paths.py | remove_token.py "C:/gitlab-runner/builds/zjYhAg4n/0"
+or 
 
+oc_cpp_issues.py ~/project_repo | apply_team_priorities.py | apply_low_hanging_fruit.py | sortby.py > issues.txt
+type issues.txt | create_report.py | apply_environment.py > open_canary_report.html
 
-# check_cpp_issues.py .. 2>nul | normalize_paths.py | filter_thirdparty.py | create_report.py > report.html
