@@ -45,15 +45,16 @@ The links are intended to be combined in the report in such a way that when (as 
 
 ## Possible transformations 
 
-These steps are suggestions, you can design your own process flow, but this order worked well for me:
+These steps/stages are suggestions, you can design your own process flow, but this order worked well for me:
 
 - Pre-filter: optional step; remove non-team issues (doing this first prevents unneeded work in following steps) 
   - the .opencanaryignore file uses the same fnmatch() syntax that .gitignore uses, currently only oc_cpp_issues.py 
     respects these ignore rules.
-- Interest
-  - filter out false positives, tooling errors and 3rd party paths
-- Valuable
-  - filter out what are _not_ errors, but the team should ignore (unmaintained code for example) 
+- Error filter 
+  - filter out false positives, tooling errors and 3rd party paths (usually a pretty static filter, might be maintained outside the team)
+- Interest / Focus on adding value
+  - filter out what are _not_ errors, but the team should ignore (unmaintained code for example)
+  - might seem similar to the previous stage, but the difference is that these are not errors, this is about chosing an focus area.
 - Prioritize 
   - assign priorities according to the teams judgement
   - override the priorities to promote rules that have very few issues (to solve low hanging fruit first)
@@ -68,8 +69,8 @@ These steps are suggestions, you can design your own process flow, but this orde
 tricks for finding high-priority issues
 - three (or more) consecutive lines with the same error
 - the same class name mentioned more then three times
-- assert(pointer); to detect null-pointers will prevent crash and cause a hang that delays CI tests
-
+- rules or categories with 3 or less occurances
+ 
 ## Failure is an option
 
 - if any issues remain after the regression filter, fail the build.
