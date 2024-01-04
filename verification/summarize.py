@@ -21,12 +21,27 @@ def unescape(text):
     text = text.replace("&gt;", ">")
     return text
 
+
+def limit_string_at_whitespace(input_string, max_length=100):
+    if len(input_string) <= max_length:
+        return input_string
+
+    # Find the last whitespace within the specified max length
+    last_whitespace = input_string.rfind(' ', 0, max_length)
+
+    # If no whitespace is found, cut off at max length
+    if last_whitespace == -1:
+        return input_string[:max_length]
+
+    return input_string[:last_whitespace]
+
+
 def add_description(rule, parts):
     global issue_descriptions
     if rule in issue_descriptions:
         return
     
-    issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + unescape(parts[Column.Description][:100])
+    issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + limit_string_at_whitespace(unescape(parts[Column.Description]))
     
     if verbose:
         issue_descriptions[rule] = issue_descriptions[rule] +  "\t@ " + parts[Column.File]

@@ -73,12 +73,12 @@ def remove_build_path(parts):
     build_path = "/include/Qt"
     position = uniform_filepath.find(build_path)
     if position != -1:
-        return "<<buildpath>" + file[position:]
+        return "_buildpath_" + file[position:]
 
     build_path = "/privateinclude/Qt"
     position = uniform_filepath.find(build_path)
     if position != -1:
-        return "<<buildpath>" + file[position:]
+        return "_buildpath_" + file[position:]
 
     source_path = "copperspice/src/"
     position = uniform_filepath.find(source_path)

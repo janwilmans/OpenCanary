@@ -142,7 +142,7 @@ class KeyNotInEnvironmentFile:
 
 
 def get_from_envfile(key):
-    return envfile.get(key, KeyNotInEnvironmentFile)
+    return envfile.get(key, "[[" + key + " not found by get_from_envfile()]]")
 
 
 def get_from_envfile_or(key, default_value):
