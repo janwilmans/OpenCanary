@@ -23,11 +23,13 @@ def add_description(rule, parts):
     global issue_descriptions
     if rule in issue_descriptions:
         return
-    issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + unescape(parts[Column.Description][:100])
+    #issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + unescape(parts[Column.Description][:100]) +  " " + parts[Column.File]
+    issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + parts[Column.Link]
 
 def countRules(lines):
     results = {}
     for parts in lines:
+        checkStructuredLineParts(parts)
         rule = parts[Column.Rule]
         add_description(rule, parts)
         if rule in results:

@@ -122,8 +122,20 @@ def stripSqlEscaping(line):
 
 
 def readIssuesParts(line):
-    return stripSqlEscaping(line.strip().split("|"))
+    result = stripSqlEscaping(line.strip().split("|"))
+    checkStructuredLineParts(result)
+    return result
 
+
+def checkStructuredLineParts(parts):
+    if len(parts) != len(Column):
+        eprint("assertion failed: broken structured CSV, line has {}/{} parts:\n {}".format(len(parts), len(Column), parts))
+    
+
+def writeStructuredLine(parts):
+    checkStructuredLineParts(parts)
+    sys.stdout.write("|".join(parts))
+    sys.stdout.write("\n")
 
 class KeyNotInEnvironmentFile:
     pass
@@ -176,6 +188,8 @@ def get_or_default(list, index, default):
     return default
 
 
+# assuption: pieces are already '/' separated
+# note: duplicated '/'s are removed
 def urljoin(*args):
     trailing_slash = '/' if args[-1].endswith('/') else ''
     return "/".join(map(lambda x: str(x).strip('/'), args)) + trailing_slash
