@@ -6,21 +6,32 @@ import traceback, sys, os
 from util import *
 
 
-def filter(line):
-    if "external/" in line:
-        return
-    sys.stdout.write(line)
+# note: return True if the line should be kept
+def is_interesting(line):
+    if "C4242" in line:     # in WebCore, CsCore, CsGui and 3rdparty
+        return False
+    if "|3rdparty|" in line:
+        if "C4291" in line:
+            return False
+    if "C4244" in line:
+        return False
+    if "C4291" in line:
+        return False
+    if "C4267" in line:
+        return False
+    if "needs to have dll-interface" in line:
+        return False
+    if "via dominance" in line:
+        return False
+    return True
 
+def filter(line):
+    if is_interesting(line):
+        sys.stdout.write(line)
 
 def filterAndNormalizeMsvc(line):
-    result = line.replace('\\', '/')
-    if "external/" in result:
-        return
-    if "/MSVC/" in result:
-        return
-    if "D9025" in result:
-        return
-    sys.stdout.write(result)
+    if is_interesting(line):
+        sys.stdout.write(line.replace('\\', '/'))
 
 
 def show_usage():

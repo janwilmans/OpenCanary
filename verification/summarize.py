@@ -73,6 +73,7 @@ def main():
     for rule, count in sorted(countRules(lines).items(), key=lambda item: (item[1], item[0])):
         check_len += count
         if rule == "rule-missing":
+            eprint("-- warning: ignored issue with rule-missing!")
             continue
         print("{}: {}\t\t{}".format(rule, count, get_description(rule)))
         
