@@ -70,10 +70,16 @@ def remove_pattern(input_string, pattern):
 def remove_build_path(parts):
     file = parts[int(Column.File)]
     uniform_filepath = file.replace("\\", r"/")
-    build_path = "privateinclude/Qt"
+    build_path = "/include/Qt"
     position = uniform_filepath.find(build_path)
     if position != -1:
-        return "[[marker]]" + file[position:]
+        return "<<buildpath>" + file[position:]
+
+    build_path = "/privateinclude/Qt"
+    position = uniform_filepath.find(build_path)
+    if position != -1:
+        return "<<buildpath>" + file[position:]
+
     source_path = "copperspice/src/"
     position = uniform_filepath.find(source_path)
     if position != -1:

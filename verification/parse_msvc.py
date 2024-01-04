@@ -49,8 +49,8 @@ def get_priority(rule):
         return 17
     if "C4918" in rule:
         return 5
-    # prime number 3 means: no specific priority assigned
-    return 3
+    # prime number 11 means: no specific priority assigned
+    return 11
 
 def report_issue(fileref, filename, line, rule, description, component, category):
     links = create_link(int(Column.Source), get_feeling_ducky_url(rule))

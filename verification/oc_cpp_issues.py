@@ -73,9 +73,9 @@ def makeRelative(filename):
 
 
 def get_priority(rule):
-    # prime number 3 means: no specific priority assigned
+    # prime number 11 means: no specific priority assigned
     # assignment of priority is done in apply_team_priorities.py
-    return 3
+    return 11
 
 
 # we do not have the information about the location of the repo here
