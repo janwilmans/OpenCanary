@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """ apply environment specific transformations
-    * fix up url's
+    * add links to git repo 
     * insert job/user information
+    see 'def transform(line)', the [[keys]] are replaced using the provided environment file
 """
 
 import traceback, sys, os

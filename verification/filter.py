@@ -90,7 +90,7 @@ def main():
         for line in lines:
             print (line,)
     else:
-        with open(outputfile, 'w') as f:
+        with open(args.outputfile, 'w') as f:
             for line in lines:
                 f.write(line)
 

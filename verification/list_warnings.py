@@ -32,15 +32,23 @@ def main():
         show_usage()
         sys.exit(1)
 
-    print("The requires command line arguments to ignore all warnings is:")
+    print("The required command line arguments to ignore all warnings are:")
     lines = read()
-    result = []
+    gcc_result = []
+    msvc_result = []
     for rule in sorted(countRules(lines)):
         if rule == "rule-missing":
             continue
-        result += ["-Wno-" + rule]
-
-    print(" ".join(result));
+        if rule[0] == "C" and len(rule) == 5:    # msvc warnings look like "Cxxxx"
+            msvc_result += ["/wd" + rule[1:]]
+        else:
+            gcc_result += ["-Wno-" + rule]
+        
+    print("for gcc/clang:")
+    print(" ".join(gcc_result))
+    if msvc_result != "":
+        print("\nand for msvc:")
+        print(" ".join(msvc_result))
 
 if __name__ == "__main__":
     try:

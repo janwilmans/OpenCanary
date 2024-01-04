@@ -1,23 +1,10 @@
 #!/usr/bin/env python3
-"""Parse warnings and error messages from MSVC
+"""Parse warnings and error messages from MSVC and transform into a uniform comma-separated format
+   see https://github.com/janwilmans/OpenCanary?tab=readme-ov-file#gather
 """
 
 import traceback, sys, os, pathlib
 from util import *
-
-def create_default_link(filename, line):
-    project_relative_filename = remove_project_path(filename)
-    if project_relative_filename.lower().startswith("c:/"):
-        return ""
-
-    url = urljoin("[[permalink-prefix]]", project_relative_filename)
-    links = create_link(3, url)
-
-    # check for positive line number
-    if str.isdigit(line):
-        links = create_link(3, url + "#L" + str(line))
-    return links
-
 
 def get_priority(rule):
     if "C4100" in rule:
@@ -66,15 +53,8 @@ def get_priority(rule):
     return 3
 
 def report_issue(fileref, filename, line, rule, description, component, category):
-    links = create_default_link(filename, line)
-    if not rule == "":
-        links += create_link(5, get_feeling_ducky_url(rule))
-
-    links += create_link(6, "[[wiki-issue-prefix]]" + rule.replace("#", "_"))
-
-    fileref = remove_build_path(fileref)
-    description = remove_build_path(description)
-    report(get_priority(rule), "tin", component, fileref, "msvc", rule, category, description, links)
+    links = create_link(int(Column.Source), get_feeling_ducky_url(rule))
+    report(get_priority(rule), "[[team]]", component, fileref, "msvc", rule, category, description, links)
 
 
 def could_not_resolve(filename):
@@ -161,23 +141,19 @@ def show_usage():
     if len(sys.argv) > 1:
         eprint("  I got:", sys.argv)
         eprint("")
-    eprint(r"Usage: type <filename> | " + os.path.basename(__file__) + " <env.txt> [<inputfile>]")
-    eprint(r"  <env.txt> file containing CI environment variables")
-    eprint(r"  <inputfile> if the second argument is omitted stdin is used")
+    eprint(r"Usage: type <filename> | " + os.path.basename(__file__) + " [<inputfile>]")
+    eprint(r"  <inputfile> if omitted stdin is used")
 
 
 def main():
-    # only used for debugging
-    if len(sys.argv) < 2:
-        eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
-        show_usage()
-        sys.exit(1)
-
-    read_envfile(sys.argv[1])
-
-    # only used for debugging
-    if len(sys.argv) > 2:
-        sys.stdin = open(sys.argv[2], 'r')
+    if len(sys.argv) > 1:
+        input_file = sys.argv[1]
+        if os.path.isfile(input_file):
+            sys.stdin = open(sys.argv[1], 'r')
+        else:
+            eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
+            show_usage()
+            sys.exit(1) 
 
     for line in sys.stdin:
         parse_msvc(line)

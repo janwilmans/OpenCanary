@@ -2,6 +2,7 @@
 # sortby.py will sort the input from stdin and filter out all duplicate entries
 # for example compilation results from debug/debug64/release/release64 or central header files included in many translation units
 # cause duplicate entries to be reported
+# consider using 'sort -t \| -k 1n,4 | uniq' if this is available on your platform
 
 import os, sys, traceback
 from util import *
@@ -12,7 +13,7 @@ def MakeTuple(line):
     data = line.split("|")
     
     # sort the first colomn by its integer-representation, colomn[0] (prio) and colomn[3] (filename)
-    return int(data[0]), data[3]
+    return int(data[int(Column.Prio)]), data[int(Column.File)]
 
 
 def SortBy(inputlines):
