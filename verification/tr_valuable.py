@@ -18,9 +18,9 @@ def filter(linetext):
     # add filters here for what the team should ignore / currently has no focus
     
     # categorize issues here
-    v = categoryMap.get(line[Column.Rule], None)
+    v = categoryMap.get(line[Column.RULE], None)
     if v is not None:
-        line[Column.Category] = v
+        line[Column.CATEGORY] = v
     
     # prioritize issues here
 
@@ -46,10 +46,15 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        raise
     except SystemExit:
         raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
     except:
         info = traceback.format_exc()
         eprint(info)
         show_usage()
         sys.exit(1)
+

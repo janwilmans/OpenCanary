@@ -2,15 +2,11 @@
 """ filter script to select content from CSV files
 """
 
-from __future__ import print_function
-
-import sys, os, re, fnmatch
+import os
+import fnmatch
 import argparse
-import atexit
-import platform
-import glob
 
-def Match(line, includefilter, excludefilter):
+def match(line, includefilter, excludefilter):
     for keyword in excludefilter:
         if keyword in line:
             return False
@@ -21,9 +17,10 @@ def Match(line, includefilter, excludefilter):
             return True
     return False
 
-def LowerList(list):
+
+def lower_list(list_value):
     result = []
-    for entry in list:
+    for entry in list_value:
         result += [entry.lower()]
     return result
 
@@ -33,8 +30,10 @@ def LowerList(list):
 # '..'    = return all file- and folder-names in the parent directory
 # 'foo*'  = return all file- and folder-names in the current directory that start with 'foo'
 # '*foo*' = return all file- and folder-names in the current directory that contains the word 'foo'
-# the result is always a list of strings that are full-real-paths 
-def listByWildcard(wildcard):
+# the result is always a list of strings that are full-real-paths
+
+
+def list_by_wildcard(wildcard):
     folder = os.path.realpath(wildcard)
     mask = ""
     if not os.path.isdir(folder):
@@ -46,14 +45,15 @@ def listByWildcard(wildcard):
             result += [os.path.join(folder, item)]
     return result
 
+
 def main():
 
     parser = argparse.ArgumentParser(description='Filter CSV files')
     parser.add_argument('-i', '--input', required=True, action='append', help="file(s) to use as input")
-    parser.add_argument('-s', '--separator', default='|', help="character used as separator, defaults to a pipe symbol ( | )") 
-    parser.add_argument('-c', '--column', type=int, help="restrict matching to column N, first column is 0") 
-    parser.add_argument('-ic', '--ignorecase', action='store_true', help="case-insensitive match") 
-    parser.add_argument('-fm', '--fullmatch', action='store_true', help="look for a full match to the keyword instead of containing the keyword") 
+    parser.add_argument('-s', '--separator', default='|', help="character used as separator, defaults to a pipe symbol ( | )")
+    parser.add_argument('-c', '--column', type=int, help="restrict matching to column N, first column is 0")
+    parser.add_argument('-ic', '--ignorecase', action='store_true', help="case-insensitive match")
+    parser.add_argument('-fm', '--fullmatch', action='store_true', help="look for a full match to the keyword instead of containing the keyword")
     parser.add_argument('-if', '--includefilter', default=[], action='append', help="include lines containing the keyword")
     parser.add_argument('-xf', '--excludefilter', default=[], action='append', help="exclude lines containing the keyword, has priority over --includefilter")
     parser.add_argument('-o', '--outputfile', default='', help="defaults to the console if ommitted")
@@ -68,33 +68,34 @@ def main():
     includefilter = args.includefilter
     excludefilter = args.excludefilter
     if args.ignorecase:
-        includefilter = LowerList(includefilter)
-        excludefilter = LowerList(excludefilter)
+        includefilter = lower_list(includefilter)
+        excludefilter = lower_list(excludefilter)
 
     lines = []
     for inputfile in args.input:
-        with open(inputfile, 'r') as f:
+        with open(inputfile, encoding="utf-8") as f:
             for line in f:
                 if args.column:
                     matchtext = line.strip().split(args.separator)[args.column]
                 else:
                     matchtext = line.strip()
                 if args.ignorecase:
-                    if Match(matchtext.lower(), includefilter, excludefilter):
+                    if match(matchtext.lower(), includefilter, excludefilter):
                         lines += [line]
                 else:
-                    if Match(matchtext, includefilter, excludefilter):
+                    if match(matchtext, includefilter, excludefilter):
                         lines += [line]
 
     if useconsole:
         for line in lines:
-            print (line,)
+            print(line,)
     else:
         with open(args.outputfile, 'w') as f:
             for line in lines:
                 f.write(line)
 
-    print (len(lines), " lines.")
+    print(len(lines), " lines.")
+
 
 if __name__ == '__main__':
     main()

@@ -103,11 +103,11 @@ def getPart(list, column):
 def getLinkMap(parts):
     links = [""] * (len(parts)-1)   # initialize a list of empty strings ["", "", ...]
 
-    linktexts = parts[Column.Link]
+    linktexts = parts[Column.LINK]
     if (linktexts == ""):
         return zip(parts, links)    # no links, just return
 
-    linkString = parts[Column.Link].rstrip("}").split("}")
+    linkString = parts[Column.LINK].rstrip("}").split("}")
     for indexWithLink in linkString:
         kv = indexWithLink[1:].split("]{")
         if len(kv) == 2:
@@ -149,7 +149,7 @@ def createHtmlReport(lines, count):
 
     for line in displayLines:
         f.write('<tr>')
-        parts = readIssuesParts(line)
+        parts = read_issues_parts(line)
         linkMap = getLinkMap(parts)
         
         index = 0

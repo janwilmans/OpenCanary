@@ -2,7 +2,9 @@
 """Parse issues from cppcheck
 """
 
-import traceback, sys, os
+import traceback
+import sys
+import os
 from subprocess import Popen, PIPE
 from util import *
 
@@ -52,16 +54,18 @@ def run_cppcheck(path):
 def run_cppcheck_compile_db():
     list = [cppcheck_cmd, '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
             '--enable=all', '--project=build_cppcheck/compile_commands.json']
-    if os.path.exists( './suppressions.xml'):
-       list +=[ '--suppress-xml=./suppressions.xml']
+    if os.path.exists('./suppressions.xml'):
+        list += ['--suppress-xml=./suppressions.xml']
     return execute_popen(list)
 
+
 def execute_popen(list):
-    sub_process = Popen(list,  stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    sub_process = Popen(list, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     (std_out, std_err) = sub_process.communicate()
     sub_process.wait()
     exitcode = sub_process.returncode
     return std_out, std_err, exitcode
+
 
 def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " <env.txt> <path> <basepath>")

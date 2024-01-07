@@ -146,7 +146,7 @@ def walk(directory, onerror=None, filenames=['.gitignore'],
 def rules_from_file(filename, base_path):
     return_rules = []
     full_path = os.path.join(base_path, filename)
-    with open(full_path) as ignore_file:
+    with open(full_path, encoding="utf-8") as ignore_file:
         counter = 0
         for line in ignore_file:
             counter += 1

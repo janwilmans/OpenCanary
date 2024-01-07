@@ -88,7 +88,7 @@ def sendReport(bodyfile, attachments = []):
     message["Subject"] = subject
     #message["Bcc"] = receiver_email  # Recommended for mass emails
 
-    with open(bodyfile, "r") as f:
+    with open(bodyfile, encoding="utf-8") as f:
         if bodyfile.endswith(".html"):
             part = MIMEText(f.read(), "html")
         else:

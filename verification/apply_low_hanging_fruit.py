@@ -2,20 +2,23 @@
 """ re-prioritize rules that have less then 5 issues to top priority
 """
 
-import traceback, sys, os
+import traceback
+import sys
+import os
 from util import *
+
 
 def read():
     results = []
     for line in sys.stdin:
-        results += [readIssuesParts(line)]
+        results += [read_issues_parts(line)]
     return results
 
 
-def countRules(lines):
+def count_rules(lines):
     results = {}
     for parts in lines:
-        rule = parts[Column.Rule]
+        rule = parts[Column.RULE]
         if rule in results:
             results[rule] = results[rule] + 1
         else:
@@ -38,7 +41,7 @@ def main():
         sys.exit(1)
 
     lines = read()
-    rules = countRules(lines)
+    rules = count_rules(lines)
     ruleSet = set()
     for rule in rules:
         count = rules[rule]
@@ -46,17 +49,22 @@ def main():
             ruleSet.add(rule)
 
     for line in lines:
-        rule = line[Column.Rule]
+        rule = line[Column.RULE]
         if rule in ruleSet:
             # prime number 7 means: priority overridden automatically to solve 'low hanging fruit' first
-            line[Column.Prio] = "7"
-        reportList(line)
+            line[Column.PRIO] = "7"
+        report_list(line)
+
 
 if __name__ == "__main__":
     try:
         main()
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         raise
+    except SystemExit:
+        raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
     except:
         info = traceback.format_exc()
         eprint(info)

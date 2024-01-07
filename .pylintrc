@@ -1,0 +1,10 @@
+[MESSAGES CONTROL]
+
+disable=
+    missing-docstring,
+    missing-function-docstring,
+    global-statement,
+    global-variable-not-assigned
+
+[FORMAT]
+max-line-length=160

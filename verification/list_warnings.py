@@ -8,13 +8,13 @@ from util import *
 def read():
     results = []
     for line in sys.stdin:
-        results += [readIssuesParts(line)]
+        results += [read_issues_parts(line)]
     return results
 
 def countRules(lines):
     results = {}
     for parts in lines:
-        rule = parts[Column.Rule]
+        rule = parts[Column.RULE]
         if rule in results:
             results[rule] = results[rule] + 1
         else:

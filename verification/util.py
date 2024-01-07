@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 
-import sys, os, re, html
+import sys
+import os
+import re
+import html
 from enum import IntEnum
 from datetime import datetime
 
 # global variable used to query env.txt that is read at main()
 envfile = {}
 
+
 class Priority(IntEnum):
-    Unassigned = 3
+    UNASSIGNED = 3
+
 
 class Column(IntEnum):
-    Prio = 0
-    Team = 1
-    Component = 2
-    File = 3
-    Source = 4
-    Rule = 5
-    Category = 6
-    Description = 7
-    Link = 8
+    PRIO = 0
+    TEAM = 1
+    COMPONENT = 2
+    FILE = 3
+    SOURCE = 4
+    RULE = 5
+    CATEGORY = 6
+    DESCRIPTION = 7
+    LINK = 8
 
 
 def on_ci_server():
@@ -48,42 +53,6 @@ def replace_no_case(instr, old, new):
     return regex.sub(new, instr)
 
 
-# returns project directory _without_ trailing /
-def get_project_dir():
-    return normpath(get_from_envfile('CI_PROJECT_DIR'))
-
-
-# returns projects JOB url _without_ trailing /
-def get_job_url():
-    return normpath(get_from_envfile('CI_JOB_URL'))
-
-
-def get_user_email():
-    return get_from_envfile('GITLAB_USER_EMAIL')
-
-
-def get_user_name():
-    if is_scheduled_build():
-        return "Scheduled build"
-    return get_from_envfile('GITLAB_USER_NAME')
-
-
-def get_commit_message():
-    return get_from_envfile('CI_COMMIT_TITLE')
-
-
-def get_branch_id():
-    return get_from_envfile('CI_BUILD_REF_NAME')    # remove get_from_envfile and move it into apply_environment.py
-
-
-def remove_project_path(pathstr):
-    return replace_no_case(pathstr, get_project_dir(), "")
-
-
-def remove_build_path(pathstr):                     # remove this and strip out file-prefix in apply_environment.py
-    parent = os.path.dirname(get_project_dir())
-    return replace_no_case(pathstr, parent, "")
-
 
 def replace_pipe(parts):
     result = []
@@ -101,11 +70,11 @@ def report(priority, team, component, filename, source, rule, category, descript
     sprint(join_report_line([str(priority), team, component, filename, source, rule, category, html.escape(description), link]))
 
 
-def reportList(list):
-    sprint(join_report_line(list))
+def report_list(list_value):
+    sprint(join_report_line(list_value))
 
 
-def stripSqlEscapingWord(word):
+def string_sql_escaping_word(word):
     result = word
     if word.startswith('b"'):
         result = word[1:]
@@ -114,28 +83,29 @@ def stripSqlEscapingWord(word):
     return result.strip('"').strip("'")
 
 
-def stripSqlEscaping(line):
+def string_sql_escaping(line):
     result = []
     for word in line:
-        result += [stripSqlEscapingWord(word)]
+        result += [string_sql_escaping_word(word)]
     return result
 
 
-def readIssuesParts(line):
-    result = stripSqlEscaping(line.strip().split("|"))
-    checkStructuredLineParts(result)
+def read_issues_parts(line):
+    result = string_sql_escaping(line.strip().split("|"))
+    check_structured_line_parts(result)
     return result
 
 
-def checkStructuredLineParts(parts):
+def check_structured_line_parts(parts):
     if len(parts) != len(Column):
         eprint("assertion failed: broken structured CSV, line has {}/{} parts:\n {}".format(len(parts), len(Column), parts))
-    
 
-def writeStructuredLine(parts):
-    checkStructuredLineParts(parts)
+
+def write_structured_line(parts):
+    check_structured_line_parts(parts)
     sys.stdout.write("|".join(parts))
     sys.stdout.write("\n")
+
 
 class KeyNotInEnvironmentFile:
     pass
@@ -149,9 +119,15 @@ def get_from_envfile_or(key, default_value):
     return envfile.get(key, default_value)
 
 
+def read_lines_from_file(filename):
+    with open(filename, encoding="utf-8") as file:
+        contents = file.read()
+        return contents.splitlines()
+
+
 def read_envfile(filename):
     global envfile
-    lines = open(filename, "r").read().splitlines()
+    lines = read_lines_from_file(filename)
     for line in lines:
         index = line.find("=")
         if index > 0:
@@ -170,9 +146,9 @@ def sprint(*args, **kwargs):
 # returns the position of the nth occurrence of substring in string
 # return -1 if there is no nth occurrence or if n=0 is specified
 def find_nth(string, substring, n):
-    if (n == 0):
+    if n == 0:
         return -1
-    if (n == 1):
+    if n == 1:
         return string.find(substring)
     else:
         return string.find(substring, find_nth(string, substring, n - 1) + 1)
@@ -182,9 +158,9 @@ def get_feeling_ducky_url(term):
     return r"https://duckduckgo.com/?q=!ducky+msdn+" + term
 
 
-def get_or_default(list, index, default):
-    if index < len(list):
-        return list[index]
+def get_or_default(list_value, index, default):
+    if index < len(list_value):
+        return list_value[index]
     return default
 
 

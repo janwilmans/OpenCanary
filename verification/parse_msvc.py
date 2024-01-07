@@ -3,8 +3,12 @@
    see https://github.com/janwilmans/OpenCanary?tab=readme-ov-file#gather
 """
 
-import traceback, sys, os, pathlib
+import traceback
+import sys
+import os
+import pathlib
 from util import *
+
 
 def get_priority(rule):
     if "C4100" in rule:
@@ -51,10 +55,6 @@ def get_priority(rule):
         return 5
     # prime number 11 means: no specific priority assigned
     return 11
-
-def report_issue(fileref, filename, line, rule, description, component, category):
-    links = create_link(int(Column.Source), get_feeling_ducky_url(rule))
-    report(get_priority(rule), "[[team]]", component, fileref, "msvc", rule, category, description, links)
 
 
 def could_not_resolve(filename):
@@ -105,15 +105,20 @@ def split_message_line(line):
     return filepart, line, "", description, component
 
 
-def parse_msvc(line):
-    if line.startswith(" "): # strip out notes
+def report_issue(component, fileref, source, rule, category, description):
+    links = create_link(int(Column.SOURCE), get_feeling_ducky_url(rule))
+    report(get_priority(rule), "[[team]]", component, fileref, source, rule, category, description, links)
+
+
+def parse_msvc(line, source):
+    if line.startswith(" "):  # strip out notes
         return
     if ": message" in line:
         # message lines sometimes seem to contain ": warning", this seem to be caused by compilers writing interleaved to stdout ??
         return
     if "class template optional is only available with C++17 or later." in line:
         # workaround bug where this warning is falsely reported on an unrelated line
-        return 
+        return
 
     line = line.strip()
 
@@ -121,7 +126,7 @@ def parse_msvc(line):
         eprint("-- error found:" + line)
     if ": warning" in line:
         fileref, filename, line, rule, description, component = split_warning_line(line)
-        report_issue(fileref, filename, line, rule, description, component, "warning")
+        report_issue(component, fileref, source, rule, "warning", description)
         return
     # if ": message" in line:
     #    filename, line, rule, description, component = split_message_line(line)
@@ -129,41 +134,51 @@ def parse_msvc(line):
     #    return
 
     # cl : Command line warning D9002 : ignoring unknown option '/foobar'
-    cmdlineMarker = "Command line warning"
-    if cmdlineMarker in line:
-        i = line.find(cmdlineMarker) + len(cmdlineMarker)
+    cmdline_marker = "Command line warning"
+    if cmdline_marker in line:
+        i = line.find(cmdline_marker) + len(cmdline_marker)
         filename = line[:i].strip()
         s = line[i:].split(":")
-        report_issue(filename, filename, 0, s[0].strip(), s[1].strip(), "compiler", "cmdline")
+
+        fileref = filename
+        line = 0
+        rule = s[0].strip()
+        description = s[1].strip()
+        component = "compiler"
+        category = "cmdline"
+
+        report_issue(component, fileref, source, rule, category, description)
         return
 
+
 def show_usage():
-    if len(sys.argv) > 1:
-        eprint("  I got:", sys.argv)
-        eprint("")
-    eprint(r"Usage: type <filename> | " + os.path.basename(__file__) + " [<inputfile>]")
-    eprint(r"  <inputfile> if omitted stdin is used")
+    eprint("  I got arguments:", sys.argv)
+    eprint(r"Usage: type <filename> | " + os.path.basename(__file__) + " <sourcename>")
+    eprint(r"  the standard input (captured data from msvc) is transformed to opencanary format")
+    eprint(r"  <sourcename> a name that identifies where input came from eg. a specific build_type)")
+    eprint("")
 
 
 def main():
-    if len(sys.argv) > 1:
-        input_file = sys.argv[1]
-        if os.path.isfile(input_file):
-            sys.stdin = open(sys.argv[1], 'r')
-        else:
-            eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
-            show_usage()
-            sys.exit(1) 
+    if len(sys.argv) < 2:
+        eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
+        show_usage()
+        sys.exit(1)
 
+    source = sys.argv[1]
     for line in sys.stdin:
-        parse_msvc(line)
+        parse_msvc(line.strip(), source)
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         raise
+    except SystemExit:
+        raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
     except:
         info = traceback.format_exc()
         eprint(info)

@@ -2,8 +2,11 @@
 """ assign team specific priorities and/or categories to the issues
 """
 
-import traceback, sys, os
+import traceback
+import sys
+import os
 from util import *
+
 
 def show_usage():
     if len(sys.argv) > 1:
@@ -16,7 +19,7 @@ def show_usage():
 def read():
     results = []
     for line in sys.stdin:
-        results += [readIssuesParts(line)]
+        results += [read_issues_parts(line)]
     return results
 
 
@@ -122,11 +125,11 @@ def get_priority(rule):
     if "AP#16" == rule:  # const_cast
         return 30
 
-    return 3 # Priority.Unassigned
+    return Priority.UNASSIGNED.value
 
 
 def get_category(line):
-    rule = line[Column.Rule]
+    rule = line[Column.RULE]
     if "aggressive-loop-optimizations" == rule:
         return "ub"
     if "stringop-truncation" in rule:
@@ -135,7 +138,7 @@ def get_category(line):
         return "ub"
     if "array-bounds" in rule:
         return "ub"
-    return line[Column.Category]
+    return line[Column.CATEGORY]
 
 
 # move into team-specific script that also fills in the category field
@@ -147,9 +150,9 @@ def get_category(line):
 # - 75-99: hard to read / old style / bad style
 def transform(line):
     try:
-        rule = line[Column.Rule]
-        line[Column.Prio] = str(get_priority(rule))
-        line[Column.Category] = get_category(line)
+        rule = line[Column.RULE]
+        line[Column.PRIO] = str(get_priority(rule))
+        line[Column.CATEGORY] = get_category(line)
     except Exception:
         eprint("Exception in transform of:", line)
         raise
@@ -163,15 +166,20 @@ def main():
         sys.exit(1)
 
     for line in read():
-        reportList(transform(line))
+        report_list(transform(line))
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         raise
+    except SystemExit:
+        raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
     except:
         info = traceback.format_exc()
         eprint(info)
+        show_usage()
         sys.exit(1)

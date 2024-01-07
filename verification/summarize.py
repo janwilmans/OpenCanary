@@ -2,18 +2,23 @@
 """ sort and summarize the number of issues per rule and totals
 """
 
-import traceback, sys, os
+import traceback
+import sys
+import os
 from util import *
 
 verbose = False
 
+
 def read():
     results = []
     for line in sys.stdin:
-        results += [readIssuesParts(line)]
+        results += [read_issues_parts(line)]
     return results
 
+
 issue_descriptions = {}
+
 
 def unescape(text):
     text = text.replace("&#x27;", "'")
@@ -37,22 +42,22 @@ def limit_string_at_whitespace(input_string, max_length=100):
 
 
 def add_description(rule, parts):
-    global issue_descriptions
     if rule in issue_descriptions:
         return
-    
-    issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + limit_string_at_whitespace(unescape(parts[Column.Description]))
-    
-    if verbose:
-        issue_descriptions[rule] = issue_descriptions[rule] +  "\t@ " + parts[Column.File]
-        
-    #issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + parts[Column.Link]
 
-def countRules(lines):
+    issue_descriptions[rule] = "[" + parts[Column.COMPONENT] + "]: " + limit_string_at_whitespace(unescape(parts[Column.DESCRIPTION]))
+
+    if verbose:
+        issue_descriptions[rule] = issue_descriptions[rule] + "\t@ " + parts[Column.FILE]
+
+    # issue_descriptions[rule] = "[" + parts[Column.Component] + "]: " + parts[Column.Link]
+
+
+def count_rules(lines):
     results = {}
     for parts in lines:
-        checkStructuredLineParts(parts)
-        rule = parts[Column.Rule]
+        check_structured_line_parts(parts)
+        rule = parts[Column.RULE]
         add_description(rule, parts)
         if rule in results:
             results[rule] = results[rule] + 1
@@ -62,7 +67,6 @@ def countRules(lines):
 
 
 def get_description(rule):
-    global issue_descriptions
     return issue_descriptions.get(rule, "")
 
 
@@ -77,24 +81,24 @@ def main():
         eprint("error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
-        
+
     if len(sys.argv) == 2:
-        verbose = True        
+        verbose = True
 
     print("Summary of all issues:")
     lines = read()
-    result = []
     check_len = 0
-    for rule, count in sorted(countRules(lines).items(), key=lambda item: (item[1], item[0])):
+    for rule, count in sorted(count_rules(lines).items(), key=lambda item: (item[1], item[0])):
         check_len += count
         if rule == "rule-missing":
             eprint("-- warning: ignored issue with rule-missing!")
             continue
-        print("{}: {}\t\t{}".format(rule, count, get_description(rule)))
-        
+        warning = "{}: {}".format(rule, count)
+        print("{:50}: {}".format(warning, get_description(rule)))
+
     if check_len != len(lines):
         print("error in script: {}/{} issues accounted for.".format(len(lines), check_len))
-    print("In total {} issues.".format(check_len))
+    print(f"In total {check_len} issues.")
 
 
 if __name__ == "__main__":

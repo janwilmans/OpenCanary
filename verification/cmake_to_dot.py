@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """ Returns with exitcode 1 if /....., otherwise 0 (success)
 """
+
 import os
 import sys
 import traceback
@@ -20,13 +21,13 @@ def show_usage():
     eprint("   description of the script operations")
 
 
-def lineContains(line, word):
+def line_contains(line, word):
     if word in line:
         return True
     return False
 
 
-def lineExtract(line, word):
+def line_extract(line, word):
     i = line.find(word)
     if i == -1:
         return ""
@@ -47,13 +48,13 @@ def get_project_name(project_in_scope, words):
 
 
 # add_library(Vic::logging ALIAS ${PROJECT_NAME})
-def collectAliases(lines):
+def collect_aliases(lines):
     results = []
     project = ""
     for l in lines:
         line = l.strip()
-        if lineContains(line, "project"):
-            project = lineExtract(line, "project")
+        if line_contains(line, "project"):
+            project = line_extract(line, "project")
             continue
 
         if l.startswith("add_library") and "ALIAS" in line:
@@ -72,59 +73,59 @@ def collectAliases(lines):
     return results
 
 
-def replaceAlias(line, aliases):
+def replace_alias(line, aliases):
     for alias in aliases:
         if line == alias[0]:
             line = alias[1]
     return line
 
-def StripLine(line):
+def strip_line(line):
     pos = line.find("#")
     if pos != -1:
         line = line[:pos-1]
     return line.strip()
 
 
-def printDependecies(lines):
+def print_dependecies(lines):
 
-    aliases = collectAliases(lines)
+    aliases = collect_aliases(lines)
     state = ParseState.Scan
     project = ""        # current project in scope
-    fromNode = ""       # fromNode -> dependency
+    from_node = ""       # fromNode -> dependency
     deps = []           # list of depedencies of current 'fromNode'
 
     # statistics only
     projects = set()
 
     for l in lines:
-        line = StripLine(l)
+        line = strip_line(l)
         #sprint("l:", line, " p:", project, " ds:", deps)
 
         if state == ParseState.Scan:
-            if lineContains(line, "project"):
-                project = lineExtract(line, "project")
+            if line_contains(line, "project"):
+                project = line_extract(line, "project")
 
-            if lineContains(line, "target_link_libraries"):
+            if line_contains(line, "target_link_libraries"):
                 state = ParseState.TargetLinkLibraries
-                words = lineExtract(line, "target_link_libraries").split()
-                fromNode = get_project_name(project, words)
+                words = line_extract(line, "target_link_libraries").split()
+                from_node = get_project_name(project, words)
                 deps += words[1:]
         else:
             if ")" in line:
                 state = ParseState.Scan
 
-                if fromNode == "":
-                    fromNode = get_project_name(project, deps)
+                if from_node == "":
+                    from_node = get_project_name(project, deps)
                     deps = deps[1:]
-                fromNode = replaceAlias(fromNode, aliases)
-                projects.add(fromNode)
+                from_node = replace_alias(from_node, aliases)
+                projects.add(from_node)
 
                 for dep in deps:
                     if dep == "PRIVATE" or dep == "PUBLIC":
                         continue
-                    dep = replaceAlias(dep, aliases)
+                    dep = replace_alias(dep, aliases)
                     dep = get_project_name(project, [dep])
-                    sprint("    \"{}\" -> \"{}\"".format(fromNode, dep))
+                    sprint(f'    "{from_node}" -> "{dep}"')
                 deps = []
             else:
                 deps += line.split()
@@ -141,15 +142,22 @@ def main():
         return 1
 
     sprint("digraph \"dependency_graph\" {")
-    printDependecies(sys.stdin.readlines())
+    print_dependecies(sys.stdin.readlines())
     sprint("}")
     return 0
 
 
 if __name__ == "__main__":
     try:
-        sys.exit(main())
-    except Exception:
-        traceback.print_exc(file=sys.stdout)
-    show_usage()
-    sys.exit(1)
+        main()
+    except KeyboardInterrupt:
+        raise
+    except SystemExit:
+        raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
+    except:
+        info = traceback.format_exc()
+        eprint(info)
+        show_usage()
+        sys.exit(1)

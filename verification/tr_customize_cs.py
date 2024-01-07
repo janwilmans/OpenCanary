@@ -8,7 +8,7 @@ from util import *
 msvc = False
 
 def define_component(parts):
-    file = parts[int(Column.File)].replace("\\", r"/")
+    file = parts[int(Column.FILE)].replace("\\", r"/")
     if "include/QtMultimedia" in file:
         return "CsMultimedia"
     if "include/QtCore" in file:
@@ -68,7 +68,7 @@ def remove_pattern(input_string, pattern):
 # notice [[marker]] is prefixed to indicate the path needs to be fixed 
 # by create_default_link()
 def remove_build_path(parts):
-    file = parts[int(Column.File)]
+    file = parts[int(Column.FILE)]
     uniform_filepath = file.replace("\\", r"/")
     build_path = "/include/Qt"
     position = uniform_filepath.find(build_path)
@@ -97,7 +97,7 @@ def remove_build_path(parts):
     return file    
 
 def create_default_link(parts):
-    file = parts[int(Column.File)]
+    file = parts[int(Column.FILE)]
     name, linenumber = file.split(":")
     
     url = urljoin("[[permalink-prefix]]", name.replace("\\", "/"))
@@ -112,18 +112,18 @@ def create_default_link(parts):
 def customize(line):
     global msvc
     parts = line.strip().split("|")
-    parts[int(Column.Component)] = define_component(parts)
+    parts[int(Column.COMPONENT)] = define_component(parts)
     if msvc:
-        parts[int(Column.File)] = remove_build_path(parts).replace("/", "\\")
+        parts[int(Column.FILE)] = remove_build_path(parts).replace("/", "\\")
     else:
-        parts[int(Column.File)] = remove_build_path(parts)
+        parts[int(Column.FILE)] = remove_build_path(parts)
     
-    file = parts[int(Column.File)]
+    file = parts[int(Column.FILE)]
     if file.startswith("[[marker]]"):
         length = len("[[marker]]")    
-        parts[int(Column.File)] = file[length:]
-        parts[int(Column.Link)] = parts[int(Column.Link)] + create_default_link(parts)
-    writeStructuredLine(parts)
+        parts[int(Column.FILE)] = file[length:]
+        parts[int(Column.LINK)] = parts[int(Column.LINK)] + create_default_link(parts)
+    write_structured_line(parts)
 
 
 def show_usage():
@@ -144,10 +144,15 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        raise
     except SystemExit:
         raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
     except:
         info = traceback.format_exc()
         eprint(info)
         show_usage()
         sys.exit(1)
+
