@@ -5,7 +5,9 @@
 import traceback
 import sys
 import os
-from util import *
+import util
+import html
+from util import eprint, Column
 
 verbose = False
 
@@ -13,7 +15,7 @@ verbose = False
 def read():
     results = []
     for line in sys.stdin:
-        results += [read_issues_parts(line)]
+        results += [util.read_structured_line(line)]
     return results
 
 
@@ -48,7 +50,7 @@ def add_description(rule, parts):
 def count_rules(lines):
     results = {}
     for parts in lines:
-        check_structured_line_parts(parts)
+        util.check_structured_line_parts(parts)
         rule = parts[Column.RULE]
         add_description(rule, parts)
         if rule in results:
@@ -63,7 +65,7 @@ def get_description(rule):
 
 
 def show_usage():
-    eprint("Usage: <input> | " + os.path.basename(__file__) + [-v])
+    eprint("Usage: <input> | " + os.path.basename(__file__) + " [-v]")
     eprint("  -v verbose mode: also print the file/location of the first occurance of an issue")
 
 
@@ -85,11 +87,11 @@ def main():
         if rule == "rule-missing":
             eprint("-- warning: ignored issue with rule-missing!")
             continue
-        warning = "{}: {}".format(rule, count)
-        print("{:50}: {}".format(warning, get_description(rule)))
+        warning = f"{rule}: {count}"
+        print(f"{warning:50}: {get_description(rule)}")
 
     if check_len != len(lines):
-        print("error in script: {}/{} issues accounted for.".format(len(lines), check_len))
+        print(f"error in script: {len(lines)}/{check_len} issues accounted for.")
     print(f"In total {check_len} issues.")
 
 

@@ -55,7 +55,6 @@ def replace_no_case(instr, old, new):
     return regex.sub(new, instr)
 
 
-
 def replace_pipe(parts):
     result = []
     for part in parts:
@@ -92,7 +91,7 @@ def string_sql_escaping(line):
     return result
 
 
-def read_issues_parts(line):
+def read_structured_line(line):
     result = string_sql_escaping(line.strip().split("|"))
     check_structured_line_parts(result)
     return result
@@ -100,7 +99,7 @@ def read_issues_parts(line):
 
 def check_structured_line_parts(parts):
     if len(parts) != len(Column):
-        eprint("assertion failed: broken structured CSV, line has {}/{} parts:\n {}".format(len(parts), len(Column), parts))
+        eprint(f"assertion failed: broken structured CSV, line has {len(parts)}/{len(Column)} parts:\n {parts}")
 
 
 def write_structured_line(parts):

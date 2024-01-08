@@ -13,7 +13,7 @@ from util import eprint
 def read():
     results = []
     for line in sys.stdin:
-        results += [util.read_issues_parts(line)]
+        results += [util.read_structured_line(line)]
     return results
 
 

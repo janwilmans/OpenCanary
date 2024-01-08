@@ -4,7 +4,9 @@ exclude all projects that do not comply yet
 any issues that pass this filter fail the build
 """
 
-import traceback, sys, os
+import traceback
+import sys
+import os
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -14,7 +16,7 @@ def sprint(*args, **kwargs):
     print(*args, file=sys.stdout, **kwargs)
 
 
-def filter():
+def filter_stdin():
     results = []
     for line in sys.stdin:
         # filter out all issues that currently exist, so we know when to fail the build (when new issues are introduced)
@@ -57,7 +59,7 @@ def main():
         show_usage()
         sys.exit(1)
 
-    regression_issues = filter()
+    regression_issues = filter_stdin()
 
     if len(regression_issues) > 0:
         eprint(len(regression_issues), "new issue(s) where introduced!\n")
@@ -81,4 +83,3 @@ if __name__ == "__main__":
         eprint(info)
         show_usage()
         sys.exit(1)
-

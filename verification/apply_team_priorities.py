@@ -20,7 +20,7 @@ def show_usage():
 def read():
     results = []
     for line in sys.stdin:
-        results += [read_issues_parts(line)]
+        results += [read_structured_line(line)]
     return results
 
 

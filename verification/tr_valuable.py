@@ -4,27 +4,32 @@ assign priorities according to the teams judgement
 the result of this yields a prioritized work-list for the team
 """
 
-import traceback, sys, os
-from util import *
+import traceback
+import sys
+import os
+import util
+from util import Column
+from util import eprint
 
 categoryMap = {}    # rule -> category
 
 categoryMap.update('C4838', 'conversions')
 categoryMap.update('C4312', 'conversions')
 
-def filter(linetext):
-    line = splitline(linetext)
+
+def process(linetext):
+    parts = util.read_issues_parts(linetext)
 
     # add filters here for what the team should ignore / currently has no focus
-    
-    # categorize issues here
-    v = categoryMap.get(line[Column.RULE], None)
-    if v is not None:
-        line[Column.CATEGORY] = v
-    
-    # prioritize issues here
 
-    sys.stdout.write(joinline(line))
+    # categorize issues here
+    v = categoryMap.get(parts[Column.RULE], None)
+    if v is not None:
+        parts[Column.CATEGORY] = v
+
+    # prioritize issues here
+    util.write_structured_line(parts)
+
 
 def show_usage():
     eprint("Usage: <input> | " + os.path.basename(__file__))
@@ -40,7 +45,7 @@ def main():
         sys.exit(1)
 
     for line in sys.stdin:
-         filter(line)
+        process(line)
 
 
 if __name__ == "__main__":
@@ -57,4 +62,3 @@ if __name__ == "__main__":
         eprint(info)
         show_usage()
         sys.exit(1)
-

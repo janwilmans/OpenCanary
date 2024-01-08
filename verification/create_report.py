@@ -2,16 +2,20 @@
 """ report V3: takes a pre-filtered csv-file and create an html report
 """
 
-import os, sys
+import os
+import sys
 import traceback
-from util import *
+import util
+from util import Column
+from util import eprint
 
 # see https://divtable.com/table-styler/
 # see https://validator.w3.org/nu/#textarea
 # see https://validator.github.io/validator/ (integrate into build as a test)
 # use https://jinja.palletsprojects.com/en/2.10.x/ for html generation?
 
-def getHtmlStyles():
+
+def get_html_styles():
     return """
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
@@ -88,28 +92,31 @@ table.blueTable tfoot .links a{
 </head>"""
 
 
-def hasIndex(list, column):
-    return len(list) > column
+def has_index(list_value, column):
+    return len(list_value) > column
 
 
-def getPart(list, column):
-    if not hasIndex(list, column):
-        return "<missing " + str(column) + ">" 
-    return list[column]
+def get_part(list_value, column):
+    if not has_index(list_value, column):
+        return "<missing " + str(column) + ">"
+    return list_value[column]
 
 # transform the Column.Link field "[1]{URL_1}[2]{URL_2}"
 # [index]{URL}  # the index is a 0-indexed reference to the fields the URL if for.
 #
-def getLinkMap(parts):
-    links = [""] * (len(parts)-1)   # initialize a list of empty strings ["", "", ...]
+
+
+def get_link_map(parts):
+    # initialize a list of empty strings ["", "", ...]
+    links = [""] * (len(parts)-1)
 
     linktexts = parts[Column.LINK]
     if (linktexts == ""):
         return zip(parts, links)    # no links, just return
 
-    linkString = parts[Column.LINK].rstrip("}").split("}")
-    for indexWithLink in linkString:
-        kv = indexWithLink[1:].split("]{")
+    link_string = parts[Column.LINK].rstrip("}").split("}")
+    for index_with_link in link_string:
+        kv = index_with_link[1:].split("]{")
         if len(kv) == 2:
             links[int(kv[0])] = kv[1]
         else:
@@ -118,19 +125,23 @@ def getLinkMap(parts):
     return zip(parts, links)
 
 
-def createHtmlReport(lines, count):
-    displayLines = lines[:count]
+def create_html_report(lines, count):
+    display_lines = lines[:count]
 
     f = sys.stdout
     f.write(r'<!DOCTYPE html><html lang="en">')
-    f.write(getHtmlStyles())
+    f.write(get_html_styles())
     f.write(r'<body>')
-    f.write(str(len(lines)) + r' issues were found relevant for this Software Quality Report (SQR)')
+    f.write(str(len(lines)) +
+            r' issues were found relevant for this Software Quality Report (SQR)')
     f.write(r'<br/><a href="[[wiki-url]]">Open-canary Wiki page</a>')
-    f.write(r'<br/><a href="[[job-url]]">The CI job that generated this report</a>')
-    f.write(r'<h2>SQR for branch: "[[branch-id]]" on behalf of [[user-name]]</h2>')
+    f.write(
+        r'<br/><a href="[[job-url]]">The CI job that generated this report</a>')
+    f.write(
+        r'<h2>SQR for branch: "[[branch-id]]" on behalf of [[user-name]]</h2>')
     f.write(r'Last commit message: [[commit-message]]<br/>')
-    f.write(r'Listing ' + str(len(displayLines)) + ' out of ' + str(len(lines)) + ' issues.')
+    f.write(r'Listing ' + str(len(display_lines)) +
+            ' out of ' + str(len(lines)) + ' issues.')
     f.write(r'<table class="blueTable">')
     f.write(r'<thead><tr>')
     f.write('<th title="Team assigned priority">Prio</th>\n')
@@ -147,18 +158,17 @@ def createHtmlReport(lines, count):
     td = '<td><div>'   # class="hideextra"
     tdend = '</div></td>\n'
 
-    for line in displayLines:
+    for line in display_lines:
         f.write('<tr>')
-        parts = read_issues_parts(line)
-        linkMap = getLinkMap(parts)
-        
-        index = 0
-        for value, link in linkMap:
-            if not link == "":
-                f.write(td + r'<a href="' + link + '">' + value + '</a>' + tdend)
-            else:
+        parts = util.read_structured_line(line)
+        link_map = get_link_map(parts)
+
+        for value, link in link_map:
+            if link == "":
                 f.write(td + value + tdend)
-            index = index + 1
+            else:
+                f.write(td + r'<a href="' + link +
+                        '">' + value + '</a>' + tdend)
         f.write('</tr>\n')
 
     f.write('</table>\n')
@@ -172,7 +182,7 @@ def show_usage():
         eprint("")
     eprint("Usage: type <foo> | " + os.path.basename(__file__) + " [/limit=N]")
     eprint("   create an html report from a opencanary-formatted CSV input, optionally limiting the output")
-    eprint("   opencanary-format: " )
+    eprint("   opencanary-format: ")
     eprint("        priority|team|component|file|source|rule|category|description|link-info")
     eprint("   see also: https://github.com/janwilmans/OpenCanary")
     eprint("")
@@ -186,18 +196,19 @@ def main():
         limit = int(sys.argv[1].split("=")[1])
 
     if len(sys.argv) != 1 and limit == 0:
-        eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
+        eprint(os.path.basename(__file__) +
+               " commandline error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
     issues = []
     for raw in sys.stdin:
         issues += [raw]
-        
+
     if limit == 0:
-        createHtmlReport(issues, len(issues))
+        create_html_report(issues, len(issues))
     else:
-        createHtmlReport(issues, limit)
+        create_html_report(issues, limit)
 
 
 if __name__ == "__main__":
@@ -209,4 +220,3 @@ if __name__ == "__main__":
         info = traceback.format_exc()
         eprint(info)
         sys.exit(1)
-
