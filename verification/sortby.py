@@ -13,7 +13,7 @@ def MakeTuple(line):
     data = line.split("|")
     
     # sort the first colomn by its integer-representation, colomn[0] (prio) and colomn[3] (filename)
-    return int(data[int(Column.PRIO)]), data[int(Column.FILE)]
+    return int(data[Column.PRIO]), data[Column.FILE]
 
 
 def SortBy(inputlines):

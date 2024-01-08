@@ -19,14 +19,6 @@ def read():
 
 issue_descriptions = {}
 
-
-def unescape(text):
-    text = text.replace("&#x27;", "'")
-    text = text.replace("&lt;", "<")
-    text = text.replace("&gt;", ">")
-    return text
-
-
 def limit_string_at_whitespace(input_string, max_length=100):
     if len(input_string) <= max_length:
         return input_string
@@ -45,7 +37,7 @@ def add_description(rule, parts):
     if rule in issue_descriptions:
         return
 
-    issue_descriptions[rule] = "[" + parts[Column.COMPONENT] + "]: " + limit_string_at_whitespace(unescape(parts[Column.DESCRIPTION]))
+    issue_descriptions[rule] = "[" + parts[Column.COMPONENT] + "]: " + limit_string_at_whitespace(html.unescape(parts[Column.DESCRIPTION]))
 
     if verbose:
         issue_descriptions[rule] = issue_descriptions[rule] + "\t@ " + parts[Column.FILE]

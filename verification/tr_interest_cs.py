@@ -2,31 +2,33 @@
 """Filter third party warnings
 """
 
-import traceback, sys, os
-from util import *
+import traceback
+import sys
+import os
+from util import eprint
 
 
 # note: return True if the line should be kept
 def is_interesting(line):
     if "|3rdparty|" in line:
-        if "C4706" in line: # assignment within conditional expression (checked)
+        if "C4706" in line:  # assignment within conditional expression (checked)
             return False
-        if "C4245" in line: # 'return': conversion from 'int' to 'unsigned int', signed/unsigned mismatch
+        if "C4245" in line:  # 'return': conversion from 'int' to 'unsigned int', signed/unsigned mismatch
             return False
-        if "4459" in line: # [3rdparty]: declaration of 'table_tags' hides global declaration
+        if "4459" in line:  # [3rdparty]: declaration of 'table_tags' hides global declaration
             return False
     if "|webkit|" in line:
-        if "C4706" in line: # assignment within conditional expression (checked)
+        if "C4706" in line:  # assignment within conditional expression (checked)
             return False
-        if "C4389" in line: # '==': signed/unsigned mismatch
+        if "C4389" in line:  # '==': signed/unsigned mismatch
             return False
     if "|WebCore|" in line:
-        if "C4702" in line: # unreachable code
+        if "C4702" in line:  # unreachable code
             return False
-        if "C4065" in line: # switch statement contains 'default' but no 'case' labels
+        if "C4065" in line:  # switch statement contains 'default' but no 'case' labels
             return False
     if "harfbuzz" in line:
-        if "C4702" in line: # unreachable code
+        if "C4702" in line:  # unreachable code
             return False
     if "C4242" in line:     # [WebCore]: '=': conversion from 'int' to 'yytype_int16', possible loss of data
         return False        # in WebCore, CsCore, CsGui and 3rdparty
@@ -44,15 +46,15 @@ def is_interesting(line):
         return False
     if "_CRT_SECURE_NO_WARNINGS" in line:
         return False
-    if "C4100" in line: # 'size': unreferenced formal parameter
+    if "C4100" in line:  # 'size': unreferenced formal parameter
         return False
-    if "C4456" in line: # [CsCore]: declaration of 'oldNext' hides previous local declaration
+    if "C4456" in line:  # [CsCore]: declaration of 'oldNext' hides previous local declaration
         return False
-    if "C4458" in line: # [CsGui]: declaration of 'state' hides class member
+    if "C4458" in line:  # [CsGui]: declaration of 'state' hides class member
         return False
-    if "C4457" in line: # declaration of 'value' hides function parameter
+    if "C4457" in line:  # declaration of 'value' hides function parameter
         return False
-    if "C4996" in line: # non-deprecation warning in iterator (was actually never standard)
+    if "C4996" in line:  # non-deprecation warning in iterator (was actually never standard)
         if "|MSVC|" in line:
             return False
     if "C4389" in line:    # [CsCore]: '!=': signed/unsigned mismatc
@@ -66,11 +68,13 @@ def is_interesting(line):
             return False
     return True
 
-def filter(line):
+
+def apply_filter(line):
     if is_interesting(line):
         sys.stdout.write(line)
 
-def filterAndNormalizeMsvc(line):
+
+def apply_filter_and_normalize_msvc(line):
     if is_interesting(line):
         sys.stdout.write(line.replace('\\', '/'))
 
@@ -78,23 +82,24 @@ def filterAndNormalizeMsvc(line):
 def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " [/msvc]")
     eprint("   will filter all lines from 3rd party as hardcoded by you in this script")
-    eprint(r"   /msvc  - also ignore messages from MSVC system headers and normalize paths, replacing \ with /")
+    eprint(r"   /msvc   - ignore messages from MSVC system headers and normalize paths, replacing \ with /")
+
+
+def has_argument(value):
+    for arg in sys.argv:
+        if value in arg:
+            return True
+    return False
 
 
 def main():
-    if len(sys.argv) < 2:
+    if has_argument("msvc"):
         for line in sys.stdin:
-            filter(line)
-        sys.exit(0)
-
-    if len(sys.argv) == 2 and sys.argv[1] == "/msvc":
+            apply_filter_and_normalize_msvc(line)
+    else:
         for line in sys.stdin:
-            filterAndNormalizeMsvc(line)
-        sys.exit(0)
-
-    eprint("error: invalid argument(s)\n")
-    show_usage()
-    sys.exit(1)
+            apply_filter(line)
+    sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -111,4 +116,3 @@ if __name__ == "__main__":
         eprint(info)
         show_usage()
         sys.exit(1)
-
