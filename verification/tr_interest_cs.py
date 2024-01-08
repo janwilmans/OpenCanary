@@ -10,6 +10,8 @@ from util import eprint
 
 # note: return True if the line should be kept
 def is_interesting(line):
+    if "C4101" in line:  # unreferenced local variable
+        return False
     if "|3rdparty|" in line:
         if "C4706" in line:  # assignment within conditional expression (checked)
             return False
@@ -38,11 +40,15 @@ def is_interesting(line):
         return False
     if "C4267" in line:     # [CsCore]: 'initializing': conversion from 'size_t' to 'int', possible loss of data
         return False
+    if "C4706" in line:     # assignment within conditional expression
+        return False
     if "dll-interface" in line:
         return False
     if "via dominance" in line:
         return False
     if "marked as __forceinline not inlined" in line:
+        return False
+    if "The POSIX name for this item is deprecated" in line:
         return False
     if "_CRT_SECURE_NO_WARNINGS" in line:
         return False

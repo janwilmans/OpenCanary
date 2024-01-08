@@ -53,8 +53,7 @@ def get_priority(rule):
         return 17
     if "C4918" in rule:
         return 5
-    # prime number 11 means: no specific priority assigned
-    return 11
+    return Priority.UNSET.value
 
 
 def could_not_resolve(filename):
@@ -106,8 +105,8 @@ def split_message_line(line):
 
 
 def report_issue(component, fileref, source, rule, category, description):
-    links = create_link(Column.SOURCE.value), get_feeling_ducky_url(rule))
-    report(get_priority(rule), "[[team]]", component, fileref, source, rule, category, description, links)
+    links = create_link(Column.SOURCE.value, get_feeling_ducky_url(rule))
+    report(str(get_priority(rule)), "[[team]]", component, fileref, source, rule, category, description, links)
 
 
 def parse_msvc(line, source):

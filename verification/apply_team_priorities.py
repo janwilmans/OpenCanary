@@ -5,6 +5,7 @@
 import traceback
 import sys
 import os
+import util
 from util import *
 
 
@@ -24,6 +25,10 @@ def read():
 
 
 def get_priority(rule):
+
+    # MSVC warnings
+    if "C4701" == rule: #ub, Potentially uninitialized local variable
+        return 5
 
     # gcc warnings, exact matches if possible, some contains trailing =
     # for example `implicit-fallthrough=`, `format-overflow=`, `stringop-overflow=` or `format-truncation=`
@@ -166,7 +171,7 @@ def main():
         sys.exit(1)
 
     for line in read():
-        report_list(transform(line))
+        util.report_list(transform(line))
 
 
 if __name__ == "__main__":

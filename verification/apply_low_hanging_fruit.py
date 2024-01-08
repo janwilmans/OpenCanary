@@ -6,7 +6,7 @@ import traceback
 import sys
 import os
 import util
-from util import Column
+from util import Column, Priority
 from util import eprint
 
 
@@ -53,9 +53,9 @@ def main():
     for line in lines:
         rule = line[Column.RULE]
         if rule in rule_set:
-            # prime number 7 means: priority overridden automatically to solve 'low hanging fruit' first
-            line[Column.PRIO] = "7"
-        report_list(line)
+            line[Column.PRIO] = str(Priority.LOW_HANGING)
+            line[Column.DESCRIPTION] = "[LOW] " + line[Column.DESCRIPTION]
+        util.report_list(line)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,9 @@ envfile = {}
 
 
 class Priority(IntEnum):
-    UNASSIGNED = 3
+    LOW_HANGING = 7
+    UNASSIGNED = 8
+    UNSET = 11
 
 
 class Column(IntEnum):
