@@ -18,7 +18,17 @@ def make_tuple(line):
 
     # sort the first column by its integer-representation, column[0] (prio) and column[3] (filename)
     # bug: we should sort also by the line-number and column-number at the end of the "filename:line:column"
-    return int(data[Column.PRIO]), data[Column.FILE]
+
+    file = data[Column.FILE]
+    parts = file.split(":")
+    filename = parts[0]
+    line_number = 0
+    column_number = 0
+    if len(parts) > 1:
+        line_number = parts[1]
+        if len(parts) > 2:
+            column_number = parts[2]
+    return int(data[Column.PRIO]), filename, int(line_number), int(column_number)
 
 
 def sort_by(inputlines):

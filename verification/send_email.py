@@ -2,10 +2,12 @@
 """ send an email report
 """
 
-import traceback, sys, os, time
+import traceback
+import sys
+import os
 from subprocess import Popen, PIPE
 
-import email, smtplib
+import smtplib
 
 from email import encoders
 from email.mime.base import MIMEBase
@@ -21,7 +23,8 @@ recipients = ["some@email.address.com"]
 login_name = sender_email
 login_password = ""
 
-def CreateBinaryPayload(content, ctype, filename = ''):
+
+def CreateBinaryPayload(content, ctype, filename=''):
     maintype, subtype = ctype.split('/', 1)
     img = MIMEBase(maintype, subtype)
     img.set_payload(content)
@@ -31,15 +34,16 @@ def CreateBinaryPayload(content, ctype, filename = ''):
 
 
 def execute_popen(list):
-    sub_process = Popen(list,  stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    sub_process = Popen(list, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     (std_out, std_err) = sub_process.communicate()
     sub_process.wait()
     exitcode = sub_process.returncode
     return std_out, std_err, exitcode
 
+
 def getRecentEditors():
     list = ['git', 'log', '--since', '2.week']
-    stdout, stderr, returncode =  execute_popen(list)
+    stdout, stderr, returncode = execute_popen(list)
     result = []
     for line in set(stdout.splitlines()):
         if 'Author:' in line:
@@ -47,6 +51,7 @@ def getRecentEditors():
             if len(parts) == 2:
                 result += [parts[1]]
     return result
+
 
 def filterList(editors):
     auto_send_authors = ["firstname1.lastname1", "firstname2.lastname2"]
@@ -57,13 +62,15 @@ def filterList(editors):
                 result += [item]
     return result
 
+
 def listContains(list, name):
     for item in list:
         if name in item:
             return True
     return False
 
-def sendReport(bodyfile, attachments = []):
+
+def sendReport(bodyfile, attachments=[]):
     global recipients
 
     recipients = filterList(getRecentEditors())
@@ -80,13 +87,12 @@ def sendReport(bodyfile, attachments = []):
         # send to admin only for testing
         recipients = ["someadmin@email.address.com"]
 
-
     # Create a multipart message and set headers
     message = MIMEMultipart()
     message["From"] = sender_email
     message['To'] = ",".join(recipients)
     message["Subject"] = subject
-    #message["Bcc"] = receiver_email  # Recommended for mass emails
+    # message["Bcc"] = receiver_email  # Recommended for mass emails
 
     with open(bodyfile, encoding="utf-8") as f:
         if bodyfile.endswith(".html"):
@@ -116,8 +122,8 @@ def sendReport(bodyfile, attachments = []):
     # Log in to server using secure context and send email
     server = smtplib.SMTP(mailserver, mailserver_port)
     server.ehlo()
-    #server.starttls()      # uncomment to use TLS
-    #server.ehlo()
+    # server.starttls()      # uncomment to use TLS
+    # server.ehlo()
     if len(login_password) > 0:
         server.login(login_name, login_password)
     try:
@@ -128,9 +134,11 @@ def sendReport(bodyfile, attachments = []):
     except smtplib.SMTPRecipientsRefused as ex:
         sprint("Email [" + subject + "] was NOT send, exception caught:", getattr(ex, 'message', repr(ex)))
 
+
 def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " <bodyfile> <attachments...> [-s <subject>]")
     eprint("   will send an email to hardcoded recipients ")
+
 
 def main():
     global subject
@@ -144,7 +152,7 @@ def main():
     if len(sys.argv) > 2:
         for arg in sys.argv[2:]:
             if arg == "-s":
-                captureSubject = True;
+                captureSubject = True
                 continue
             else:
                 if captureSubject:
@@ -156,6 +164,7 @@ def main():
 
     sendReport(sys.argv[1], att)
 
+
 if __name__ == "__main__":
     try:
         main()
@@ -166,4 +175,3 @@ if __name__ == "__main__":
         eprint(info)
         show_usage()
         sys.exit(1)
-
