@@ -27,8 +27,6 @@ def make_tuple(line):
     if len(parts) > 1:
         if parts[1] != "":
             line_number = int(parts[1])
-        else:
-            eprint("oddity:\n {}\n".format(line))
         if len(parts) > 2:
             column_number = int(parts[2])
     return int(data[Column.PRIO]), filename, int(line_number), int(column_number)

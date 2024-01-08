@@ -83,16 +83,15 @@ def split_warning_line(line):
     remaining = parts[1]
     idx = remaining.find(":")
     rule = remaining[:idx]
-    description = remaining[idx + 2:]
+    description = remaining[idx + 1:].strip()
     component = ""
 
     lastbrace = filepart.rfind("(")
     filename = get_real_filename(filepart[:lastbrace])
     remaining = filepart[lastbrace:]
-    parts = remaining.rstrip().rstrip(")")
-    line = parts.split(",")[0][1:]
-    fileref = filename + ":" + line
-    return fileref, filename, line, rule, description, component
+    line_number = remaining.lstrip("( ").rstrip(" ,)")   
+    fileref = filename + ":" + line_number
+    return fileref, filename, line_number, rule, description, component
 
 
 def split_message_line(line):
