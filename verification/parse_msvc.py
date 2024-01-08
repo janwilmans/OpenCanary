@@ -77,21 +77,35 @@ def get_real_filename(filename):
     return fs_filename.replace('\\', '/')
 
 
-def split_warning_line(line):
-    parts = line.split(": warning ")
-    filepart = parts[0]
-    remaining = parts[1]
-    idx = remaining.find(":")
-    rule = remaining[:idx]
-    description = remaining[idx + 1:].strip()
-    component = ""
+# splits a line in two parts, if the separator is not found the second part is empty
+def split_two(line, separator):
+    parts = line.split(separator, 1)
+    if len(parts) == 2:
+        return parts[0], parts[1].strip(" )")
+    return line, ""
 
-    lastbrace = filepart.rfind("(")
-    filename = get_real_filename(filepart[:lastbrace])
-    remaining = filepart[lastbrace:]
-    line_number = remaining.lstrip("( ").rstrip(" ,)")   
-    fileref = filename + ":" + line_number
-    return fileref, filename, line_number, rule, description, component
+# msvc messages look like:
+# C:\project\...\slot.h(75): warning C4251: description....
+# MASM messages look like:
+# MASM : warning A4018:invalid command-line option : /utf-8
+#
+def split_warning_line(line):
+    filepart, remainder = split_two(line, ": warning ")
+    rule, description = split_two(remainder, ":")
+
+    filename, location = split_two(filepart, "(")
+    filename = get_real_filename(filename)
+
+    line_number, column_number = split_two(location, ",")
+    
+    fileref = filename
+    if line_number != "":
+        fileref = f"{filename}:{line_number}"
+    else:
+        line_number = "0"
+    if column_number != "":
+        fileref = f"{filename}:{line_number}:{column_number}"
+    return fileref, filename, line_number, rule, description
 
 
 def split_message_line(line):
@@ -123,7 +137,8 @@ def parse_msvc(line, source):
     if ": error" in line:
         eprint("-- error found:" + line)
     if ": warning" in line:
-        fileref, filename, line, rule, description, component = split_warning_line(line)
+        fileref, filename, line, rule, description = split_warning_line(line)
+        component = ""
         report_issue(component, fileref, source, rule, "warning", description)
         return
     # if ": message" in line:
