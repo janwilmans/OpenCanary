@@ -94,7 +94,7 @@ def create_default_link(parts):
     parts = file.split(":")
     filename = util.get_or_default(parts, 0, "")
     line_number = util.get_or_default(parts, 1, "0")
-    #_colomn_number = util.get_or_default(parts, 2, 0)  # ignored if present
+    #_column_number = util.get_or_default(parts, 2, 0)  # ignored if present
 
     url = util.urljoin("[[permalink-prefix]]", filename.replace("\\", "/"))
     links = util.create_link(3, url)

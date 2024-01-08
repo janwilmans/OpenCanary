@@ -33,7 +33,7 @@ def create_default_link(filename, line):
     return links
 
 
-# fileref can include a colomn number (or any other postfixed information)
+# fileref can include a column number (or any other postfixed information)
 # eg. file:   /component/inc/foo.h:127:23
 #     filename:  /component/inc/foo.h
 #     line:      127

@@ -5,13 +5,15 @@
 import traceback
 import sys
 import os
-from util import *
+import util
+from util import Column
+from util import eprint
 
 
 def read():
     results = []
     for line in sys.stdin:
-        results += [read_issues_parts(line)]
+        results += [util.read_issues_parts(line)]
     return results
 
 
@@ -42,15 +44,15 @@ def main():
 
     lines = read()
     rules = count_rules(lines)
-    ruleSet = set()
+    rule_set = set()
     for rule in rules:
         count = rules[rule]
         if count <= 5:
-            ruleSet.add(rule)
+            rule_set.add(rule)
 
     for line in lines:
         rule = line[Column.RULE]
-        if rule in ruleSet:
+        if rule in rule_set:
             # prime number 7 means: priority overridden automatically to solve 'low hanging fruit' first
             line[Column.PRIO] = "7"
         report_list(line)

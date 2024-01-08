@@ -4,23 +4,28 @@
 # cause duplicate entries to be reported
 # consider using 'sort -t \| -k 1n,4 | uniq' if this is available on your platform
 
-import os, sys, traceback
-from util import *
+import os
+import sys
+import traceback
+from util import Column
+from util import eprint
+from util import sprint
 
 
 # the tuple is used for a lexicographically sort by its fields
-def MakeTuple(line):
+def make_tuple(line):
     data = line.split("|")
-    
-    # sort the first colomn by its integer-representation, colomn[0] (prio) and colomn[3] (filename)
+
+    # sort the first column by its integer-representation, column[0] (prio) and column[3] (filename)
+    # bug: we should sort also by the line-number and column-number at the end of the "filename:line:column"
     return int(data[Column.PRIO]), data[Column.FILE]
 
 
-def SortBy(inputlines):
-    return sorted(inputlines, key=MakeTuple)
+def sort_by(inputlines):
+    return sorted(inputlines, key=make_tuple)
 
 
-def getStdinLines():
+def get_stdin_lines():
     lines = []
     for line in sys.stdin:
         lines += [line.strip()]
@@ -37,17 +42,21 @@ def main():
         show_usage()
         sys.exit(1)
 
-    for line in SortBy(set(getStdinLines())):
+    for line in sort_by(set(get_stdin_lines())):
         sprint(line)
+
 
 if __name__ == "__main__":
     try:
         main()
+    except KeyboardInterrupt:
+        raise
     except SystemExit:
         raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.exit(0)
     except:
         info = traceback.format_exc()
         eprint(info)
         show_usage()
         sys.exit(1)
-

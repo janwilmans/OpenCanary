@@ -8,30 +8,30 @@
 import traceback
 import sys
 import os
-from util import *
-
+import util
+from util import eprint
 
 # returns projects JOB url _without_ trailing /
 def get_job_url():
-    return normpath(get_from_envfile('CI_JOB_URL'))
+    return util.normpath(util.get_from_envfile('CI_JOB_URL'))
 
 
 def get_user_email():
-    return get_from_envfile('GITLAB_USER_EMAIL')
+    return util.get_from_envfile('GITLAB_USER_EMAIL')
 
 
 def get_user_name():
-    if is_scheduled_build():
+    if util.is_scheduled_build():
         return "Scheduled build"
-    return get_from_envfile('GITLAB_USER_NAME')
+    return util.get_from_envfile('GITLAB_USER_NAME')
 
 
 def get_commit_message():
-    return get_from_envfile('CI_COMMIT_TITLE')
+    return util.get_from_envfile('CI_COMMIT_TITLE')
 
 
 def get_branch_id():
-    return get_from_envfile('CI_BUILD_REF_NAME')    # remove get_from_envfile and move it into apply_environment.py
+    return util.get_from_envfile('CI_BUILD_REF_NAME')    # remove get_from_envfile and move it into apply_environment.py
 
 
 def show_usage():
@@ -58,7 +58,7 @@ def get_wiki_main_url():
 
 # returns projects GIT url _without_ trailing /
 def get_permalink_prefix():
-    return urljoin(normpath(get_from_envfile('CI_PROJECT_URL')), "blob", get_from_envfile('CI_COMMIT_SHA'))
+    return util.urljoin(util.normpath(util.get_from_envfile('CI_PROJECT_URL')), "blob", util.get_from_envfile('CI_COMMIT_SHA'))
 
 
 def transform(line):
@@ -79,7 +79,7 @@ def main():
         show_usage()
         sys.exit(1)
 
-    read_envfile(sys.argv[1])
+    util.read_envfile(sys.argv[1])
     for line in sys.stdin:
         sys.stdout.write(transform(line))
 
