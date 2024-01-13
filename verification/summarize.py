@@ -5,8 +5,9 @@
 import traceback
 import sys
 import os
-import util
 import html
+import util
+
 from util import eprint, Column
 
 verbose = False
