@@ -13,7 +13,6 @@ import sys
 import os
 import re
 import xml.etree.ElementTree as ET
-import gitignore_parser
 
 import util
 from util import Priority, eprint
@@ -23,63 +22,42 @@ ns = '{http://schemas.microsoft.com/developer/msbuild/2003}'
 ignore_rule_list = []
 
 
-def getProjectXMLRoot(projectname):
-    projectTree = ET.parse(projectname)
-    return projectTree.getroot()
+def get_project_xml_root(projectname):
+    project_tree = ET.parse(projectname)
+    return project_tree.getroot()
 
 
-def getIncludeFilesFromProject(projectRoot, projectDirectory):
+def get_include_files_from_project(project_root, project_directory):
     result = []
-    for includeSection in projectRoot.iter(ns + 'ClInclude'):
-        relativeFilename = includeSection.get('Include')
-        result += [os.path.join(projectDirectory, relativeFilename)]
+    for include_section in project_root.iter(ns + 'ClInclude'):
+        relative_filename = include_section.get('Include')
+        result += [os.path.join(project_directory, relative_filename)]
     return result
 
 
-def getCppFilesFromProject(projectRoot, projectDirectory):
+def get_cpp_files_from_project(project_root, project_directory):
     result = []
-    for includeSection in projectRoot.iter(ns + 'ClCompile'):
-        relativeFilename = includeSection.get('Include')
-        if relativeFilename is not None:
-            result += [os.path.join(projectDirectory, relativeFilename)]
+    for include_section in project_root.iter(ns + 'ClCompile'):
+        relative_filename = include_section.get('Include')
+        if relative_filename is not None:
+            result += [os.path.join(project_directory, relative_filename)]
     return result
 
 
-def get_cpp_files_from_directory(path):
-    global rootpath
-    rootpath = os.path.abspath(path)
-    headers = []
-    cpps = []
-
-    for root, dirs, files in gitignore_parser.walk(path, filenames=['.opencanaryignore']):
-        for file in files:
-            filename = os.path.abspath(os.path.join(root, file))
-            if file.endswith(".h") or file.endswith(".hpp"):
-                headers += [filename]
-            if file.endswith(".cpp") or file.endswith(".cc"):
-                cpps += [filename]
-    return headers, cpps
-
-
-def checkCppSource(filename):
-    lineNumber = 0
+def check_cpp_source(filename):
+    line_number = 0
     for line in read_lines(filename):
-        lineNumber = lineNumber + 1
-        check_line(filename, lineNumber, line)
+        line_number = line_number + 1
+        check_line(filename, line_number, line)
 
 
 def read_lines(filename):
     return open(filename, encoding='utf-8').readlines()  # , errors='ignore'
 
 
-def makeRelative(filename):
-    global rootpath
-    return os.path.relpath(filename, rootpath)
-
-
 def get_priority(_rule):
     # assignment of priority is done in apply_team_priorities.py
-    return Priority.UNSET
+    return Priority.UNSET.value
 
 
 # we do not have the information about the location of the repo here
@@ -99,11 +77,10 @@ def report_issue_detail(fileref, filename, line, rule, description, component, c
     component = ""
     source = "opencanary"
     util.report(get_priority(rule), team, component, fileref,
-           source, rule, category, description, links)
+                source, rule, category, description, links)
 
 
 def report_issue(filename, line, rule, category, description):
-    filename = makeRelative(filename)
     if len(str(line)) > 0:
         fileref = filename + ":" + line
     else:
@@ -127,7 +104,7 @@ def clean_group(match_group):
 
 def check_line(filename, line_number, line):
     try:
-        check_line_impl(filename, line_number, line)
+        check_line_impl(filename, str(line_number), line)
     except:
         eprint("open canary parsing error: ", filename + ":" + line_number)
         eprint(line)
@@ -137,66 +114,47 @@ def check_line(filename, line_number, line):
 # Rule numbering is continuous over the prefix, in the sense that #1 occurs only once so MO#1, MO#2, AP#3
 def check_line_impl(filename, line_number, line):
     if "/make_unique" in line:
-        report_issue(filename, str(line_number), "MO#1", "modernize",
-                     "For C++14 and later use #include <memory>")
+        report_issue(filename, line_number, "MO#1", "modernize", "For C++14 and later use #include <memory>")
     else:
         if "make_unique" in line and not "std::make_unique" in line:
-            report_issue(filename, str(line_number), "MO#2", "modernize",
-                         "For C++14 and later use std::make_unique")
+            report_issue(filename, line_number, "MO#2", "modernize", "For C++14 and later use std::make_unique")
 
     if "reinterpret_cast<" in line:
-        report_issue(filename, str(line_number), "AP#3", "casting",
-                     "Anti-pattern: do not reinterpret_cast")
+        report_issue(filename, line_number, "AP#3", "casting", "Anti-pattern: do not reinterpret_cast")
 
-    if re.search("[^a-z]volatile[^a-z].*;", line):
-        report_issue(filename, str(line_number), "AP#4", "redflag",
-                     "Anti-pattern: do not use volatile")
-    if re.search("\sNULL\s", line):
-        report_issue(filename, str(line_number), "MO#5", "modernize",
-                     "Anti-pattern: do not use NULL, use 0 or nullptr instead")
+    if re.search(r"[^a-z]volatile[^a-z].*;", line):
+        report_issue(filename, line_number, "AP#4", "redflag", "Anti-pattern: do not use volatile")
+    if re.search(r"\sNULL\s", line):
+        report_issue(filename, line_number, "MO#5", "modernize", "Anti-pattern: do not use NULL, use 0 or nullptr instead")
 
-    match_group = re.search(
-        "(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", line, re.IGNORECASE)
+    match_group = re.search(r"(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", line, re.IGNORECASE)
     if match_group:
-        report_issue(filename, str(line_number), "AP#6", "readability",
-                     "Anti-pattern: do not use non-english words ('{}') in code or comments".format(
-                         clean_group(match_group)))
-    match_group = re.search("(#if\s+\d)", line)
+        report_issue(filename, line_number, "AP#6", "readability", f"Anti-pattern: do not use non-english words ('{clean_group(match_group)}') in code or comments")
+    match_group = re.search(r"(#if\s+\d)", line)
     if match_group:
-        report_issue(filename, str(line_number), "AP#7", "readability",
-                     "Anti-pattern: {}, do not keep historical code in ifdefs".format(clean_group(match_group)))
-    if re.search("\(\w+\s*\*\s*\)", line):
-        report_issue(filename, str(line_number), "AP#8", "modernize",
-                     "Anti-pattern: dont use c-style casts")
-    match_group = re.search("#define\s+(_\w+)", line)
+        report_issue(filename, line_number, "AP#7", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
+    if re.search(r"\(\w+\s*\*\s*\)", line):
+        report_issue(filename, line_number, "AP#8", "modernize", "Anti-pattern: dont use c-style casts")
+    match_group = re.search(r"#define\s+(_\w+)", line)
     if match_group:
-        report_issue(filename, str(line_number), "AP#9", "ub",
-                     "prevent UB: names starting with underscore, followed by a capital ({}) are reserved ".format(
-                         clean_group(match_group)))
-    match_group = re.search(
-        "#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
+        report_issue(filename, line_number, "AP#9", "ub", "prevent UB: names starting with underscore, followed by a capital ({clean_group(match_group)}) are reserved ")
+    match_group = re.search(r"#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
     if match_group:
-        report_issue(filename, str(line_number), "AP#10", "modernize",
-                     "Anti-pattern: do not define {}, use std::min and std::max".format(clean_group(match_group)))
-    if re.search("($|[^\w])extern\s+[^\"]", line):
-        report_issue(filename, str(line_number), "AP#11",
-                     "redflag", "Anti-pattern: do not use extern")
+        report_issue(filename, line_number, "AP#10", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
+    if re.search(r"($|[^\w])extern\s+[^\"]", line):
+        report_issue(filename, line_number, "AP#11", "redflag", "Anti-pattern: do not use extern")
 
     #    if re.search("($|[^\w])register\s", line):
     #        report_issue(filename, str(lineNumber), "AP#12", "redflag", "Anti-pattern: do not use register") # disabled because of too many false positives, and also compilers already catch it
 
-    if re.search("($|[^\w])delete\s\w{1,25};", line):
-        report_issue(filename, str(line_number), "AP#13",
-                     "redflag", "Anti-pattern: do not use delete")
+    if re.search(r"($|[^\w])delete\s\w{1,25};", line):
+        report_issue(filename, line_number, "AP#13", "redflag", "Anti-pattern: do not use delete")
     if "extern volatile" in line:
-        report_issue(filename, str(line_number), "AP#14",
-                     "redflag", "Anti-pattern: extern volatile ?!")
-    if re.search("\(char\s*\*\)\s*\"", line):
-        report_issue(filename, str(line_number), "AP#15", "ub",
-                     "prevent UB: do not cast away constness of string literals")
-    if re.search("const_cast<", line):
-        report_issue(filename, str(line_number), "AP#16", "casting",
-                     "Anti-pattern: do not cast away constness")
+        report_issue(filename, line_number, "AP#14", r"redflag", "Anti-pattern: extern volatile ?!")
+    if re.search(r"\(char\s*\*\)\s*\"", line):
+        report_issue(filename, line_number, "AP#15", "ub", "prevent UB: do not cast away constness of string literals")
+    if re.search(r"const_cast<", line):
+        report_issue(filename, line_number, "AP#16", "casting", "Anti-pattern: do not cast away constness")
 
     # if "catch\s+\(...\)" in line:
     # if "catch\s+(...).*\n*.*\{[\n.]*throw[\n.]*\}" in line:
@@ -215,39 +173,36 @@ def check_cpp_header(filename):
         line_number = line_number + 1
         check_line(filename, line_number, line)
         if re.search("^using namespace", line):
-            report_issue(filename, str(line_number), "AP#17",
-                         "redflag", "Using namespace found in header file")
+            report_issue(filename, str(line_number), "AP#17", "redflag", "Using namespace found in header file")
 
 
 def check_project(projectname):
-    projectRoot = getProjectXMLRoot(projectname)
+    project_root = get_project_xml_root(projectname)
 
     # checks for cpp/header files are done recursively from a directory iso the project
     # checks for missing files moved to checkvsproject.py since they are not c++ project specific.
 
-    for itemDefinitionGroupNode in projectRoot.iter(ns + 'ItemDefinitionGroup'):
+    for item_definition_group_node in project_root.iter(ns + 'ItemDefinitionGroup'):
         # print (itemDefinitionGroupNode.tag + " " + itemDefinitionGroupNode.get("Condition"))
-        clCompileNode = itemDefinitionGroupNode.find(ns + 'ClCompile')
-        if not clCompileNode is None:
-            warningAsErrorNode = clCompileNode.find(ns + 'TreatWarningAsError')
-            if not warningAsErrorNode is None:
+        cl_compile_node = item_definition_group_node.find(ns + 'ClCompile')
+        if not cl_compile_node is None:
+            warning_as_error_node = cl_compile_node.find(ns + 'TreatWarningAsError')
+            if not warning_as_error_node is None:
                 # print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
-                if warningAsErrorNode.text.lower() == "true":
+                if warning_as_error_node.text.lower() == "true":
                     continue
-        report_issue(projectname, "0", "UD#4", "redflag",
-                     "TreatWarningAsError is not set to true")
+        report_issue(projectname, "0", "UD#4", "redflag", "TreatWarningAsError is not set to true")
 
-    for itemDefinitionGroupNode in projectRoot.iter(ns + 'ItemDefinitionGroup'):
+    for item_definition_group_node in project_root.iter(ns + 'ItemDefinitionGroup'):
         # print (itemDefinitionGroupNode.tag + " " + itemDefinitionGroupNode.get("Condition"))
-        clCompileNode = itemDefinitionGroupNode.find(ns + 'ClCompile')
-        if not clCompileNode is None:
-            warningLevel = clCompileNode.find(ns + 'WarningLevel')
-            if not warningLevel is None:
+        cl_compile_node = item_definition_group_node.find(ns + 'ClCompile')
+        if not cl_compile_node is None:
+            warning_level = cl_compile_node.find(ns + 'WarningLevel')
+            if not warning_level is None:
                 # print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
-                if warningLevel.text.endswith("4"):
+                if warning_level.text.endswith("4"):
                     continue
-        report_issue(projectname, "0", "UD#5", "redflag",
-                     "Warning level is not set to 4")
+        report_issue(projectname, "0", "UD#5", "redflag", "Warning level is not set to 4")
 
 
 def get_projects_recursively(path):
@@ -279,19 +234,12 @@ def read_ignore_file(ignorefile, basepath):
     ignore_rule_list += gitignore_parser.rules_from_file(ignorefile, basepath)
 
 
-def in_ignore_rule_list(path):
-    global ignore_rule_list
-
-    return True
-
-
 def main():
     if not len(sys.argv) == 2:
         eprint("error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
-    global rootpath
     rootpath = os.path.abspath(sys.argv[1])
 
     eprint("checking folder", rootpath, "(recursively)")
@@ -306,10 +254,9 @@ def main():
             # info = traceback.format_exc()
             # eprint(info)                   # uncomment to debug parsing issues
             # maybe related: https://stackoverflow.com/questions/31390213/how-to-parse-an-xml-file-with-encoding-declaration-in-python
-            report_issue(project, "0", "PARSE", "parse",
-                         "Could not parse project file")
+            report_issue(project, "0", "PARSE", "parse", "Could not parse project file")
 
-    headers, cpps = get_cpp_files_from_directory(rootpath)
+    headers, cpps = util.get_cpp_files_from_directory(rootpath)
     for filename in headers:
         try:
             check_cpp_header(filename)
@@ -317,18 +264,16 @@ def main():
             raise
         except Exception as e:
             eprint("OC Error parsing header:", filename, "\n", e, "\n\n")
-            report_issue(filename, "", "PARSE", "parse",
-                         "Could not parse header file")
+            report_issue(filename, "", "PARSE", "parse", "Could not parse header file")
 
     for filename in cpps:
         try:
-            checkCppSource(filename)
+            check_cpp_source(filename)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
             eprint("OC Error parsing source:", filename, "\n", e, "\n\n")
-            report_issue(filename, "", "PARSE", "parse",
-                         "Could not parse source file")
+            report_issue(filename, "", "PARSE", "parse", "Could not parse source file")
 
     sys.stdout.flush()
     eprint(str(len(projects)) + " project(s) checked")

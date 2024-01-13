@@ -11,7 +11,7 @@ from util import *
 cppcheck_cmd = r'c:\Program Files\Cppcheck\cppcheck.exe'
 
 
-def shortenPathStem(v):
+def shorten_path_stem(v):
     i = find_nth(v, "/", 2)
     if i == -1:
         return v
@@ -19,7 +19,7 @@ def shortenPathStem(v):
 
 
 def report_issue(filename, line, rule, description, component, category):
-    links = create_link(3, urljoin("[[permalink-prefix]]", shortenPathStem(filename) + "#L" + str(line)))
+    links = create_link(3, urljoin("[[permalink-prefix]]", shorten_path_stem(filename) + "#L" + str(line)))
     if not rule == "":
         links += create_link(5, "https://duckduckgo.com/?q=!ducky+msdn+" + rule)
 
@@ -46,21 +46,21 @@ def parse(msg):
 
 
 def run_cppcheck(path):
-    list = [cppcheck_cmd, os.path.realpath(path), '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
+    list_value = [cppcheck_cmd, os.path.realpath(path), '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
             '--enable=all']  # notice 4 fields in the --template argument
-    return execute_popen(list)
+    return execute_popen(list_value)
 
 
 def run_cppcheck_compile_db():
-    list = [cppcheck_cmd, '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
+    list_value = [cppcheck_cmd, '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
             '--enable=all', '--project=build_cppcheck/compile_commands.json']
     if os.path.exists('./suppressions.xml'):
-        list += ['--suppress-xml=./suppressions.xml']
-    return execute_popen(list)
+        list_value += ['--suppress-xml=./suppressions.xml']
+    return execute_popen(list_value)
 
 
-def execute_popen(list):
-    sub_process = Popen(list, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+def execute_popen(list_value):
+    sub_process = Popen(list_value, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     (std_out, std_err) = sub_process.communicate()
     sub_process.wait()
     exitcode = sub_process.returncode

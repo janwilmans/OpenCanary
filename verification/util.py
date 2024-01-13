@@ -4,6 +4,7 @@ import sys
 import os
 import re
 import html
+import gitignore_parser
 from enum import IntEnum
 from datetime import datetime
 
@@ -179,3 +180,18 @@ def create_link(index, url):
 def get_timestamp():
     now = datetime.now()
     return now.strftime("%H:%M:%S.%f")[:12]
+
+
+def get_cpp_files_from_directory(path):
+    rootpath = os.path.abspath(path)
+    headers = []
+    cpps = []
+
+    for root, _dirs, files in gitignore_parser.walk(rootpath, filenames=['.opencanaryignore']):
+        for file in files:
+            filename = os.path.abspath(os.path.join(root, file))
+            if file.endswith(".h") or file.endswith(".hpp"):
+                headers += [filename]
+            if file.endswith(".cpp") or file.endswith(".cc"):
+                cpps += [filename]
+    return headers, cpps
