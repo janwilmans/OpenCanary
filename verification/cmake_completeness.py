@@ -7,7 +7,7 @@ import sys
 import os
 import json
 import util
-from util import eprint, Priority, report
+from util import sprint, eprint, Priority, report
 
 
 def get_key(obj, key_name):
@@ -30,7 +30,7 @@ def get_all_buildable_files(compile_commands):
         data = json.load(file)
         files = get_key(data, "file")
         for file in files:
-            result.append(file)
+            result.append(os.path.normpath(file))
     return result
 
 def is_cpp_file(file):
@@ -51,14 +51,23 @@ def main():
         sys.exit(1)
 
     compile_commands = sys.argv[1]
-    all_files_compiled_by_cmake = get_all_buildable_files(compile_commands)
+    all_files_in_compile_commands = get_all_buildable_files(compile_commands)
+    all_transitive_files = set(util.get_recursive_files_include_tree(all_files_in_compile_commands))  
+    _headers, cpp_files = util.get_cpp_files_from_directory(".")
+    sprint("transitive files:", len(all_transitive_files))
 
-    headers, cpp_files = util.get_cpp_files_from_directory(".")
+    for file in all_transitive_files:
+        sprint(f"Tr: {file}")
+
+    sprint("cpp files:", len(cpp_files))
+    for file in cpp_files:
+        sprint(f"cpp: {file}")
+
     for file in cpp_files:
         if "_autogen" in file:
             continue
-        if file not in all_files_compiled_by_cmake:
-            print(file)
+        if file not in all_transitive_files:
+            sprint(file)
             #util.report(Priority.UNSET.value, "", "cmake", file, "cmake_completeness", "CM#1", "build", "C++ source not build", "")
 
 
@@ -70,6 +79,7 @@ if __name__ == "__main__":
     except SystemExit:
         raise
     except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.stderr.close()
         sys.exit(0)
     except:
         info = traceback.format_exc()

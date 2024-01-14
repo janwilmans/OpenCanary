@@ -303,11 +303,11 @@ def fnmatch_pathname_to_regex(pattern):
                 stuff = pattern[i:j].replace('\\', '\\\\')
                 i = j + 1
                 if stuff[0] == '!':
-                    stuff = ''.join('^', stuff[1:])
+                    stuff = ''.join('^' + stuff[1:])
                 elif stuff[0] == '^':
                     stuff = ''.join('\\' + stuff)
-                res.append('[{}]'.format(stuff))
+                res.append(f'[{stuff}]')
         else:
             res.append(re.escape(c))
-    res.append('\Z(?ms)')
-    return ''.join(res)
+    res.append(r'\Z')
+    return r'(?ms)' + ''.join(res)

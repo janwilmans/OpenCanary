@@ -142,7 +142,12 @@ def eprint(*args, **kwargs):
 
 
 def sprint(*args, **kwargs):
-    print(*args, file=sys.stdout, **kwargs)
+    try:
+        print(*args, file=sys.stdout, **kwargs)
+    except OSError as exc:
+        if exc.errno == 22: # broken pipe causes 'Invalid Argument' on windows
+            sys.stderr.close()  # dirty hack to prevent reporting any errors
+            sys.exit(1)
 
 
 # returns the position of the nth occurrence of substring in string
@@ -195,3 +200,38 @@ def get_cpp_files_from_directory(path):
             if file.endswith(".cpp") or file.endswith(".cc"):
                 cpps += [filename]
     return headers, cpps
+
+
+def get_include_file(line):
+    match = re.search(r'#include ["<](.*?)[">]', line)
+    if match:
+        return match.group(1)
+    return ""
+
+
+def get_abspath_from_include_line(file, line):
+    include_file = get_include_file(line)
+    if include_file == "":
+        return ""
+    dirname = os.path.dirname(file)
+    absname = os.path.join(dirname, include_file)
+    if os.path.isfile(absname):
+        return os.path.normpath(absname)
+    return ""
+
+
+def get_recursive_files_include_tree(files, visited = set()):
+    result = []
+    result.extend(files)
+    for file in files:
+        file = os.path.normpath(file)
+        if file in visited:
+            continue
+        visited.add(file)
+        lines = read_lines_from_file(file)
+        for line in lines:
+            if line.startswith("#include"):
+                newfile = get_abspath_from_include_line(file, line)
+                if newfile != "":
+                    result.extend(get_recursive_files_include_tree([newfile], visited))
+    return result
