@@ -5,17 +5,15 @@
 import traceback
 import sys
 import os
-from subprocess import Popen, PIPE
-
 import smtplib
+from subprocess import Popen, PIPE
 
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from util import *
 
-mailserver = 'gateway.company.com'
+mailserver = 'smtp.company.com'
 mailserver_port = 25
 subject = "Software Quality Report"
 sender_email = "sender@email.address.com"
@@ -23,27 +21,42 @@ recipients = ["some@email.address.com"]
 login_name = sender_email
 login_password = ""
 
+def on_ci_server():
+    return "CI_SERVER" in os.environ
 
-def CreateBinaryPayload(content, ctype, filename=''):
+
+def is_scheduled_build():
+    if "CI_PIPELINE_SOURCE" in os.environ:
+        return "schedule" in os.environ["CI_PIPELINE_SOURCE"]
+    return False
+
+
+def is_part_of_project(name):
+    if "CI_PROJECT_PATH" in os.environ:
+        return name.lower() in os.environ["CI_PROJECT_PATH"].lower()
+    return False
+
+
+def create_binary_payload(content, ctype, filename=''):
     maintype, subtype = ctype.split('/', 1)
     img = MIMEBase(maintype, subtype)
     img.set_payload(content)
-    if not filename == '':
+    if filename != '':
         img.add_header('Content-Disposition', 'attachment; filename="%s"' % os.path.basename(filename))
     return img
 
 
-def execute_popen(list):
-    sub_process = Popen(list, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+def execute_popen(command):
+    sub_process = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True)
     (std_out, std_err) = sub_process.communicate()
     sub_process.wait()
     exitcode = sub_process.returncode
     return std_out, std_err, exitcode
 
 
-def getRecentEditors():
-    list = ['git', 'log', '--since', '2.week']
-    stdout, stderr, returncode = execute_popen(list)
+def get_recent_editors():
+    result = ['git', 'log', '--since', '2.week']
+    stdout, _stderr, _returncode = execute_popen(result)
     result = []
     for line in set(stdout.splitlines()):
         if 'Author:' in line:
@@ -53,7 +66,7 @@ def getRecentEditors():
     return result
 
 
-def filterList(editors):
+def filter_list(editors):
     auto_send_authors = ["firstname1.lastname1", "firstname2.lastname2"]
     result = []
     for item in editors:
@@ -63,17 +76,17 @@ def filterList(editors):
     return result
 
 
-def listContains(list, name):
-    for item in list:
+def list_contains(list_value, name):
+    for item in list_value:
         if name in item:
             return True
     return False
 
 
-def sendReport(bodyfile, attachments=[]):
+def send_report(bodyfile, attachments):
     global recipients
 
-    recipients = filterList(getRecentEditors())
+    recipients = filter_list(get_recent_editors())
     if len(recipients) < 1:
         recipients = ["some@email.address.com"]
 
@@ -127,42 +140,42 @@ def sendReport(bodyfile, attachments=[]):
     if len(login_password) > 0:
         server.login(login_name, login_password)
     try:
-        sprint("Sending email [" + subject + "] to", recipients)
+        print("Sending email [" + subject + "] to", recipients)
         server.sendmail(sender_email, recipients, message.as_string())
-        sprint("Done.")
+        print("Done.")
         server.quit()
     except smtplib.SMTPRecipientsRefused as ex:
-        sprint("Email [" + subject + "] was NOT send, exception caught:", getattr(ex, 'message', repr(ex)))
+        print("Email [" + subject + "] was NOT send, exception caught:", getattr(ex, 'message', repr(ex)))
 
 
 def show_usage():
-    eprint("Usage: " + os.path.basename(__file__) + " <bodyfile> <attachments...> [-s <subject>]")
-    eprint("   will send an email to hardcoded recipients ")
+    print("Usage: " + os.path.basename(__file__) + " <bodyfile> <attachments...> [-s <subject>]", file=sys.stderr)
+    print("   will send an email to hardcoded recipients ", file=sys.stderr)
 
 
 def main():
     global subject
     if len(sys.argv) < 2:
-        eprint("error: invalid argument(s)\n")
+        print("error: invalid argument(s)\n", file=sys.stderr)
         show_usage()
         sys.exit(1)
 
     att = []
-    captureSubject = False
+    capture_subject = False
     if len(sys.argv) > 2:
         for arg in sys.argv[2:]:
             if arg == "-s":
-                captureSubject = True
+                capture_subject = True
                 continue
             else:
-                if captureSubject:
+                if capture_subject:
                     subject = arg
-                    captureSubject = False
+                    capture_subject = False
                     continue
 
                 att += [arg]
 
-    sendReport(sys.argv[1], att)
+    send_report(sys.argv[1], att)
 
 
 if __name__ == "__main__":

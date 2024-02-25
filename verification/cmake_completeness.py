@@ -52,7 +52,7 @@ def main():
 
     compile_commands = sys.argv[1]
     all_files_in_compile_commands = get_all_buildable_files(compile_commands)
-    all_transitive_files = set(util.get_recursive_files_include_tree(all_files_in_compile_commands))  
+    all_transitive_files = set(util.get_recursive_files_include_tree(all_files_in_compile_commands), set())  
     _headers, cpp_files = util.get_cpp_files_from_directory(".")
     sprint("transitive files:", len(all_transitive_files))
 

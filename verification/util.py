@@ -40,12 +40,6 @@ def is_scheduled_build():
     return False
 
 
-def is_part_of_project(name):
-    if "CI_PROJECT_PATH" in os.environ:
-        return name.lower() in os.environ["CI_PROJECT_PATH"].lower()
-    return False
-
-
 def normpath(pathstr):
     # os.path.normpath cant be used here, as it would convert the / back to \ on windows.
     return pathstr.replace("\\", r"/").rstrip("/")
@@ -220,7 +214,7 @@ def get_abspath_from_include_line(file, line):
     return ""
 
 
-def get_recursive_files_include_tree(files, visited = set()):
+def get_recursive_files_include_tree(files, visited):
     result = []
     result.extend(files)
     for file in files:
