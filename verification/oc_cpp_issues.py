@@ -13,6 +13,7 @@ import sys
 import os
 import re
 import xml.etree.ElementTree as ET
+import gitignore_parser
 
 import util
 from util import Priority, eprint
