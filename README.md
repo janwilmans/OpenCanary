@@ -52,24 +52,33 @@ These steps/stages are suggestions, you can design your own process flow, but th
     respects these ignore rules.
 - Error filter 
   - filter out false positives, tooling errors and 3rd party paths (usually a pretty static filter, might be maintained outside the team)
-- Interest / Focus on adding value
+- Interest / Focus on adding value (examples: tr_interest_vc.py, tr_interest_cs.py)
   - filter out what are _not_ errors, but the team should ignore (unmaintained code for example)
   - might seem similar to the previous stage, but the difference is that these are not errors, this is about chosing an focus area.
-- Prioritize 
+- Prioritize (see apply_team_priorities.py)
   - assign priorities according to the teams judgement
   - override the priorities to promote rules that have very few issues (to solve low hanging fruit first)
   - **the result of this yields a prioritized work-list for the team**
-- Generate report
+- Generate report (create_report.py)
   - transform the issue list into a html report for easy access and/or sending emails 
 - Regression
    - exclude all projects or categories of issues that are not at zero yet
   - **any issues that pass this filter fail the build**
 
-## Script descriptions
+## Script descriptions, in default order of application
 
 - `parse_gcc.py` and `parse_merge.py`, transform raw compiler output into 'structured CSV'
+- `oc_cpp_issues.py`, uses raw text search to identify common C++ problems
+- `tr_interest_cv.py`, an example interest filter, to filter out lines we are not going to fix, MSVC warning example.
+- `tr_interest_vc.py`, another much simpler example
+- `tr_customize_cs.py`, this script can assign the 'Component' column to group by or files issues later, MSVC example
+- `tr_customize_vc.py`, another example, not MSVC specific, in this step it is also possible to change the display and URL paths
+- `apply_team_priorities.py`, assigns the priority field, **should be customized** based on your preferences
+- `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur less then 20 times (customizable threshold)
 - `sorty.py`, filters duplicates and sorts first by priority and then by filename
 - `create_report.py`, transforms the 'structured CSV' to an HTML report.
+- `apply_environment.py`, replaces [[keyword]] placeholders with content, **should be customized** to fit your enviroment**.
+- `tr_regression.py`, filters all known issues, so when anything remains, you know they are **new** issues and you can make this fail the build.
 
 example: `ninja | parse_merge.py | sorty.py | create_report.py > report.html`
 
