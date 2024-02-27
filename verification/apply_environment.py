@@ -31,7 +31,11 @@ def get_commit_message():
 
 
 def get_branch_id():
-    return util.get_from_envfile('CI_BUILD_REF_NAME')    # remove get_from_envfile and move it into apply_environment.py
+    return util.get_from_envfile_or('CI_BUILD_REF_NAME', '')
+
+
+def get_commit_id():
+    return util.get_from_envfile_or('CI_COMMIT_REF_NAME', '')
 
 
 def show_usage():
@@ -66,7 +70,11 @@ def transform(line):
     line = line.replace("[[wiki-issue-prefix]]", get_wiki_issue_prefix())
     line = line.replace("[[wiki-url]]", get_wiki_main_url())
     line = line.replace("[[job-url]]", get_job_url())
-    line = line.replace("[[branch-id]]", get_branch_id())
+
+    branch_id = get_branch_id()
+    if branch_id == "":
+        branch_id = get_commit_id() + " (commit_id)"
+    line = line.replace("[[branch-id]]", branch_id)
     line = line.replace("[[user-name]]", get_user_name())
     line = line.replace("[[commit-message]]", get_commit_message())
     line = line.replace("[[permalink-prefix]]", get_permalink_prefix())
