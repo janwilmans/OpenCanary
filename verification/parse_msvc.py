@@ -97,7 +97,7 @@ def split_warning_line(line):
     filename = get_real_filename(filename)
 
     line_number, column_number = split_two(location, ",")
-    
+
     fileref = filename
     if line_number != "":
         fileref = f"{filename}:{line_number}"

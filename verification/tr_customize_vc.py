@@ -18,6 +18,7 @@ option_prefix_search = ""
 windows_separator = "\\"
 unix_separator = "/"
 
+
 def define_component(parts):
     file = parts[Column.FILE].replace("\\", r"/")
     if "lib/toolkit" in file:
@@ -51,6 +52,8 @@ def define_team(parts):
         return "project"
     if "/kernel" in file:
         return "project"
+    if "/modules/" in file:
+        return "project"
     return "platform"
 
 
@@ -77,7 +80,7 @@ def search_for_pattern(input_string, pattern):
 
 # returns file, needs_link
 #   file =  path with system prefixes removed
-#   needs_link = True if path needs to be linked up to an URL, this is not the case of system headers or third-party paths 
+#   needs_link = True if path needs to be linked up to an URL, this is not the case of system headers or third-party paths
 def remove_system_paths(file):
     end_position = search_for_pattern(file, r".*Program\sFiles/Microsoft.*/\d+/\w+/")
     if end_position != -1:
@@ -106,17 +109,18 @@ def create_default_links(parts):
     parts = file.split(":")
     filename = util.get_or_default(parts, 0, "")
     line_number = util.get_or_default(parts, 1, "0")
-    #_column_number = util.get_or_default(parts, 2, 0)  # ignored if present
+    # _column_number = util.get_or_default(parts, 2, 0)  # ignored if present
 
     if option_reference_depth > 0:
         filename = unix_separator.join(filename.split(unix_separator)[option_reference_depth:])
 
     url = util.urljoin("[[permalink-prefix]]", filename)
-    links = util.create_link(Column.FILE.value, url)
 
     # check for positive line number
     if str.isdigit(line_number):
         links = util.create_link(Column.FILE.value, url + "#L" + line_number)
+    else:
+        links = util.create_link(Column.FILE.value, url)
     return links
 
 
@@ -133,6 +137,25 @@ def create_display_path(parts):
     return file
 
 
+def links_to_dict(links):
+    result = dict(re.findall(r'\[(.*?)\]\{(.*?)\}', links))
+    return result
+
+
+def dict_to_links(links):
+    result = ""
+    for k, v in links.items():
+        result += f"[{k}]({v})"
+    return result
+
+
+def replace_links(new_links, existing_links):
+    result = links_to_dict(existing_links)
+    for k, v in links_to_dict(new_links).items():
+        result[k] = v
+    return dict_to_links(result)
+
+
 def customize(line):
     parts = line.strip().split("|")
     parts[Column.COMPONENT] = define_component(parts)
@@ -140,7 +163,8 @@ def customize(line):
     parts[Column.FILE], needs_link = get_sanitized_build_path(parts)
 
     if needs_link:
-        parts[Column.LINK] = parts[Column.LINK] + create_default_links(parts)
+        new_links = create_default_links(parts)
+        parts[Column.LINK] = replace_links(new_links, parts[Column.LINK])
 
     parts[Column.FILE] = create_display_path(parts)
     util.write_structured_line(parts)
@@ -149,7 +173,6 @@ def customize(line):
 def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " [/msvc] [/option=n]")
     eprint("   /msvc                    transform unix paths back to windows path for display")
-    eprint("   /remove_prefix=<needle>  search for <needle> and trim upto and including the needle, this is done before any other operation")
     eprint("   /depth=n                 set both display_depth and reference_path to n")
     eprint("   /display_depth=n         set display_depth to n, used to show a path in the report that looks nice to the user")
     eprint("   /reference_depth=n       set reference_depth to n, used to align the path with [[permalink-prefix]] to form a working URL")
@@ -178,10 +201,6 @@ def apply_settings(arg):
         if arg.startswith("reference_depth="):
             value = int(arg.split("=")[1])
             option_reference_depth = value
-            return
-        if arg.startswith("remove_prefix="):
-            value = arg.split("=")[1]
-            option_prefix_search = value
             return
     except Exception as e:
         eprint(f"Unknown option: {arg} ({e})")

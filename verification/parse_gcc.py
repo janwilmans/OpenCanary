@@ -61,7 +61,11 @@ def split_warning_line(line):
 
     return file, filename, line, remainder
 
-
+# examples we need to handle:
+# file.cc:985:30: warning: cast from 'char *' to 'int *' [-Wcast-align]
+# executor.cc:190:5: warning: variable 'id' of type 'unsigned int' can be declared 'const' [misc-const-correctness]
+# notice the rule-specifier in warnings from clang not always start with '-W'
+#
 def parse(line, source):
     rule = "rule-missing"
     category = "warning"
@@ -76,11 +80,13 @@ def parse(line, source):
         if remainder.startswith("command line"):
             rule = "cmdline"
 
-        rule_parts = remainder.split("[-W")
-        if len(rule_parts) > 1:
-            description = rule_parts[0].strip()
-            rule = rule_parts[-1].rstrip("]")
-
+        description = remainder
+        last_bracket_index = remainder.rfind('[')
+        if last_bracket_index != -1:  # find last occurring '['
+            description = remainder[:last_bracket_index]
+            rule = remainder[last_bracket_index:].strip("]").strip("[")
+            if rule.startswith("-W"):
+                rule = rule[2:]
         report_issue(file, filename, line, source, rule, category, description)
 
 
