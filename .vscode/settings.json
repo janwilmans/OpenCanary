@@ -26,15 +26,12 @@
     "C_Cpp.autoAddFileAssociations": false,
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "cmake.configureOnOpen": true,
+    "cmake.configureOnOpen": true
 
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.autopep8",
-        "editor.formatOnSave": true
-      },
     "python.formatting.autopep8Args": [
         "--max-line-length=160"
     ]
+
 }
 
 

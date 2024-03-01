@@ -1,0 +1,30 @@
+[
+    {
+        "name": "ccache gcc",
+        "compilers": {
+            "C": "/usr/local/lib/ccache/gcc",
+            "CXX": "/usr/local/lib/ccache/g++"
+        }
+    },
+    {
+        "name": "ccache clang",
+        "compilers": {
+            "C": "/usr/local/lib/ccache/clang",
+            "CXX": "/usr/local/lib/ccache/clang++"
+        }
+    },
+    {
+        "name": "gcc",
+        "compilers": {
+            "C": "/opt/gcc-13.1/bin/gcc-13.1",
+            "CXX": "/opt/gcc-13.1/bin/g++-13.1"
+        }
+    },
+    {
+        "name": "clang",
+        "compilers": {
+            "C": "/usr/bin/clang-17",
+            "CXX": "/usr/bin/clang++-17"
+        }
+    }
+]
