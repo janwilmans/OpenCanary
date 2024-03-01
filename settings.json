@@ -1,0 +1,40 @@
+{
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file",
+    "cmake.clearOutputBeforeBuild": false,
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+    "cmake.defaultVariants": {
+        "buildType": {
+            "default": "release",
+            "description": "The build type.",
+            "choices": {
+                "debug": {
+                    "short": "debug",
+                    "long": "Disable optimizations - include debug information.",
+                    "buildType": "debug"
+                },
+                "release": {
+                    "short": "release",
+                    "long": "Optimize for speed - exclude debug information.",
+                    "buildType": "release"
+                }
+            }
+        }
+    },
+    "cmake.cmakePath": "/opt/cmake/bin/cmake",
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format-17",
+    "C_Cpp.autoAddFileAssociations": false,
+    "C_Cpp.default.cppStandard": "c++23",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "cmake.configureOnOpen": true,
+
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.autopep8",
+        "editor.formatOnSave": true
+      },
+    "python.formatting.autopep8Args": [
+        "--max-line-length=160"
+    ]
+}
+
+

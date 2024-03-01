@@ -145,7 +145,7 @@ def links_to_dict(links):
 def dict_to_links(links):
     result = ""
     for k, v in links.items():
-        result += f"[{k}]({v})"
+        result += f"[{k}]" + "{" + f"{v}" + "}"
     return result
 
 

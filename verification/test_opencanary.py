@@ -10,6 +10,7 @@ from xml.sax import make_parser
 import unittest
 from util import eprint
 
+
 def is_valid_xml_file(file):
     parser = make_parser()
     parser.setContentHandler(ContentHandler())
@@ -83,3 +84,7 @@ class TestParseGcc(unittest.TestCase):
                 result += [line]
 
         self.assertTrue(is_valid_xml_file("test_result.txt"))
+
+
+if __name__ == '__main__':
+    unittest.main()
