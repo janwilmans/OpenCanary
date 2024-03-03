@@ -22,6 +22,35 @@ ns = '{http://schemas.microsoft.com/developer/msbuild/2003}'
 
 ignore_rule_list = []
 
+wrong_word_list = [
+    'accomodate', 'aquire', 'arguement', 'athiest', 'belive', 'bizzare', 'calender', 'carribean',
+    'cemetary', 'cheif', 'collegue', 'collectable', 'columist', 'commitee', 'comitted', 'concensus',
+    'definately', 'dilemna', 'dissapoint', 'embarras', 'embarassed', 'enviroment', 'exilerate',
+    'facinate', 'florescent', 'foriegn', 'fourty', 'freind', 'goverment', 'greatful',
+    'happend', 'harras', 'horderves', 'humourous', 'immediatly', 'independant', 'jewelry',
+    'judgement', 'knowlege', 'liesure', 'liason', 'lightening', 'maintanance', 'manuever',
+    'medival', 'mementos', 'millenium', 'minature', 'mischevious', 'mispell', 'nausious',
+    'neccessary', 'ocassion', 'occured', 'paralel', 'parralel', 'pavilion', 'perseverence',
+    'phillipines', 'playwrite', 'privelege', 'publically', 'questionaire', 'recieve', 'recomend',
+    'resistence', 'responsability', 'rythm', 'sacreligious', 'seige', 'seperate', 'strenght',
+    'succesful', 'successfull', 'sucessful', 'supercede', 'tatoo', 'tendancy', 'threshhold', 'tollerance',
+    'truely', 'unecessary', 'unforseen', 'untill', 'vacum', 'viscious', 'visibile', 'weather', 'wether',
+    'wich', 'wierd', 'whereever', 'writting', 'yatch', 'zealos'
+]
+
+
+def rip_grep(word):
+    command = ['rg', '-on', word]
+    print(f"search: {word}")
+    # result = subprocess.run(" ".join(command), check=False, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # do not check the exit code (rg gives a non-zero exit code if no match is found)
+    subprocess.run(command, check=False)
+
+
+def main():
+    for word in wrong_word_list:
+        rip_grep(word)
+
 
 def get_project_xml_root(projectname):
     project_tree = ET.parse(projectname)
@@ -155,7 +184,12 @@ def check_line_impl(filename, line_number, line):
     if re.search(r"\(char\s*\*\)\s*\"", line):
         report_issue(filename, line_number, "AP#15", "ub", "prevent UB: do not cast away constness of string literals")
     if re.search(r"const_cast<", line):
-        report_issue(filename, line_number, "AP#16", "casting", "Anti-pattern: do not cast away constness")
+        report_issue(filename, line_number, "AP#16", "readability", "Anti-pattern: do not cast away constness")
+
+    #  AP#17 see checkCppHeader_AP17()
+
+    if re.search(r"(while|if)\s*\(.*\s=\s.*\)", line):
+        report_issue(filename, line_number, "AP#18", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
 
     # if "catch\s+\(...\)" in line:
     # if "catch\s+(...).*\n*.*\{[\n.]*throw[\n.]*\}" in line:
@@ -165,10 +199,10 @@ def check_line_impl(filename, line_number, line):
     # if "new" in line and not "#define new" in line:
     #    report_issue(filename, str(lineNumber), "MO#", "Prefer std::make_unique over bare new/delete")
 
-    # Current highest number at:  #17 , see also checkCppHeader()
+    # Current highest number at:  #19
 
 
-def check_cpp_header(filename):
+def check_cpp_header_AP17(filename):
     line_number = 0
     for line in read_lines(filename):
         line_number = line_number + 1
@@ -260,7 +294,7 @@ def main():
     headers, cpps = util.get_cpp_files_from_directory(rootpath)
     for filename in headers:
         try:
-            check_cpp_header(filename)
+            check_cpp_header_AP17(filename)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
