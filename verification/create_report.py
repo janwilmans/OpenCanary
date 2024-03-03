@@ -16,10 +16,10 @@ from util import eprint
 
 
 def get_html_styles():
-    return """
-<head>
+    return r'''<head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <title>Issue report</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <style>
 body { font-family: Calibri, Arial;}
 
@@ -88,8 +88,37 @@ table.blueTable tfoot .links a{
   border-radius: 5px;
 }
 
+.sortable {
+    cursor: pointer; /* Change cursor only for sortable headers */
+}
+.sortable:hover {
+    background-color: lightblue; /* Change background color when hovering over sortable headers */
+}
+
 </style>
-</head>"""
+</head>
+'''
+
+
+def get_script_section():
+    return r'''
+<script>
+$(document).ready(function() {
+    $('th').click(function() {
+        var table = $(this).parents('table').eq(0)
+        var column = $(this).index()
+        var rows = table.find('tr:gt(0)').toArray().sort((a, b) => {
+            var valA = $(a).children('td').eq(column).text()
+            var valB = $(b).children('td').eq(column).text()
+            return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB)
+        })
+        this.asc = !this.asc
+        if (!this.asc) { rows = rows.reverse() }
+        for (var i = 0; i < rows.length; i++) { table.append(rows[i]) }
+    })
+})
+</script>
+'''
 
 
 def has_index(list_value, column):
@@ -108,7 +137,7 @@ def get_part(list_value, column):
 
 def get_link_map(parts):
     # initialize a list of empty strings ["", "", ...]
-    links = [""] * (len(parts)-1)
+    links = [""] * (len(parts) - 1)
 
     linktexts = parts[Column.LINK]
     if (linktexts == ""):
@@ -128,52 +157,52 @@ def get_link_map(parts):
 def create_html_report(lines, count):
     display_lines = lines[:count]
 
-    f = sys.stdout
-    f.write(r'<!DOCTYPE html><html lang="en">')
-    f.write(get_html_styles())
-    f.write(r'<body>')
-    f.write(str(len(lines)) +
-            r' issues were found relevant for this Software Quality Report (SQR)')
-    f.write(r'<br/><a href="[[wiki-url]]">Open-canary Wiki page</a>')
-    f.write(
-        r'<br/><a href="[[job-url]]">The CI job that generated this report</a>')
-    f.write(
-        r'<h2>SQR for branch: "[[branch-id]]" on behalf of [[user-name]]</h2>')
-    f.write(r'Last commit message: [[commit-message]]<br/>')
-    f.write(r'Listing ' + str(len(display_lines)) +
-            ' out of ' + str(len(lines)) + ' issues.')
-    f.write(r'<table class="blueTable">')
-    f.write(r'<thead><tr>')
-    f.write('<th title="Team assigned priority">Prio</th>\n')
-    f.write('<th title="Team responsible for file">Team</th>\n')
-    f.write('<th title="Component the file belongs to">Component</th>\n')
-    f.write('<th title="Location of the file">File</th>\n')
-    f.write('<th title="Tool that raised/generated the issue">Source</th>\n')
-    f.write('<th title="Rule that raised/genereated the issue">Rule</th>\n')
-    f.write('<th title="Category or the issue">Category</th>\n')
-    f.write('<th title="Description">Description</th>\n')
-    f.write('</tr></thead>\n')
-    f.write(os.linesep)
+    html_content = r'''<!DOCTYPE html><html lang="en">
+{styles}
+<body>
+{issue_count}
+<br/><a href="[[wiki-url]]">Open-canary Wiki page</a>
+<br/><a href="[[job-url]]">The CI job that generated this report</a>
+<h2>SQR for branch: "[[branch-id]]" on behalf of [[user-name]]</h2>
+Last commit message: [[commit-message]]<br/>
+Listing {display_count} out of {total_count} issues.
+<table class="blueTable">
+<thead><tr>
+<th class="sortable" title="Team assigned priority">Prio</th>
+<th class="sortable" title="Team responsible for file">Team</th>
+<th class="sortable" title="Component the file belongs to">Component</th>
+<th class="sortable" title="Location of the file">File</th>
+<th class="sortable" title="Tool that raised/generated the issue">Source</th>
+<th class="sortable" title="Rule that raised/genereated the issue">Rule</th>
+<th class="sortable" title="Category or the issue">Category</th>
+<th class="sortable" title="Description">Description</th>
+</tr></thead>
+'''
 
-    td = '<td><div>'   # class="hideextra"
+    td = '<td><div>'
     tdend = '</div></td>\n'
 
     for line in display_lines:
-        f.write('<tr>')
+        html_content += '<tr>'
         parts = util.read_structured_line(line)
         link_map = get_link_map(parts)
 
         for value, link in link_map:
             if link == "":
-                f.write(td + value + tdend)
+                html_content += td + value + tdend
             else:
-                f.write(td + r'<a href="' + link +
-                        '">' + value + '</a>' + tdend)
-        f.write('</tr>\n')
+                html_content += td + f'<a href="{link}">{value}</a>' + tdend
+        html_content += '</tr>\n'
 
-    f.write('</table>\n')
-    f.write('</body></html>\n')
-    f.close()
+    html_content += '</table>\n{script_section}\n</body></html>\n'
+
+    sys.stdout.write(html_content.format(
+        styles=get_html_styles(),
+        issue_count=str(len(lines)) + ' issues were found relevant for this Software Quality Report (SQR)',
+        display_count=len(display_lines),
+        total_count=len(lines),
+        script_section=get_script_section()
+    ))
 
 
 def show_usage():
