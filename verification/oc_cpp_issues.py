@@ -35,7 +35,7 @@ wrong_word_list = [
     'resistence', 'responsability', 'rythm', 'sacreligious', 'seige', 'seperate', 'strenght',
     'succesful', 'successfull', 'sucessful', 'supercede', 'tatoo', 'tendancy', 'threshhold', 'tollerance',
     'truely', 'unecessary', 'unforseen', 'untill', 'vacum', 'viscious', 'visibile', 'weather', 'wether',
-    'wich', 'wierd', 'whereever', 'writting', 'yatch', 'zealos'
+    'wich', 'wierd', 'whereever', 'writting', 'yatch', 'zealos', 'unkown'
 ]
 
 
