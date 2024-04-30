@@ -16,7 +16,7 @@ wrong_word_list = [
     'medival', 'mementos', 'millenium', 'minature', 'mischevious', 'mispell', 'nausious',
     'neccessary', 'ocassion', 'occured', 'paralel', 'parralel', 'pavilion', 'perseverence',
     'phillipines', 'playwrite', 'privelege', 'publically', 'questionaire', 'recieve', 'recomend',
-    'resistence', 'responsability', 'rythm', 'sacreligious', 'seige', 'seperate', 'strenght',
+    'resistence', 'responce', 'responsability', 'rythm', 'sacreligious', 'seige', 'seperate', 'strenght',
     'succesful', 'successfull', 'sucessful', 'supercede', 'tatoo', 'tendancy', 'threshhold', 'tollerance',
     'truely', 'unecessary', 'unforseen', 'untill', 'vacum', 'viscious', 'visibile', 'weather', 'wether',
     'wich', 'wierd', 'whereever', 'writting', 'yatch', 'zealos'
