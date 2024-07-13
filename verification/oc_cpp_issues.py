@@ -14,6 +14,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import gitignore_parser
+import subprocess
 
 import util
 from util import Priority, eprint
@@ -28,7 +29,7 @@ wrong_word_list = [
     'definately', 'dilemna', 'dissapoint', 'embarras', 'embarassed', 'enviroment', 'exilerate',
     'facinate', 'florescent', 'foriegn', 'fourty', 'freind', 'goverment', 'greatful',
     'happend', 'harras', 'horderves', 'humourous', 'immediatly', 'independant', 'jewelry',
-    'judgement', 'knowlege', 'liesure', 'liason', 'lightening', 'maintanance', 'manuever',
+    'knowlege', 'liesure', 'liason', 'lightening', 'maintanance', 'manuever',
     'medival', 'mementos', 'millenium', 'minature', 'mischevious', 'mispell', 'nausious',
     'neccessary', 'ocassion', 'occured', 'paralel', 'parralel', 'pavilion', 'perseverence',
     'phillipines', 'playwrite', 'privelege', 'publically', 'questionaire', 'recieve', 'recomend',
@@ -40,16 +41,20 @@ wrong_word_list = [
 
 
 def rip_grep(word):
-    command = ['rg', '-on', word]
-    print(f"search: {word}")
-    # result = subprocess.run(" ".join(command), check=False, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    # do not check the exit code (rg gives a non-zero exit code if no match is found)
-    subprocess.run(command, check=False)
+    result = []
+    command = f"rg -o -n -w --color=never --no-heading --with-filename --column {word}"
+    rg_result = subprocess.run(command, check=False, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    for line in rg_result.stdout.splitlines():
+        if line.strip() != "":
+            result += [[line, word]]
+    return result
 
 
-def main():
+def get_spelling_violations():
+    result = []
     for word in wrong_word_list:
-        rip_grep(word)
+        result += rip_grep(word)
+    return result
 
 
 def get_project_xml_root(projectname):
@@ -85,13 +90,19 @@ def read_lines(filename):
     return open(filename, encoding='utf-8').readlines()  # , errors='ignore'
 
 
-def get_priority(_rule):
+def get_priority():
     # assignment of priority is done in apply_team_priorities.py
     return Priority.UNSET.value
 
 
+def get_source():
+    # fixed source string for OpenCanary
+    return "opencanary"
+
 # we do not have the information about the location of the repo here
 # [[permalink-prefix]] is replaced in apply_environment.py
+
+
 def create_default_link(filename, line):
     url = util.urljoin("[[permalink-prefix]]", util.normpath(filename))
     if line == 0:
@@ -105,9 +116,8 @@ def report_issue_detail(fileref, filename, line, rule, description, component, c
     links = create_default_link(filename, line)
     team = ""
     component = ""
-    source = "opencanary"
-    util.report(get_priority(rule), team, component, fileref,
-                source, rule, category, description, links)
+    util.report(get_priority(), team, component, fileref,
+                get_source(), rule, category, description, links)
 
 
 def report_issue(filename, line, rule, category, description):
@@ -188,7 +198,7 @@ def check_line_impl(filename, line_number, line):
 
     #  AP#17 see checkCppHeader_AP17()
 
-    if re.search(r"(while|if)\s*\(.*\s=\s.*\)", line):
+    if re.search(r"(while|if|switch)\s*\(.*\s=\s.*\)", line):
         report_issue(filename, line_number, "AP#18", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
 
     # if "catch\s+\(...\)" in line:
@@ -209,6 +219,35 @@ def check_cpp_header_AP17(filename):
         check_line(filename, line_number, line)
         if re.search("^using namespace", line):
             report_issue(filename, str(line_number), "AP#17", "redflag", "Using namespace found in header file")
+
+
+def get_file_reference(file):
+    pattern = r'^.*(:\d*)?(:\d*)?'
+    match = re.search(pattern, file)
+    if match:
+        return match.group(0)
+    return file
+
+
+def get_filename_and_line(file):
+    pattern = r'(^.*):(\d+)'
+    match = re.search(pattern, file)
+    if match.groups().count == 2:
+        return match.group(0), match.group(1)
+    return file, 0
+
+
+def check_spelling_AP19():
+    for file, word in get_spelling_violations():
+        category = "spelling"
+        description = f"Missspelled word '{word}' found'"
+        # util.report(get_priority(), team, component, fileref, source, "AP#19", category, description, links)
+        # report_issue(filename, str(line_number), "AP#19", "spelling", f"Missspelled word '{word}' found'")
+        fileref = get_file_reference(file)
+        filename, line_number = get_filename_and_line(fileref)
+        print(f"fileref: {fileref}, filename: '{filename}', line_number: {line_number}")
+
+        # report_issue_detail(fileref, filename, line_number, "AP#19", description, "", category)
 
 
 def check_project(projectname):
@@ -275,6 +314,8 @@ def main():
         show_usage()
         sys.exit(1)
 
+    check_spelling_AP19()
+
     rootpath = os.path.abspath(sys.argv[1])
 
     eprint("checking folder", rootpath, "(recursively)")
@@ -311,7 +352,7 @@ def main():
             report_issue(filename, "", "PARSE", "parse", "Could not parse source file")
 
     sys.stdout.flush()
-    eprint(str(len(projects)) + " project(s) checked")
+    eprint(str(len(projects)) + " msvc project(s) checked")
 
 
 if __name__ == "__main__":
