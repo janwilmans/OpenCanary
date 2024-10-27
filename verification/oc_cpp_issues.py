@@ -27,7 +27,7 @@ wrong_word_list = [
     'accomodate', 'aquire', 'arguement', 'athiest', 'belive', 'bizzare', 'calender', 'carribean',
     'cemetary', 'cheif', 'collegue', 'collectable', 'columist', 'commitee', 'comitted', 'concensus',
     'definately', 'dilemna', 'dissapoint', 'embarras', 'embarassed', 'enviroment', 'exilerate',
-    'facinate', 'florescent', 'foriegn', 'fourty', 'freind', 'goverment', 'greatful',
+    'facinate', 'florescent', 'foriegn', 'fourty', 'freind', 'greyscale', 'goverment', 'greatful',
     'happend', 'harras', 'horderves', 'humourous', 'immediatly', 'independant', 'jewelry',
     'knowlege', 'liesure', 'liason', 'lightening', 'maintanance', 'manuever',
     'medival', 'mementos', 'millenium', 'minature', 'mischevious', 'mispell', 'nausious',
