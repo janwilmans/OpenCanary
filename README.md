@@ -67,11 +67,11 @@ These steps/stages are suggestions, you can design your own process flow, but th
 
 ## Script descriptions, in default order of application
 
-- `parse_gcc.py` and `parse_merge.py`, transform raw compiler output into 'structured CSV'
+- `parse_gcc.py` and `parse_msvc.py`, transform raw compiler output into 'structured CSV'
 - `oc_cpp_issues.py`, uses raw text search to identify common C++ problems
 - `tr_interest_cv.py`, an example interest filter, to filter out lines we are not going to fix, MSVC warning example.
 - `tr_interest_vc.py`, another much simpler example
-- `tr_customize_cs.py`, this script can assign the 'Component' column to group by or files issues later, MSVC example
+- `tr_customize_cs.py`, this script can assign the 'Component' column to group by or files issues later, MSVC example.
 - `tr_customize_vc.py`, another example, not MSVC specific, in this step it is also possible to change the display and URL paths
 - `apply_team_priorities.py`, assigns the priority field, **should be customized** based on your preferences
 - `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur less then 20 times (customizable threshold)
@@ -80,12 +80,12 @@ These steps/stages are suggestions, you can design your own process flow, but th
 - `apply_environment.py`, replaces [[keyword]] placeholders with content, **should be customized** to fit your enviroment**.
 - `tr_regression.py`, filters all known issues, so when anything remains, you know they are **new** issues and you can make this fail the build.
 
-example: `ninja | parse_merge.py | sorty.py | create_report.py > report.html`
+example: `ninja | parse_msvc.py | sorty.py | create_report.py > report.html`
 
 This example works, but the links in the report will not point at your repository and/or wiki.
 To add the right links we need to include more steps.
 
-example: `ninja | parse_merge.py | sorty.py | create_report.py | apply_environment.py > report.html`
+example: `ninja | parse_msvc.py | sorty.py | create_report.py | apply_environment.py > report.html`
 
 Notice that `apply_environment.py` is used to add links to the report.
 
