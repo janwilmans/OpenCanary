@@ -141,7 +141,7 @@ def read_envfile(filename):
 
 # ---- rule files -----------------------------------------------------------------------------------------------------
 # A rule file is a plain text list of "<value> <matcher> [<matcher>...]" lines, evaluated top to bottom, the first rule
-# whose matchers all match wins. Matchers: =text (equals), ~text (contains). Use quotes for text with spaces, # starts a
+# whose matchers all match wins. Matchers: =text (equals), ~text (contains), ?regex (re.search). Use quotes for text with spaces, # starts a
 # comment. A value of the form key:value (eg. component:CsCore) lets one file hold several kinds of rules.
 
 class Rule:
@@ -155,6 +155,8 @@ class Rule:
                 return False
             if matcher[0] == "~" and matcher[1:] not in text:
                 return False
+            if matcher[0] == "?" and not re.search(matcher[1:], text):
+                return False
         return True
 
 
@@ -165,8 +167,8 @@ def parse_rules(lines):
         if line == "" or line.startswith("#"):
             continue
         parts = shlex.split(line)
-        if len(parts) < 2 or any(m[0] not in "=~" for m in parts[1:]):
-            raise ValueError(f"rule line {number} is invalid: {line!r}, expected '<value> =text|~text ...'")
+        if len(parts) < 2 or any(m[0] not in "=~?" for m in parts[1:]):
+            raise ValueError(f"rule line {number} is invalid: {line!r}, expected '<value> =text|~text|?regex ...'")
         rules.append(Rule(parts[0], parts[1:]))
     return rules
 

@@ -122,6 +122,19 @@ class TestRules(unittest.TestCase):
             self.assertTrue(out.startswith("3|"))
 
 
+class TestInterest(unittest.TestCase):
+
+    def test_default_rules_drop_autogen_and_external(self):
+        data = "a\\b_autogen.cc\nkeep\nx/external/y\n"
+        self.assertEqual(run_script("tr_interest.py", stdin=data), "keep\n")
+
+    def test_all_matchers_must_match_and_msvc_normalizes(self):
+        rules = os.path.join(HERE, "examples", "interest_copperspice.txt")
+        data = "|3rdparty|C4706\n|CsCore|C4706\n|CsCore|C4018\n|x|C4018 a\\b\n"
+        out = run_script("tr_interest.py", ["--rules", rules, "--msvc"], data)
+        self.assertEqual(out, "|x|C4018 a/b\n")
+
+
 class TestStages(unittest.TestCase):
 
     @staticmethod

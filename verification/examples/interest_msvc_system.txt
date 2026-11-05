@@ -1,0 +1,5 @@
+# example: ignore MSVC system headers and SDK paths (case insensitive), use together with --msvc
+# use: tr_interest.py --rules examples/interest_msvc_system.txt --msvc
+drop ?(?i)external/
+drop ?(?i)/msvc/
+drop ?(?i)^.{0,20}/sdk/

@@ -1,0 +1,11 @@
+# interest rules for tr_interest.py: every line that matches a 'drop' rule is removed from the report.
+# format:  drop <matcher>...    all matchers on a rule must match (the text is the complete line)
+#   =text    line equals text
+#   ~text    line contains text
+#   ?regex   regular expression (re.search), prefix with (?i) to ignore case
+# use quotes around a matcher that contains spaces, '#' starts a comment
+# see examples/ for larger rule sets, for MSVC use --msvc so the paths are normalized to / first
+
+drop ~_autogen
+drop "~|use of old-style|"
+drop ~external/
