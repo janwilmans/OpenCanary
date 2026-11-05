@@ -67,15 +67,16 @@ def get_description(rule):
 
 
 def show_usage():
-    eprint("Usage: <input> | " + os.path.basename(__file__) + " [-v]")
+    eprint("Usage: <input> | " + os.path.basename(__file__) + " [-v | -s]")
     eprint("  -v verbose mode: also print the file/location of the first occurrence of an issue")
+    eprint("  -s show all: print the description of every issue instead of the summary")
 
 
 def main():
     global verbose
     global showall
 
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 2 or (len(sys.argv) == 2 and sys.argv[1] not in ("-v", "-s")):
         eprint("error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
