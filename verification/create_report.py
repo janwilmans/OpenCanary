@@ -102,7 +102,7 @@ table.blueTable tfoot .links a{
 
 def get_script_section():
     return r'''
-<script>
+<script>/*<![CDATA[*/
 $(document).ready(function() {
     $('th').click(function() {
         var table = $(this).parents('table').eq(0)
@@ -110,14 +110,14 @@ $(document).ready(function() {
         var rows = table.find('tr:gt(0)').toArray().sort((a, b) => {
             var valA = $(a).children('td').eq(column).text()
             var valB = $(b).children('td').eq(column).text()
-            return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB)
+            return $.isNumeric(valA) ? ($.isNumeric(valB) ? valA - valB : valA.localeCompare(valB)) : valA.localeCompare(valB)
         })
         this.asc = !this.asc
         if (!this.asc) { rows = rows.reverse() }
         for (var i = 0; i < rows.length; i++) { table.append(rows[i]) }
     })
 })
-</script>
+/*]]>*/</script>
 '''
 
 

@@ -5,11 +5,15 @@
 # consider using 'sort -t \| -k 1n,4 | uniq' if this is available on your platform
 
 import os
+import re
 import sys
 import traceback
 from util import Column
 from util import eprint
 from util import sprint
+
+
+FILEREF_RE = re.compile(r"^(.*?)(?::(\d+))?(?::(\d+))?:?$")
 
 
 # the tuple is used for a lexicographically sort by its fields
@@ -19,17 +23,10 @@ def make_tuple(line):
     # sort the first column by its integer-representation, column[0] (prio) and column[3] (filename)
     # bug: we should sort also by the line-number and column-number at the end of the "filename:line:column"
 
-    file = data[Column.FILE]
-    parts = file.split(":")
-    filename = parts[0]
-    line_number = 0
-    column_number = 0
-    if len(parts) > 1:
-        if parts[1] != "":
-            line_number = int(parts[1])
-        if len(parts) > 2:
-            column_number = int(parts[2])
-    return int(data[Column.PRIO]), filename, int(line_number), int(column_number)
+    # fileref is "name[:line[:column]]"; name may itself contain ':' (windows drive letter, C:\foo.cc:12)
+    match = FILEREF_RE.match(data[Column.FILE])
+    filename, line_number, column_number = match.group(1), int(match.group(2) or 0), int(match.group(3) or 0)
+    return int(data[Column.PRIO]), filename, line_number, column_number
 
 
 def sort_by(inputlines):
