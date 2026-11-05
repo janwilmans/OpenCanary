@@ -11,6 +11,7 @@ import util
 from util import eprint, Column
 
 verbose = False
+showall = False
 
 
 def read():
@@ -67,21 +68,30 @@ def get_description(rule):
 
 def show_usage():
     eprint("Usage: <input> | " + os.path.basename(__file__) + " [-v]")
-    eprint("  -v verbose mode: also print the file/location of the first occurance of an issue")
+    eprint("  -v verbose mode: also print the file/location of the first occurrence of an issue")
 
 
 def main():
     global verbose
+    global showall
+
     if len(sys.argv) > 2:
         eprint("error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
     if len(sys.argv) == 2:
-        verbose = True
+        verbose = sys.argv[1] == "-v"
+        showall = sys.argv[1] == "-s"
+
+    lines = read()
+
+    if showall:
+        for parts in lines:
+            print(html.unescape(parts[Column.DESCRIPTION]))
+        return 0
 
     print("Summary of all issues:")
-    lines = read()
     check_len = 0
     for rule, count in sorted(count_rules(lines).items(), key=lambda item: (item[1], item[0])):
         check_len += count
