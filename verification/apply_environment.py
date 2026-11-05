@@ -48,15 +48,20 @@ def show_usage():
 
 # _Issue_XXX_NN will be concatenated for issues specific pages
 # _Issues will be concatenated for the overview page
-wiki_url_prefix = "https://wiki.company.nl/wiki/index.php?title=OpenCanary"
+# configure with WIKI_URL_PREFIX=... in the environment file
+DEFAULT_WIKI_URL_PREFIX = "https://wiki.company.nl/wiki/index.php?title=OpenCanary"
+
+
+def get_wiki_url_prefix():
+    return util.get_from_envfile_or("WIKI_URL_PREFIX", DEFAULT_WIKI_URL_PREFIX)
 
 
 def get_wiki_issue_prefix():
-    return wiki_url_prefix + "_Issue_"
+    return get_wiki_url_prefix() + "_Issue_"
 
 
 def get_wiki_main_url():
-    return wiki_url_prefix + "_Issues"
+    return get_wiki_url_prefix() + "_Issues"
 
 
 # returns projects GIT url _without_ trailing /
