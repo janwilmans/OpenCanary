@@ -7,6 +7,24 @@ A build-canary is a system that gives you early warning when new problems have b
 
 The process works in a couple of steps that are executed as post-build steps as part of the CI build.
 
+## Quickstart
+
+```
+cd verification
+python3 opencanary.py init        # writes opencanary.toml, point [[input]] at your build log(s)
+python3 opencanary.py run         # writes issues.txt (prioritized work list) and report.html
+python3 -m unittest               # run the tests
+```
+`opencanary.py run` needs python 3.11+ (or `pip install tomli`), the individual scripts work with python 3.8+.
+Every stage can also be used on its own as a filter, `opencanary.py <command>` runs one stage (see `opencanary.py --help`),
+for example `cat gcc.log | opencanary.py parse-gcc gcc | opencanary.py prioritize | opencanary.py sort`.
+
+Team specific behavior lives in plain text rule files, first matching line wins (`=` equals, `~` contains, `?` regex):
+- `rules/priorities.txt` priority (and category) per rule, **customize this**
+- `rules/interest.txt` lines the team is not interested in (3rd party, known noise)
+- `rules/customize.txt` component and team per path
+- `examples/` has larger example rule sets (CopperSpice, MSVC system headers, toolkit) and a project specific customizer
+
 ## Gather
 - gcc / clang compiler warnings
 - gcc / clang commandline warnings
@@ -20,9 +38,9 @@ The process works in a couple of steps that are executed as post-build steps as 
 Parse all warnings/issues into a structured comma-separated format. Actually pipe (|) separated seems to work good, because semicolons (;) and comma (,) are often used in messages and pipe symbols much less. Should a | occur, then its 'escaped' as [[pipe]] instead.
 
 format:
-`priority | team | component | fileref | source | category | rule | description | [n]{url}[n]{url}... `
+`priority | team | component | fileref | source | rule | category | description | [n]{url}[n]{url}... `
 
-where columns category -> rule -> description are in ordered from coarse to fine
+where columns rule -> category -> description are in ordered from fine to coarse
 and the lines are ordered in order of priority first and second in order of file(name)
 that way issues are clustered per-file as good as possible.
 
@@ -31,8 +49,8 @@ that way issues are clustered per-file as good as possible.
 * [2] component - name of the component the issue is associated to 
 * [3] fileref - file + linenumber "/path/foo:14" with optional columnnumber "/path/foo:14:35"
 * [4] source - the tools that produced the issue (gcc/coverage, cppcheck/opencanary,ubsan,etc.)
-* [5] category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
-* [6] rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
+* [5] rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
+* [6] category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * [7] description - the actual message that was reported
 * link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.)
 
@@ -67,43 +85,19 @@ These steps/stages are suggestions, you can design your own process flow, but th
 
 ## Script descriptions, in default order of application
 
-- `parse_gcc.py` and `parse_msvc.py`, transform raw compiler output into 'structured CSV'
-- `oc_cpp_issues.py`, uses raw text search to identify common C++ problems
-- `tr_interest_cv.py`, an example interest filter, to filter out lines we are not going to fix, MSVC warning example.
-- `tr_interest_vc.py`, another much simpler example
-- `tr_customize_cs.py`, this script can assign the 'Component' column to group by or files issues later, MSVC example.
-- `tr_customize_vc.py`, another example, not MSVC specific, in this step it is also possible to change the display and URL paths
-- `apply_team_priorities.py`, assigns the priority field, **should be customized** based on your preferences
-- `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur less then 20 times (customizable threshold)
-- `sorty.py`, filters duplicates and sorts first by priority and then by filename
+All scripts are in `verification/`, `opencanary.py run` applies them in this order:
+
+- Gather: `parse_gcc.py` (gcc and clang), `parse_msvc.py`, `cppcheck.py`, `oc_cpp_issues.py` (raw text search for common C++ problems, respects `.opencanaryignore`)
+- `tr_interest.py`, remove what the team is not interested in (`rules/interest.txt`, `--msvc` normalizes paths). Replaces `tr_interest_cs.py`, `tr_interest_vc.py` and `filter_thirdparty.py`.
+- `tr_customize.py`, assign 'component' and 'team', make the path presentable and add the permalink (`rules/customize.txt`). Replaces `tr_customize_vc.py`.
+- `apply_team_priorities.py`, assigns the priority field (`rules/priorities.txt`), **should be customized** based on your preferences
+- `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur 20 times or less (`--threshold N`)
+- `sortby.py`, filters duplicates and sorts first by priority and then by filename
 - `create_report.py`, transforms the 'structured CSV' to an HTML report.
-- `apply_environment.py`, replaces [[keyword]] placeholders with content, **should be customized** to fit your enviroment**.
-- `tr_regression.py`, filters all known issues, so when anything remains, you know they are **new** issues and you can make this fail the build.
+- `apply_environment.py`, replaces [[keyword]] placeholders using a `key=value` environment file (`CI_JOB_URL`, `CI_PROJECT_URL`, `CI_COMMIT_SHA`, ..., optional `WIKI_URL_PREFIX`).
+- `tr_regression.py`, example of the regression gate: any line that passes fails the build.
 
-example: `ninja | parse_msvc.py | sorty.py | create_report.py > report.html`
-
-This example works, but the links in the report will not point at your repository and/or wiki.
-To add the right links we need to include more steps.
-
-example: `ninja | parse_msvc.py | sorty.py | create_report.py | apply_environment.py > report.html`
-
-Notice that `apply_environment.py` is used to add links to the report.
-
-
-tricks for finding high-priority issues
-- three (or more) consecutive lines with the same error
-- the same class name mentioned more then three times
-- rules or categories with 3 or less occurances
- 
-## Failure is an option
-
-- if any issues remain after the regression filter, fail the build.
-
-## Report
-
-- send out nightly emails with a top-50? report showing the prioritized list of issues
-
-# References
-
-- https://github.com/snark/ignorance (A spec-compliant gitignore parser) provides a .gitignore-aware wrapper around os.walk
-
+Other tools:
+- `cmake_completeness.py`, `cmake_to_dot.py`, `find_*.sh`: find sources not referenced by the build, visualize cmake dependencies, find unique words (dead code candidates)
+- `run_clang_format.py` (`CLANG_FORMAT` env var selects the binary), `send_email.py`, `summarize.py`, `list_warnings.py`, `returncode.py`, `pype.py`
+- `filter.py` select lines from csv files, `prettydiff.py` diff two csv files with numeric tolerance (needs `pip install docopt`)

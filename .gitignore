@@ -1,3 +1,6 @@
 .idea/
 /verification/__pycache__
 __pycache__
+/verification/issues.txt
+/verification/report.html
+*.pyc
