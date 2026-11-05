@@ -118,7 +118,7 @@ def split_message_line(line):
 
 
 def report_issue(component, fileref, source, rule, category, description):
-    links = create_link(Column.SOURCE.value, get_feeling_ducky_url(rule))
+    links = create_link(Column.RULE.value, get_feeling_ducky_url(rule))
     report(str(get_priority(rule)), "[[team]]", component, fileref, source, rule, category, description, links)
 
 
