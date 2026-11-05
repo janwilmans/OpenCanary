@@ -51,9 +51,10 @@ def remove_system_paths(file):
     if end_position != -1:
         return file[end_position:], False
 
-    # remove drive letter, if any (X:\)
-    if re.search(r'\w:\\', file):
-        return file[3:], False
+    # remove drive letter, if any (X:/), the path is already normalized to '/'. The remainder is
+    # linked, use --reference-depth to remove the build directories in front of the repository path
+    if re.match(r'\w:/', file):
+        return file[3:], True
 
     # not a system path
     return file, True

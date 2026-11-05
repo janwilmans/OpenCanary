@@ -84,6 +84,11 @@ class TestParseMsvc(unittest.TestCase):
         rules = {line.split("|")[5] for line in lines(result)}
         self.assertTrue({"C4251", "C4701", "C4244"} <= rules)
 
+    def test_rule_link_points_at_the_rule_column(self):
+        result = run_script("parse_msvc.py", ["msvc"], read_testdata("msvc_warnings.txt"))
+        row = [line for line in lines(result) if "|C4251|" in line][0].split("|")
+        self.assertTrue(row[8].startswith("[5]{"), row[8])
+
     def test_parse_msvc_full_integration(self):
         stages = [("parse_msvc.py", ["msvc"])] + DEFAULT_STAGES + ["create_report.py", ("apply_environment.py", [os.path.join(TESTDATA, "env.txt")])]
         report = run_pipeline(stages, read_testdata("msvc_warnings.txt"))
@@ -148,6 +153,13 @@ class TestCustomize(unittest.TestCase):
         self.assertEqual(parts[2], "toolkit")
         self.assertEqual(parts[3], "build/lib/toolkit/a.cc:12")
         self.assertIn("[3]{[[permalink-prefix]]/build/lib/toolkit/a.cc#L12}", parts[8])
+
+    def test_drive_letter_is_removed_and_path_is_linked(self):
+        row = self.ROW.replace("|build", "|C:\\build")
+        rules = os.path.join(HERE, "examples", "customize_toolkit.txt")
+        parts = run_script("tr_customize.py", ["--rules", rules, "--reference-depth=1"], row).split("|")
+        self.assertEqual(parts[3], "build/lib/toolkit/a.cc:12")
+        self.assertIn("[3]{[[permalink-prefix]]/lib/toolkit/a.cc#L12}", parts[8])
 
     def test_legacy_options_and_msvc_display(self):
         parts = self.customize("/msvc", "-display_depth=1")
