@@ -5,6 +5,9 @@ Its purpose is to give you a failing CI build if new issues are introduced and t
 The purpose of this repo is to provide a set of scripts that can be used to build your own build-canary.
 A build-canary is a system that gives you early warning when new problems have been introduced. (so code quality _as you define it_ has regressed). Also a (nightly?) report can be generated to provide you and your team guidance to start improving you code base. The report is a prioritized list (_you define you own team priorities_) of issues to solve.
 
+Branches: `main` is the current version, `classic` (formerly `master`) has the original scripts, see
+[Converting a CI pipeline from `classic` to `main`](#converting-a-ci-pipeline-from-classic-to-main).
+
 The process works in a couple of steps that are executed as post-build steps as part of the CI build.
 
 ## Quickstart
@@ -103,16 +106,20 @@ Other tools:
 - `run_clang_format.py` (`CLANG_FORMAT` env var selects the binary), `send_email.py`, `summarize.py`, `list_warnings.py`, `returncode.py`, `pype.py`
 - `filter.py` select lines from csv files, `prettydiff.py` diff two csv files with numeric tolerance (needs `pip install docopt`)
 
-## Converting a CI pipeline from `master` to `main`
+## Converting a CI pipeline from `classic` to `main`
 
-`main` is a cleanup of `master`: the scripts that had team or project specific settings hardcoded now read them from
-rule files or options, and a few scripts were merged. The issue format is unchanged (on `master` the README listed
+`classic` is the original version of the scripts, it was called `master` until November 2026. A pipeline that
+checks out `master` stops working, check out `classic` to keep the old behavior or convert it to `main` as described
+here.
+
+`main` is a cleanup of `classic`: the scripts that had team or project specific settings hardcoded now read them from
+rule files or options, and a few scripts were merged. The issue format is unchanged (on `classic` the README listed
 category before rule, the code already used rule as column 5 and category as column 6), so existing `issues.txt` files
 and scripts that read them keep working.
 
 ### 1. Rename the scripts in the pipeline
 
-| on `master` | on `main` |
+| on `classic` | on `main` |
 |---|---|
 | `tr_interest_vc.py` | `tr_interest.py`, the default `rules/interest.txt` contains the same rules (`_autogen`, `\|use of old-style\|`) |
 | `filter_thirdparty.py` | `tr_interest.py`, `rules/interest.txt` also drops `external/` |
@@ -131,7 +138,7 @@ component and team columns empty; the components and teams that were hardcoded i
 
 ### 2. Move local edits out of the scripts
 
-If you edited scripts on `master` to fit your project, those edits now go into rule files, options or the environment
+If you edited scripts on `classic` to fit your project, those edits now go into rule files, options or the environment
 file, so the scripts can be updated without merge conflicts:
 
 - the if-chain in `apply_team_priorities.py`: `rules/priorities.txt`, or your own file with `--rules FILE`
@@ -142,7 +149,7 @@ file, so the scripts can be updated without merge conflicts:
 
 ### 3. Expect these differences in the output
 
-- MSVC priorities: on `master`, `parse_msvc.py` assigned priorities and `apply_team_priorities.py` then overwrote all
+- MSVC priorities: on `classic`, `parse_msvc.py` assigned priorities and `apply_team_priorities.py` then overwrote all
   of them with 8 (unassigned), except C4701. On `main`, `parse_msvc.py` assigns 8 and `apply_team_priorities.py` applies
   the MSVC table from `rules/priorities.txt`. A pipeline that runs `apply_team_priorities.py` now gets the MSVC
   priorities (for example C4100 70, C4244 40). A pipeline that skipped it gets 8 for everything, so add the stage.
@@ -150,11 +157,11 @@ file, so the scripts can be updated without merge conflicts:
 - In the MSVC report the documentation link is on the rule column instead of the source column.
 - `cppcheck.py` leaves team and component empty instead of `tin` and `tincomp`, use `tr_customize.py` to fill them.
 - `sortby.py` no longer crashes on Windows paths with a drive letter (`C:\...`).
-- gcc and clang pipelines produce the same output as on `master`.
+- gcc and clang pipelines produce the same output as on `classic`.
 
 ### 4. Optionally replace the pipe with `opencanary.py run`
 
-A typical `master` pipeline:
+A typical `classic` pipeline:
 
 ```
 cat build.log | parse_msvc.py msvc | tr_interest_vc.py | filter_thirdparty.py /msvc | tr_customize_vc.py /msvc \
