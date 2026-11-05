@@ -251,7 +251,7 @@ class IgnoreRule(collections.namedtuple('IgnoreRule_', IGNORE_RULE_FIELDS)):
         if rel_path.startswith('./'):
             rel_path = rel_path[2:]
 
-        if re.search(self.regex, rel_path):
+        if re.search(self.regex, rel_path, re.MULTILINE | re.DOTALL):
             matched = True
         return matched
 
@@ -310,4 +310,4 @@ def fnmatch_pathname_to_regex(pattern):
         else:
             res.append(re.escape(c))
     res.append(r'\Z')
-    return r'(?ms)' + ''.join(res)
+    return ''.join(res)

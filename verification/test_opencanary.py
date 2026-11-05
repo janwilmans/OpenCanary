@@ -188,6 +188,21 @@ class TestRunner(unittest.TestCase):
         self.assertEqual([line.split("|")[0] for line in lines(out)], ["1", "9"])
 
 
+class TestIgnoreFiles(unittest.TestCase):
+
+    def test_cpp_files_respect_ignore_file(self):
+        import tempfile
+        import util
+        with tempfile.TemporaryDirectory() as d:
+            for name in ("sub/a.cc", "keep/b.cc", "keep/c.H"):
+                os.makedirs(os.path.dirname(os.path.join(d, name)), exist_ok=True)
+                open(os.path.join(d, name), "w", encoding="utf-8").close()
+            with open(os.path.join(d, ".opencanaryignore"), "w", encoding="utf-8") as f:
+                f.write("sub/\n")
+            headers, cpps = util.get_cpp_files_from_directory(d)
+            self.assertEqual([os.path.basename(x) for x in headers + cpps], ["c.H", "b.cc"])
+
+
 class TestStages(unittest.TestCase):
 
     @staticmethod

@@ -3,11 +3,12 @@
 """
 
 import os, sys, traceback, re
-import gitignore_parser, subprocess
+import subprocess
+import util
 from subprocess import Popen, PIPE
 
 # commandline argument used require clang-format-11 or better
-CLANG_FMT_BINARY = r"clang-format-11"
+CLANG_FMT_BINARY = os.environ.get("CLANG_FORMAT", "clang-format-11")  # override with the CLANG_FORMAT environment variable
 
 def get_lowered_extention(file):
     filename, ext = os.path.splitext(file)
@@ -20,22 +21,6 @@ def is_cpp_header(file):
 
 def is_cpp_source(file):
     return get_lowered_extention(file).endswith((".cpp", ".cc"))
-
-
-def get_cpp_files_from_directory(path):
-    global rootpath
-    rootpath = os.path.abspath(path)
-    headers = []
-    cpps = []
-
-    for root, dirs, files in gitignore_parser.walk(rootpath, filenames=['.gitignore', '.clang-format-ignore']):
-        for file in files:
-            abs_filename = os.path.abspath(os.path.join(root, file))
-            if is_cpp_header(file):
-                headers += [abs_filename]
-            if is_cpp_source(file):
-                cpps += [abs_filename]
-    return headers, cpps
 
 
 def get_cpp_files(files):
@@ -112,7 +97,7 @@ def get_files_from_arg_list(args):
 def main():
     files = get_files_from_arg_list(sys.argv[1:])
     if len(files) < 1:
-        headers, cpps = get_cpp_files_from_directory(".")
+        headers, cpps = util.get_cpp_files_from_directory(".", (".gitignore", ".clang-format-ignore"))
         files = headers + cpps
 
     files = get_cpp_files(files)

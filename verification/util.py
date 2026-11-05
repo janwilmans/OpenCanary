@@ -269,17 +269,18 @@ def get_timestamp():
     return now.strftime("%H:%M:%S.%f")[:12]
 
 
-def get_cpp_files_from_directory(path):
+def get_cpp_files_from_directory(path, ignore_files=('.opencanaryignore',)):
     rootpath = os.path.abspath(path)
     headers = []
     cpps = []
 
-    for root, _dirs, files in gitignore_parser.walk(rootpath, filenames=['.opencanaryignore']):
+    for root, _dirs, files in gitignore_parser.walk(rootpath, filenames=list(ignore_files)):
         for file in files:
             filename = os.path.abspath(os.path.join(root, file))
-            if file.endswith(".h") or file.endswith(".hpp"):
+            extension = os.path.splitext(file)[1].lower()
+            if extension in (".h", ".hpp"):
                 headers += [filename]
-            if file.endswith(".cpp") or file.endswith(".cc"):
+            if extension in (".cpp", ".cc"):
                 cpps += [filename]
     return headers, cpps
 
