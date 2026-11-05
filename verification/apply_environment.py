@@ -65,7 +65,10 @@ def get_wiki_main_url():
 
 
 # returns projects GIT url _without_ trailing /
+# PERMALINK_PREFIX=... in the environment file overrides it, for example file:///C:/project/repo to link to a local checkout
 def get_permalink_prefix():
+    if "PERMALINK_PREFIX" in util.envfile:
+        return util.normpath(util.envfile["PERMALINK_PREFIX"])
     return util.urljoin(util.normpath(util.get_from_envfile('CI_PROJECT_URL')), "blob", util.get_from_envfile('CI_COMMIT_SHA'))
 
 
