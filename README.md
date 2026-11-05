@@ -98,6 +98,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - `tr_regression.py`, example of the regression gate: any line that passes fails the build.
 
 Other tools:
-- `cmake_completeness.py`, `cmake_to_dot.py`, `find_*.sh`: find sources not referenced by the build, visualize cmake dependencies, find unique words (dead code candidates)
+- `cmake_completeness.py`, `cmake_to_dot.py`: find sources not referenced by the build (from compile_commands.json), visualize cmake dependencies
+- `find_dead_code.py <arrays|functions|defines|variables|sources> [path]`: dead code candidates (words that occur once), and sources no CMakeLists.txt refers to. Replaces the `find_*.sh` scripts.
 - `run_clang_format.py` (`CLANG_FORMAT` env var selects the binary), `send_email.py`, `summarize.py`, `list_warnings.py`, `returncode.py`, `pype.py`
 - `filter.py` select lines from csv files, `prettydiff.py` diff two csv files with numeric tolerance (needs `pip install docopt`)

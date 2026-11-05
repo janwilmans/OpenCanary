@@ -215,6 +215,28 @@ class TestIgnoreFiles(unittest.TestCase):
             self.assertEqual([os.path.basename(x) for x in headers + cpps], ["c.H", "b.cc"])
 
 
+class TestFindDeadCode(unittest.TestCase):
+
+    def test_modes(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            files = {
+                "src/a.cc": "#define USED_THING 1\n#define LONELY_DEFINE 2\nint lonely_array[10];\nint never_called_fn() { return 0; }\n"
+                            "int helper_fn(int x) { return x + USED_THING; }\nvoid run() { int lonelyvar = 4; helper_fn(2); }\n",
+                "src/orphan.cc": "int x;\n",
+                "CMakeLists.txt": "add_library(x src/a.cc)\n",
+            }
+            for name, content in files.items():
+                os.makedirs(os.path.dirname(os.path.join(d, name)), exist_ok=True)
+                with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                    f.write(content)
+            self.assertEqual(lines(run_script("find_dead_code.py", ["arrays", d])), ["int lonely_array[10];"])
+            self.assertEqual(lines(run_script("find_dead_code.py", ["functions", d])), ["int never_called_fn() { return 0; }"])
+            self.assertEqual(lines(run_script("find_dead_code.py", ["defines", d])), ["#define LONELY_DEFINE"])
+            self.assertEqual(lines(run_script("find_dead_code.py", ["variables", d])), ["lonelyvar ="])
+            self.assertEqual(lines(run_script("find_dead_code.py", ["sources", d])), ["orphan.cc"])
+
+
 class TestStages(unittest.TestCase):
 
     @staticmethod
