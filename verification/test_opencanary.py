@@ -226,6 +226,10 @@ class TestStages(unittest.TestCase):
         prios = [line.split("|")[0] for line in lines(out)]
         self.assertEqual(prios, ["5", "8"])
 
+    def test_msvc_priorities_come_from_the_rules_file(self):
+        out = run_script("apply_team_priorities.py", stdin=self.row(rule="C4100") + self.row(rule="C4701") + self.row(rule="C4505"))
+        self.assertEqual([line.split("|")[0] for line in lines(out)], ["70", "5", "60"])
+
     def test_low_hanging_fruit_threshold(self):
         rare = self.row(rule="rare", file="a.cc:1")
         common = "".join(self.row(rule="common", file=f"b.cc:{i}") for i in range(1, 22))

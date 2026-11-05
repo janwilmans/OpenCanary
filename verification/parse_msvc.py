@@ -10,52 +10,6 @@ import pathlib
 from util import *
 
 
-def get_priority(rule):
-    if "C4100" in rule:
-        return 70
-    if "C4127" in rule:
-        return 15
-    if "C4211" in rule:
-        return 20
-    if "C4239" in rule:
-        return 20
-    if "C4244" in rule:
-        return 40
-    if "C4245" in rule:
-        return 50
-    if "C4310" in rule:
-        return 15
-    if "C4324" in rule:
-        return 20
-    if "C4389" in rule:
-        return 50
-    if "C4456" in rule:
-        return 10
-    if "C4457" in rule:
-        return 10
-    if "C4458" in rule:
-        return 10
-    if "C4499" in rule:
-        return 55
-    if "C4505" in rule:
-        return 60
-    if "C4611" in rule:
-        return 60
-    if "C4505" in rule:
-        return 60
-    if "C4611" in rule:
-        return 20
-    if "C4701" in rule:
-        return 16
-    if "C4706" in rule:
-        return 30
-    if "C4714" in rule:
-        return 17
-    if "C4918" in rule:
-        return 5
-    return Priority.UNSET.value
-
-
 def could_not_resolve(filename):
     lower_filename = filename.lower()
     if lower_filename.endswith(".obj"):
@@ -119,7 +73,7 @@ def split_message_line(line):
 
 def report_issue(component, fileref, source, rule, category, description):
     links = create_link(Column.RULE.value, get_feeling_ducky_url(rule))
-    report(str(get_priority(rule)), "[[team]]", component, fileref, source, rule, category, description, links)
+    report(Priority.UNASSIGNED.value, "[[team]]", component, fileref, source, rule, category, description, links)
 
 
 def parse_msvc(line, source):

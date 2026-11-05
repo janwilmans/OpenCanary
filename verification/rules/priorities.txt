@@ -17,6 +17,26 @@
 # MSVC warnings
 5   =C4701  #ub, Potentially uninitialized local variable
 
+# MSVC warnings that used to be prioritized in parse_msvc.py (C4505 and C4611 were listed twice, the first one won; C4701 is defined above)
+70  ~C4100
+15  ~C4127
+20  ~C4211
+20  ~C4239
+40  ~C4244
+50  ~C4245
+15  ~C4310
+20  ~C4324
+50  ~C4389
+10  ~C4456
+10  ~C4457
+10  ~C4458
+55  ~C4499
+60  ~C4505
+60  ~C4611
+30  ~C4706
+17  ~C4714
+5   ~C4918
+
 # gcc warnings, exact matches if possible, some contains trailing =
 
 # for example `implicit-fallthrough=`, `format-overflow=`, `stringop-overflow=` or `format-truncation=`
