@@ -10,6 +10,7 @@ from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 TESTDATA = os.path.join(HERE, "testdata")
 
 DEFAULT_STAGES = ["apply_team_priorities.py", "apply_low_hanging_fruit.py", "sortby.py"]
@@ -87,6 +88,38 @@ class TestParseMsvc(unittest.TestCase):
         stages = [("parse_msvc.py", ["msvc"])] + DEFAULT_STAGES + ["create_report.py", ("apply_environment.py", [os.path.join(TESTDATA, "env.txt")])]
         report = run_pipeline(stages, read_testdata("msvc_warnings.txt"))
         self.assertTrue(is_valid_xml(report))
+
+
+class TestRules(unittest.TestCase):
+
+    def test_first_match_wins_and_matcher_types(self):
+        import util
+        rules = util.parse_rules(["5 =exact", "10 ~part  # comment", "# full line comment", "", '20 "~two words" ~x'])
+        self.assertEqual(util.first_match(rules, "exact"), "5")
+        self.assertEqual(util.first_match(rules, "exact-and-part"), "10")
+        self.assertEqual(util.first_match(rules, "a two words x"), "20")
+        self.assertIsNone(util.first_match(rules, "a two words"))
+
+    def test_keyed_rules_are_separate(self):
+        import util
+        rules = util.parse_rules(["category:ub ~bounds", "5 ~bounds"])
+        self.assertEqual(util.first_match(rules, "array-bounds"), "5")
+        self.assertEqual(util.first_match(rules, "array-bounds", "category"), "ub")
+
+    def test_invalid_rule_is_reported(self):
+        import util
+        with self.assertRaises(ValueError):
+            util.parse_rules(["5 nomatcher"])
+
+    def test_custom_priority_rules_file(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "p.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("3 =my-rule\n")
+            row = "|".join(["8", "", "", "a.cc:1", "src", "my-rule", "warning", "d", ""]) + "\n"
+            out = run_script("apply_team_priorities.py", ["--rules", path], row)
+            self.assertTrue(out.startswith("3|"))
 
 
 class TestStages(unittest.TestCase):

@@ -4,6 +4,7 @@ import sys
 import os
 import re
 import html
+import shlex
 import traceback
 import gitignore_parser
 from enum import IntEnum
@@ -98,6 +99,12 @@ def check_structured_line_parts(parts):
         eprint(f"assertion failed: broken structured CSV, line has {len(parts)}/{len(Column)} parts:\n {parts}")
 
 
+def stdin_rows():
+    """yields every line of stdin as a list of columns"""
+    for line in sys.stdin:
+        yield read_structured_line(line)
+
+
 def write_structured_line(parts):
     check_structured_line_parts(parts)
     sys.stdout.write("|".join(parts))
@@ -130,6 +137,56 @@ def read_envfile(filename):
         if index > 0:
             k = line[:index]
             envfile[k] = line[index + 1:]
+
+
+# ---- rule files -----------------------------------------------------------------------------------------------------
+# A rule file is a plain text list of "<value> <matcher> [<matcher>...]" lines, evaluated top to bottom, the first rule
+# whose matchers all match wins. Matchers: =text (equals), ~text (contains). Use quotes for text with spaces, # starts a
+# comment. A value of the form key:value (eg. component:CsCore) lets one file hold several kinds of rules.
+
+class Rule:
+    def __init__(self, value, matchers):
+        self.value = value
+        self.matchers = matchers
+
+    def matches(self, text):
+        for matcher in self.matchers:
+            if matcher[0] == "=" and text != matcher[1:]:
+                return False
+            if matcher[0] == "~" and matcher[1:] not in text:
+                return False
+        return True
+
+
+def parse_rules(lines):
+    rules = []
+    for number, line in enumerate(lines, 1):
+        line = line.split(" #")[0].strip()
+        if line == "" or line.startswith("#"):
+            continue
+        parts = shlex.split(line)
+        if len(parts) < 2 or any(m[0] not in "=~" for m in parts[1:]):
+            raise ValueError(f"rule line {number} is invalid: {line!r}, expected '<value> =text|~text ...'")
+        rules.append(Rule(parts[0], parts[1:]))
+    return rules
+
+
+def load_rules(filename):
+    return parse_rules(read_lines_from_file(filename))
+
+
+def first_match(rules, text, key=None):
+    """returns the value of the first matching rule, or None. With key, only rules with value 'key:...' are
+    considered and the 'key:' prefix is removed from the result."""
+    prefix = "" if key is None else key + ":"
+    for rule in rules:
+        if rule.value.startswith(prefix) and (key is not None or ":" not in rule.value) and rule.matches(text):
+            return rule.value[len(prefix):]
+    return None
+
+
+def default_rules_file(name):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "rules", name)
 
 
 def eprint(*args, **kwargs):

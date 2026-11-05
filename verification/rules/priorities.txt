@@ -1,0 +1,77 @@
+# team priorities: first matching line wins, lowest number = most important
+# guideline for priority:
+# - likeliness to be an actual bug means higher priority
+# - below 10: solve immediately, likely currently causing problems
+# - 11-50: likely a bug
+# - 51-75: probably not causing active problems, but just the wrong way to do it
+# - 75-99: hard to read / old style / bad style
+#
+# format:  <priority> <matcher>...      (all matchers must match, the text is the rule name)
+#          category:<name> <matcher>...  assigns the category column instead
+#   =text   rule equals text
+#   ~text   rule contains text
+# use quotes around a matcher that contains spaces, '#' starts a comment
+# rules not listed here get priority 8 (UNASSIGNED)
+
+
+# MSVC warnings
+5   =C4701  #ub, Potentially uninitialized local variable
+
+# gcc warnings, exact matches if possible, some contains trailing =
+
+# for example `implicit-fallthrough=`, `format-overflow=`, `stringop-overflow=` or `format-truncation=`
+5   =aggressive-loop-optimizations  # ub
+5   =array-bounds
+5   =literal-conversion
+5   =restrict
+5   =stringop-overflow=
+5   =varargs  # ub
+5   =overloaded-virtual
+5   =self-assign
+10  =gnu-zero-variadic-macro-arguments
+10  =ignored-qualifiers
+10  =stringop-truncation  # ub
+10  =unused-value
+10  =main
+10  ~comment
+10  ~pointer-bool-conversion
+20  ~implicit-fallthrough
+25  =uninitialized
+30  ~self-assign
+40  ~maybe-uninitialized
+40  ~unused-
+45  ~format-overflow
+45  ~missing-field-initializers
+45  ~sign-compare
+50  ~write-strings
+60  =format-y2k
+60  =vla
+60  ~ignored-qualifiers
+70  =format-nonliteral
+80  =format-truncation
+80  ~format-nonliteral
+80  ~overflow
+
+# open canary issues
+70  =MO#1  # /make_unique
+70  =MO#2  # make_unique
+35  =AP#3  # reinterpret_cast
+15  =AP#4  # volatile
+85  =MO#5  # nullptr
+65  =AP#6  # non-english words
+80  =AP#7  # ifdef
+40  =AP#8  # c-style-cast
+75  =AP#9  # c-style-cast
+70  =AP#10
+60  =AP#11
+99  =AP#12  # ??
+45  =AP#13  # delete
+15  =AP#14  # c-style-cast
+30  =AP#15  # casting literals
+30  =AP#16  # const_cast
+
+# categories
+category:ub =aggressive-loop-optimizations
+category:ub ~stringop-truncation
+category:ub ~varargs
+category:ub ~array-bounds
