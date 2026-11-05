@@ -4,6 +4,7 @@ import sys
 import os
 import re
 import html
+import traceback
 import gitignore_parser
 from enum import IntEnum
 from datetime import datetime
@@ -133,6 +134,21 @@ def read_envfile(filename):
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
+
+def run_main(main, show_usage):
+    """common entry point wrapper for all scripts: quiet on ctrl-c / broken pipe, usage + traceback on errors"""
+    try:
+        main()
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
+        sys.stderr.close()
+        sys.exit(0)
+    except Exception:  # pylint: disable=broad-except
+        eprint(traceback.format_exc())
+        show_usage()
+        sys.exit(1)
 
 
 def sprint(*args, **kwargs):

@@ -2,7 +2,7 @@
 """Parse warnings and error messages from gcc (clang outputs the same format)
 """
 
-import traceback
+import util
 import sys
 import os
 from util import *
@@ -110,16 +110,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        raise
-    except SystemExit:
-        raise
-    except BrokenPipeError:   # still makes piping into 'head -n' work nicely
-        sys.exit(0)
-    except:
-        info = traceback.format_exc()
-        eprint(info)
-        show_usage()
-        sys.exit(1)
+    util.run_main(main, show_usage)
