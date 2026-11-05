@@ -5,10 +5,12 @@
 import traceback
 import sys
 import os
+import shutil
 from subprocess import Popen, PIPE
 from util import *
 
-cppcheck_cmd = r'c:\Program Files\Cppcheck\cppcheck.exe'
+# override with the CPPCHECK environment variable
+cppcheck_cmd = os.environ.get("CPPCHECK") or shutil.which("cppcheck") or r'c:\Program Files\Cppcheck\cppcheck.exe'
 
 
 def shorten_path_stem(v):
@@ -27,7 +29,7 @@ def report_issue(filename, line, rule, description, component, category):
     if int(line) == 0:
         priority = 1
     source = "cppcheck"
-    report(priority, "tin", component, filename + ":" + str(line), source, rule, category, description, links)
+    report(priority, "", component, filename + ":" + str(line), source, rule, category, description, links)
 
 
 def parse(msg):
@@ -42,7 +44,7 @@ def parse(msg):
 
     if "Consider using std" == s[3]:        # doesn't make any sense?
         return
-    report_issue(normpath(s[0]), s[1], "rule", s[3], "tincomp", s[2])
+    report_issue(normpath(s[0]), s[1], "rule", s[3], "", s[2])
 
 
 def run_cppcheck(path):

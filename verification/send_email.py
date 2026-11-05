@@ -3,6 +3,7 @@
 """
 
 import traceback
+import util
 import sys
 import os
 import smtplib
@@ -20,16 +21,6 @@ sender_email = "sender@email.address.com"
 recipients = ["some@email.address.com"]
 login_name = sender_email
 login_password = ""
-
-def on_ci_server():
-    return "CI_SERVER" in os.environ
-
-
-def is_scheduled_build():
-    if "CI_PIPELINE_SOURCE" in os.environ:
-        return "schedule" in os.environ["CI_PIPELINE_SOURCE"]
-    return False
-
 
 def is_part_of_project(name):
     if "CI_PROJECT_PATH" in os.environ:
@@ -90,13 +81,13 @@ def send_report(bodyfile, attachments):
     if len(recipients) < 1:
         recipients = ["some@email.address.com"]
 
-    if is_scheduled_build():
+    if util.is_scheduled_build():
         recipients = ["some1@email.address.com"]
 
     if is_part_of_project("tin"):
         recipients = ["some3@email.address.com"]
 
-    if not on_ci_server():
+    if not util.on_ci_server():
         # send to admin only for testing
         recipients = ["someadmin@email.address.com"]
 
