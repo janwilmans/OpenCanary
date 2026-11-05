@@ -1,0 +1,6 @@
+C:\project\lib\toolkit\slot.h(75): warning C4251: 'Slot::m_name': class 'std::string' needs to have dll-interface
+C:\project\lib\toolkit\slot.cc(12): warning C4701: potentially uninitialized local variable 'x' used
+C:\project\lib\toolkit\slot.cc(30,5): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\project\external\boost\foo.hpp(9): warning C4100: 'p': unreferenced formal parameter
+C:\project\lib\toolkit\slot.cc(12): warning C4701: potentially uninitialized local variable 'x' used
+cl : Command line warning D9002 : ignoring unknown option '/foobar'

@@ -1,0 +1,27 @@
+w.cc: In function ‘int unused_fn(int, int)’:
+w.cc:3:26: warning: unused parameter ‘b’ [-Wunused-parameter]
+    3 | int unused_fn(int a, int b) { int c; return a + c; }
+      |                      ~~~~^
+w.cc: In function ‘void f(const char*)’:
+w.cc:9:11: warning: comparison of integer expressions of different signedness: ‘int’ and ‘unsigned int’ [-Wsign-compare]
+    9 |     if (i < u) {}
+      |         ~~^~~
+w.cc:13:14: warning: format ‘%d’ expects a matching ‘int’ argument [-Wformat=]
+   13 |     printf("%d\n");
+      |             ~^
+      |              |
+      |              int
+w.cc:6:9: warning: variable ‘arr’ set but not used [-Wunused-but-set-variable]
+    6 |     int arr[3];
+      |         ^~~
+w.cc: In function ‘S g()’:
+w.cc:16:17: warning: missing initializer for member ‘S::b’ [-Wmissing-field-initializers]
+   16 | S g() { S s = {1}; return s; }
+      |                 ^
+w.cc: In function ‘int unused_fn(int, int)’:
+w.cc:3:49: warning: ‘c’ is used uninitialized [-Wuninitialized]
+    3 | int unused_fn(int a, int b) { int c; return a + c; }
+      |                                                 ^
+w.cc:3:35: note: ‘c’ was declared here
+    3 | int unused_fn(int a, int b) { int c; return a + c; }
+      |                                   ^
