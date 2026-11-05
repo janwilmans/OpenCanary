@@ -95,6 +95,57 @@ class TestParseMsvc(unittest.TestCase):
         self.assertTrue(is_valid_xml(report))
 
 
+class TestCopperSpiceBuildLog(unittest.TestCase):
+    """a real MSVC /W4 ninja build log of CopperSpice (237 MB, 2.6M lines, xz compressed in testdata)
+    the numbers are a regression baseline: they match the parsed output kept with the original log"""
+
+    @classmethod
+    def setUpClass(cls):
+        import lzma
+        with lzma.open(os.path.join(TESTDATA, "msvc_w4_copperspice.log.xz"), "rt", encoding="utf-8") as f:
+            log = f.read()
+        cls.parsed = run_script("parse_msvc.py", ["msvc"], log)
+        cls.issues = run_script("sortby.py", stdin=cls.parsed)
+
+    def test_parse_and_deduplicate(self):
+        self.assertEqual(len(lines(self.parsed)), 404930)
+        self.assertEqual(len(lines(self.issues)), 15063)
+
+    def test_rule_counts(self):
+        from collections import Counter
+        rules = Counter(line.split("|")[5] for line in lines(self.issues))
+        self.assertEqual(len(rules), 46)
+        self.assertEqual(rules["C4244"], 4567)
+        self.assertEqual(rules["C4250"], 2472)
+        self.assertEqual(rules["C4291"], 2255)
+        self.assertNotIn("rule-missing", rules)
+
+    def test_summarize(self):
+        out = run_script("summarize.py", stdin=self.issues)
+        self.assertNotIn("error in script", out)
+        self.assertIn("C4244: 4567", out)
+        self.assertTrue(out.rstrip().endswith("In total 15063 issues."))
+
+    def test_summarize_verbose_shows_first_location(self):
+        out = run_script("summarize.py", ["-v"], self.issues)
+        self.assertIn("\t@ C:\\project\\internal-copperspice\\src\\3rdparty\\webkit\\Source\\JavaScriptCore\\wtf\\Assertions.cpp:31", out)
+
+    def test_summarize_showall_prints_every_issue(self):
+        out = lines(run_script("summarize.py", ["-s"], self.issues))
+        self.assertEqual(len(out), 15063)
+        self.assertIn("declaration of 'oldNext' hides previous local declaration", out)
+
+    def test_copperspice_pipeline_to_report(self):
+        stages = [os.path.join("examples", "tr_customize_copperspice.py"),
+                  ("tr_interest.py", ["--rules", os.path.join(HERE, "examples", "interest_copperspice.txt"), "--msvc"])] + DEFAULT_STAGES
+        interest = run_pipeline(stages, self.issues)
+        self.assertEqual(len(lines(interest)), 445)
+        components = {line.split("|")[2] for line in lines(interest)}
+        self.assertTrue({"CsCore", "CsGui", "webkit"} <= components)
+        report = run_pipeline(["create_report.py", ("apply_environment.py", [os.path.join(TESTDATA, "env.txt")])], interest)
+        self.assertTrue(is_valid_xml(report))
+
+
 class TestRules(unittest.TestCase):
 
     def test_first_match_wins_and_matcher_types(self):
