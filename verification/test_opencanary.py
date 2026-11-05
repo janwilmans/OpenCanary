@@ -154,6 +154,40 @@ class TestCustomize(unittest.TestCase):
         self.assertEqual(parts[3], "lib\\toolkit\\a.cc:12")
 
 
+class TestRunner(unittest.TestCase):
+
+    def test_wiki_url_prefix_from_environment_file(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            env = os.path.join(d, "env.txt")
+            with open(env, "w", encoding="utf-8") as f:
+                f.write("WIKI_URL_PREFIX=https://wiki.example.com/?t=OC\n")
+            out = run_script("apply_environment.py", [env], "[[wiki-url]] [[wiki-issue-prefix]]\n")
+            self.assertEqual(out.strip(), "https://wiki.example.com/?t=OC_Issues https://wiki.example.com/?t=OC_Issue_")
+
+    @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
+    def test_run_from_config(self):
+        import shutil
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            shutil.copy(os.path.join(TESTDATA, "gcc_warnings.txt"), os.path.join(d, "gcc.log"))
+            shutil.copy(os.path.join(TESTDATA, "env.txt"), os.path.join(d, "env.txt"))
+            with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
+                f.write('[[input]]\nformat = "gcc"\npath = "gcc.log"\n[output]\nenvironment = "env.txt"\n')
+            out = run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
+            self.assertEqual(out, "")
+            with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
+                self.assertEqual(len(lines(f.read())), 6)
+            with open(os.path.join(d, "report.html"), encoding="utf-8") as f:
+                report = f.read()
+            self.assertTrue(is_valid_xml(report))
+            self.assertIn("https://git.example.com/group/proj/blob/0123456789abcdef/w.cc", report)
+
+    def test_single_stage_command(self):
+        out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))
+        self.assertEqual([line.split("|")[0] for line in lines(out)], ["1", "9"])
+
+
 class TestStages(unittest.TestCase):
 
     @staticmethod
