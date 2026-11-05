@@ -99,6 +99,19 @@ def check_structured_line_parts(parts):
         eprint(f"assertion failed: broken structured CSV, line has {len(parts)}/{len(Column)} parts:\n {parts}")
 
 
+def legacy_args(args, known):
+    """accept the old style options /msvc, -display_depth=2 as --msvc, --display-depth=2, only for the option names
+    in 'known' so values such as /absolute/paths are left alone"""
+    result = []
+    for arg in args:
+        name, sep, value = arg.lstrip("/-").partition("=")
+        name = name.lower().replace("_", "-")
+        if arg[:1] in "/-" and arg[:2] != "--" and name in known:
+            arg = "--" + name + sep + value
+        result.append(arg)
+    return result
+
+
 def stdin_rows():
     """yields every line of stdin as a list of columns"""
     for line in sys.stdin:

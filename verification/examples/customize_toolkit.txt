@@ -1,0 +1,17 @@
+# example component/team rules, use: tr_customize.py --rules examples/customize_toolkit.txt
+
+component:toolkit ~lib/toolkit
+component:sensing ~/sensing
+component:tooling ~/tooling/
+component:device ~/keylok
+component:UI ~/vqt
+component:IPC ~/taskcommunication
+component:logging ~/viceventlog
+component:logviewer ~/logviewer
+component:IPC ~/lib/shmemlib
+team:platform ~/lib/
+team:platform ~/infrastructure/
+team:project ~/window.cc
+team:project ~/kernel
+team:project ~/modules/
+team:platform ~""   # default team, an empty ~ matches everything

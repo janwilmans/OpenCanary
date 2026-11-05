@@ -19,8 +19,8 @@ def show_usage():
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--rules", default=util.default_rules_file("interest.txt"), help="rules file, 'drop' rules remove the line")
-    parser.add_argument("--msvc", "-msvc", action="store_true", help="replace \\ with / in the output")
-    args = parser.parse_args(["-msvc" if a == "/msvc" else a for a in sys.argv[1:]])  # accept the legacy /msvc
+    parser.add_argument("--msvc", action="store_true", help="replace \\ with / in the output")
+    args = parser.parse_args(util.legacy_args(sys.argv[1:], ["msvc"]))
 
     rules = util.load_rules(args.rules)
     for line in sys.stdin:

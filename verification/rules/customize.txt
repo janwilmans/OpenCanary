@@ -1,0 +1,5 @@
+# rules for tr_customize.py, the text that is matched is the file path with / separators
+# format:  component:<name> <matcher>...    sets the component column, first match wins
+#          team:<name> <matcher>...         sets the team column, first match wins
+#   =text   path equals text   ~text   path contains text   ?regex   regular expression
+# '#' starts a comment, see examples/customize_toolkit.txt

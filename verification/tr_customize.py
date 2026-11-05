@@ -1,66 +1,32 @@
 #!/usr/bin/env python3
-"""Remove build paths, customize 'component' field
+"""Remove build paths, customize the 'component' and 'team' fields and add permalinks to the source.
+    component:/team: rules are read from a rules file (default rules/customize.txt), the text they are matched
+    against is the file path with / separators, see examples/customize_toolkit.txt.
+
+    Usage: <input> | tr_customize.py [--rules FILE] [--msvc] [--depth N] [--display-depth N] [--reference-depth N]
 """
 
-import sys
-import os
+import argparse
 import re
+import sys
 import util
 from util import Column
-from util import eprint
-
-option_msvc = False
-option_display_depth = 0
-option_reference_depth = 0
-option_prefix_search = ""
 
 windows_separator = "\\"
 unix_separator = "/"
 
+options = None   # set by main()
+rules = []       # set by main()
+
 
 def define_component(parts):
-    file = parts[Column.FILE].replace("\\", r"/")
-    if "lib/toolkit" in file:
-        return "toolkit"
-    if "/sensing" in file:
-        return "sensing"
-    if "/tooling/" in file:
-        return "tooling"
-    if "/keylok" in file:
-        return "device"
-    if "/vqt" in file:
-        return "UI"
-    if "/taskcommunication" in file:
-        return "IPC"
-    if "/viceventlog" in file:
-        return "logging"
-    if "/logviewer" in file:
-        return "logviewer"
-    if "/lib/shmemlib" in file:
-        return "IPC"
-    return ""
+    file = parts[Column.FILE].replace(windows_separator, unix_separator)
+    return util.first_match(rules, file, "component") or ""
 
 
 def define_team(parts):
-    file = parts[Column.FILE].replace("\\", r"/")
-    if "/lib/" in file:
-        return "platform"
-    if "/infrastructure/" in file:
-        return "platform"
-    if "/window.cc" in file:
-        return "project"
-    if "/kernel" in file:
-        return "project"
-    if "/modules/" in file:
-        return "project"
-    return "platform"
-
-
-def get_substring_end_position(needle, haystack):
-    position = haystack.find(needle)
-    if position == -1:
-        return 0
-    return position + len(needle)
+    file = parts[Column.FILE].replace(windows_separator, unix_separator)
+    return util.first_match(rules, file, "team") or parts[Column.TEAM]
 
 
 # returns the end-position of the 'pattern' or -1 if it is not found
@@ -102,16 +68,14 @@ def get_sanitized_build_path(parts):
 # creates one or more links, by default only one, in the format "[Column.FILE.value]{url}" means it will
 # create an URL for the FILE to link to.
 def create_default_links(parts):
-    global option_reference_depth
-
     file = parts[Column.FILE]
     parts = file.split(":")
     filename = util.get_or_default(parts, 0, "")
     line_number = util.get_or_default(parts, 1, "0")
     # _column_number = util.get_or_default(parts, 2, 0)  # ignored if present
 
-    if option_reference_depth > 0:
-        filename = unix_separator.join(filename.split(unix_separator)[option_reference_depth:])
+    if options.reference_depth > 0:
+        filename = unix_separator.join(filename.split(unix_separator)[options.reference_depth:])
 
     url = util.urljoin("[[permalink-prefix]]", filename)
 
@@ -124,14 +88,11 @@ def create_default_links(parts):
 
 
 def create_display_path(parts):
-    global option_msvc
-    global option_display_depth
-
     file = parts[Column.FILE]
 
-    if option_display_depth > 0:
-        file = unix_separator.join(file.split(unix_separator)[option_display_depth:])
-    if option_msvc:
+    if options.display_depth > 0:
+        file = unix_separator.join(file.split(unix_separator)[options.display_depth:])
+    if options.msvc:
         file = file.replace(unix_separator, windows_separator)  # optionally back to windows style for display
     return file
 
@@ -170,47 +131,21 @@ def customize(line):
 
 
 def show_usage():
-    eprint("Usage: " + os.path.basename(__file__) + " [/msvc] [/option=n]")
-    eprint("   /msvc                    transform unix paths back to windows path for display")
-    eprint("   /depth=n                 set both display_depth and reference_path to n")
-    eprint("   /display_depth=n         set display_depth to n, used to show a path in the report that looks nice to the user")
-    eprint("   /reference_depth=n       set reference_depth to n, used to align the path with [[permalink-prefix]] to form a working URL")
-    eprint("   note: any option may also be given as -option instead of /option, this is useful in environments where / is ambiguous")
-    eprint("   will customize structured CSV, according to user-specific rules, see customize()")
-
-
-def apply_settings(arg):
-    global option_msvc
-    global option_display_depth
-    global option_reference_depth
-    global option_prefix_search
-    try:
-        if arg.startswith("msvc="):
-            option_msvc = True
-            return
-        if arg.startswith("depth="):
-            value = int(arg.split("=")[1])
-            option_display_depth = value
-            option_reference_depth = value
-            return
-        if arg.startswith("display_depth="):
-            value = int(arg.split("=")[1])
-            option_display_depth = value
-            return
-        if arg.startswith("reference_depth="):
-            value = int(arg.split("=")[1])
-            option_reference_depth = value
-            return
-    except Exception as e:
-        eprint(f"Unknown option: {arg} ({e})")
-    eprint(f"Unknown option: {arg}")
-    show_usage()
-    sys.exit(1)
+    print(__doc__, file=sys.stderr)
 
 
 def main():
-    for arg in sys.argv[1:]:
-        apply_settings(arg[1:].lower())
+    global options, rules
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--rules", default=util.default_rules_file("customize.txt"), help="rules file with component:/team: rules")
+    parser.add_argument("--msvc", action="store_true", help="transform unix paths back to windows path for display")
+    parser.add_argument("--depth", type=int, help="set both display-depth and reference-depth to n")
+    parser.add_argument("--display-depth", type=int, default=0, help="strip n leading path elements from the path shown in the report")
+    parser.add_argument("--reference-depth", type=int, default=0, help="strip n leading path elements to align the path with [[permalink-prefix]]")
+    options = parser.parse_args(util.legacy_args(sys.argv[1:], ["msvc", "depth", "display-depth", "reference-depth"]))
+    if options.depth is not None:
+        options.display_depth = options.reference_depth = options.depth
+    rules = util.load_rules(options.rules)
 
     for line in sys.stdin:
         customize(line)

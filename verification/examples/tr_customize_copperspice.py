@@ -1,56 +1,24 @@
 #!/usr/bin/env python3
-"""Remove build paths, customize 'component' field
+"""Example: CopperSpice specific build path removal and 'component' rules (customize_copperspice.txt).
+    Generic version: tr_customize.py
 """
 
-import sys
 import os
 import re
-import util
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import util  # noqa: E402
 from util import Column
 from util import eprint
 
 msvc = False
+rules = util.load_rules(os.path.join(os.path.dirname(os.path.abspath(__file__)), "customize_copperspice.txt"))
 
 
 def define_component(parts):
     file = parts[Column.FILE].replace("\\", r"/")
-    if "include/QtMultimedia" in file:
-        return "CsMultimedia"
-    if "include/QtCore" in file:
-        return "CsCore"
-    if "/src/core" in file:
-        return "CsCore"
-    if "include/QtGui" in file:
-        return "CsGui"
-    if "/webkit" in file:
-        return "webkit"
-    if "/WebCore" in file:
-        return "WebCore"
-    if "/src/gui/" in file:
-        return "CsGui"
-    if "/src/multimedia/" in file:
-        return "multimedia"
-    if "/src/network/" in file:
-        return "network"
-    if "/src/opengl/" in file:
-        return "opengl"
-    if "/src/plugins/" in file:
-        return "plugins"
-    if "/src/script/" in file:
-        return "script"
-    if "/src/svg/" in file:
-        return "svg"
-    if "/src/xmlpatterns/" in file:
-        return "xmlpatterns"
-    if "/src/xml/" in file:
-        return "xml"
-    if "/src/tools/" in file:
-        return "tools"
-    if "/3rdparty" in file:
-        return "3rdparty"
-    if "/MSVC" in file:
-        return "MSVC"
-    return ""
+    return util.first_match(rules, file, "component") or ""
 
 
 def get_substring_end_position(needle, haystack):

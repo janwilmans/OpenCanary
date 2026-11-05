@@ -1,0 +1,20 @@
+# example component rules for a CopperSpice checkout, used by examples/tr_customize_copperspice.py
+
+component:CsMultimedia ~include/QtMultimedia
+component:CsCore ~include/QtCore
+component:CsCore ~/src/core
+component:CsGui ~include/QtGui
+component:webkit ~/webkit
+component:WebCore ~/WebCore
+component:CsGui ~/src/gui/
+component:multimedia ~/src/multimedia/
+component:network ~/src/network/
+component:opengl ~/src/opengl/
+component:plugins ~/src/plugins/
+component:script ~/src/script/
+component:svg ~/src/svg/
+component:xmlpatterns ~/src/xmlpatterns/
+component:xml ~/src/xml/
+component:tools ~/src/tools/
+component:3rdparty ~/3rdparty
+component:MSVC ~/MSVC

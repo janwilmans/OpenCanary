@@ -135,6 +135,25 @@ class TestInterest(unittest.TestCase):
         self.assertEqual(out, "|x|C4018 a/b\n")
 
 
+class TestCustomize(unittest.TestCase):
+    ROW = "8||c|build\\lib\\toolkit\\a.cc:12|gcc|rule|warning|d|[3]{old}\n"
+
+    def customize(self, *args):
+        rules = os.path.join(HERE, "examples", "customize_toolkit.txt")
+        return run_script("tr_customize.py", ["--rules", rules, *args], self.ROW).split("|")
+
+    def test_component_team_and_link(self):
+        parts = self.customize()
+        self.assertEqual(parts[1], "platform")
+        self.assertEqual(parts[2], "toolkit")
+        self.assertEqual(parts[3], "build/lib/toolkit/a.cc:12")
+        self.assertIn("[3]{[[permalink-prefix]]/build/lib/toolkit/a.cc#L12}", parts[8])
+
+    def test_legacy_options_and_msvc_display(self):
+        parts = self.customize("/msvc", "-display_depth=1")
+        self.assertEqual(parts[3], "lib\\toolkit\\a.cc:12")
+
+
 class TestStages(unittest.TestCase):
 
     @staticmethod
