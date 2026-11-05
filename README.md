@@ -33,7 +33,7 @@ Team specific behavior lives in plain text rule files, first matching line wins 
 - gcc / clang commandline warnings
 - msvc warnings
 - cppcheck issues
-- sanitizer (ubsan, tsan, asan, etc) issues 
+- sanitizer (ubsan, tsan, asan, etc) issues
 - clang-tidy
 - coverage results
 - more?
@@ -49,7 +49,7 @@ that way issues are clustered per-file as good as possible.
 
 * [0] priority - team assigned priority
 * [1] team - name of the team responsible for the file
-* [2] component - name of the component the issue is associated to 
+* [2] component - name of the component the issue is associated to
 * [3] fileref - file + linenumber "/path/foo:14" with optional columnnumber "/path/foo:14:35"
 * [4] source - the tools that produced the issue (gcc/coverage, cppcheck/opencanary,ubsan,etc.)
 * [5] rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
@@ -57,21 +57,21 @@ that way issues are clustered per-file as good as possible.
 * [7] description - the actual message that was reported
 * link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.)
 
-## category and rule 
-Its important that the rule is specific enough so advice can be offered on how to handle a particular issue. This is because the rule is what makes links to the Wiki pages unique. Conversely the category must be broad enough to group silimar issues together, but typically only issues with the same priority. However, the latter is not strictly required, specfic rules _can_ have a different priority from their category. 
+## category and rule
+Its important that the rule is specific enough so advice can be offered on how to handle a particular issue. This is because the rule is what makes links to the Wiki pages unique. Conversely the category must be broad enough to group silimar issues together, but typically only issues with the same priority. However, the latter is not strictly required, specfic rules _can_ have a different priority from their category.
 
 ## links
 The links are intended to be combined in the report in such a way that when (as an example) the value in 'priority' is clicked, it is linking to the url in [0]{url} etc. This way any tool can add custom links into the report. This is used to create links from the fileref to the source repository (permalinks) so issues can be viewed easily in full context. But also to make the 'rule' clickable, so it links to a wiki page to gather typical solving strategies. The wiki page name is typically generated from the 'rule' name.
 
 
-## Possible transformations 
+## Possible transformations
 
 These steps/stages are suggestions, you can design your own process flow, but this order worked well for me:
 
-- Pre-filter: optional step; remove non-team issues (doing this first prevents unneeded work in following steps) 
-  - the .opencanaryignore file uses the same fnmatch() syntax that .gitignore uses, currently only oc_cpp_issues.py 
+- Pre-filter: optional step; remove non-team issues (doing this first prevents unneeded work in following steps)
+  - the .opencanaryignore file uses the same fnmatch() syntax that .gitignore uses, currently only oc_cpp_issues.py
     respects these ignore rules.
-- Error filter 
+- Error filter
   - filter out false positives, tooling errors and 3rd party paths (usually a pretty static filter, might be maintained outside the team)
 - Interest / Focus on adding value (examples: tr_interest_vc.py, tr_interest_cs.py)
   - filter out what are _not_ errors, but the team should ignore (unmaintained code for example)
@@ -81,7 +81,7 @@ These steps/stages are suggestions, you can design your own process flow, but th
   - override the priorities to promote rules that have very few issues (to solve low hanging fruit first)
   - **the result of this yields a prioritized work-list for the team**
 - Generate report (create_report.py)
-  - transform the issue list into a html report for easy access and/or sending emails 
+  - transform the issue list into a html report for easy access and/or sending emails
 - Regression
    - exclude all projects or categories of issues that are not at zero yet
   - **any issues that pass this filter fail the build**
