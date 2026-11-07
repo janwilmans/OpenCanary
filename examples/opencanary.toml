@@ -1,5 +1,6 @@
 # CopperSpice MSVC /W4 example, links point to the local checkout in C:\project\copperspice
 # run from anywhere: python3 verification/opencanary.py run -c examples/opencanary.toml
+# unzip log.w4.all.zip in this directory first, it contains log.w4.all.txt
 
 [[input]]
 format = "msvc"
