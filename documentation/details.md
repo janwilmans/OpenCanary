@@ -37,7 +37,7 @@ priority|team|component|fileref|source|rule|category|description|links
 | # | Field | Meaning | Written by | Changed by |
 |---|-------|---------|------------|------------|
 | 0 | priority | Integer, lower is more important. | parsers | `apply_team_priorities.py`, `apply_low_hanging_fruit.py` |
-| 1 | team | Team responsible for the file. | parsers (empty, `[[team]]` for MSVC) | `tr_customize.py` |
+| 1 | team | Team responsible for the file. | parsers (empty) | `tr_customize.py` |
 | 2 | component | Component the file belongs to. | parsers (empty, `compiler` for command line warnings) | `tr_customize.py` |
 | 3 | fileref | `file[:line[:column]]` | parsers | `tr_customize.py` (path clean-up) |
 | 4 | source | Tool or build that reported it, free text. | parsers | |
@@ -222,12 +222,12 @@ Reads an MSVC (cl.exe, MASM, link) build log and writes one issue per warning.
 - **Command line warnings** (`cl : Command line warning D9002 : ignoring unknown option '/foo'`): fileref is the text
   up to and including `Command line warning`, the rule (`D9002`) and description follow, **component** `compiler`,
   **category** `cmdline`.
-- **priority** `8`, **team** `[[team]]` (see [Known limitations](#known-limitations)), description HTML-escaped.
+- **priority** `8`, **team** empty, description HTML-escaped.
 - **links**: only `[5]{https://duckduckgo.com/?q=!ducky+msdn+<rule>}`; the file link is added by `tr_customize.py`.
 
 ```
 in:   C:\project\lib\toolkit\slot.h(75): warning C4251: 'Slot::m_name': class 'std::string' needs to have dll-interface
-out:  8|[[team]]||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_name&#x27;: class &#x27;std::string&#x27; needs to have dll-interface|[5]{https://duckduckgo.com/?q=!ducky+msdn+C4251}
+out:  8|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_name&#x27;: class &#x27;std::string&#x27; needs to have dll-interface|[5]{https://duckduckgo.com/?q=!ducky+msdn+C4251}
 ```
 
 ### oc_cpp_issues.py
@@ -365,9 +365,9 @@ For every issue, in this order:
    `\`.
 
 ```
-in:   8|[[team]]||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}
+in:   8|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}
       tr_customize.py --msvc --display-depth 1
-out:  8|[[team]]||lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}[3]{[[permalink-prefix]]/project/lib/toolkit/slot.h#L75}
+out:  8|||lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}[3]{[[permalink-prefix]]/project/lib/toolkit/slot.h#L75}
 ```
 
 `verification/examples/tr_customize_copperspice.py` is an example of a project specific customizer.
@@ -519,7 +519,7 @@ Replaces the placeholders in every input line (any text, normally the report):
 
 `WIKI_URL_PREFIX` defaults to `https://wiki.company.nl/wiki/index.php?title=OpenCanary`. A missing key for job URL,
 user name, commit message or permalink is written as `[[<KEY> not found by get_from_envfile()]]`, which makes the
-report hide that header item. `[[team]]` and `[[pipe]]` are not replaced.
+report hide that header item. `[[pipe]]` is not replaced.
 
 ### tr_regression.py
 
@@ -678,8 +678,6 @@ field numeric: values that differ by at most DELTA (default 1) are equal. Needs 
 
 ## Known limitations
 
-- `parse_msvc.py` writes the placeholder `[[team]]` in the team field and no stage replaces it: MSVC issues show
-  `[[team]]` as their team unless a `team:` rule in the customize rules matches.
 - `tr_customize.py` always replaces the component, so the `compiler` component set by the parsers for command line
   warnings is lost unless a `component:` rule matches.
 - `apply_environment.py` reads the branch from `CI_BUILD_REF_NAME`, the old GitLab name; set

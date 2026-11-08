@@ -193,6 +193,10 @@ class TestParseMsvc(unittest.TestCase):
         row = [line for line in lines(result) if "|C4251|" in line][0].split("|")
         self.assertTrue(row[8].startswith("[5]{"), row[8])
 
+    def test_team_is_empty_until_a_team_rule_sets_it(self):
+        result = run_script("parse_msvc.py", ["msvc"], read_testdata("msvc_warnings.txt"))
+        self.assertEqual({line.split("|")[1] for line in lines(result)}, {""})
+
     def test_parse_msvc_full_integration(self):
         stages = [("parse_msvc.py", ["msvc"])] + DEFAULT_STAGES + ["create_report.py", ("apply_environment.py", [os.path.join(TESTDATA, "env.txt")])]
         report = run_pipeline(stages, read_testdata("msvc_warnings.txt"))
