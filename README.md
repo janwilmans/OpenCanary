@@ -147,8 +147,8 @@ create_summary.py [--report-url URL] < issues.txt > summary.html
 
 The branch and committer, then the 10 most important issues (lowest priority number first), with a link to the file.
 Then a table with a row per combination of rule, team, component and category, with the number of issues, and a total.
-The rows of a rule are grouped: its priority, name (with its number of issues) and the description of its first issue
-(cut at 100 characters) are shown once for the group. Rules are ordered by number of issues (fewest first) and by name
+The rows of a rule are grouped: its priority, name, total number of issues and the description of its first issue
+(cut at 100 characters) are shown once for the group. Rules are ordered by their total (fewest first) and by name
 second, the rows within a rule by number of issues; an empty team, component or category is shown as `(none)`. The
 branch, committer and file links are `[[keywords]]`, filled in by piping the summary through `apply_environment.py env.txt`
 (a branch or committer without a value is left out). The HTML only

@@ -15,8 +15,8 @@ from util import eprint
 
 FONT = "font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1d2330;"
 BORDER = "border: 1px solid #d0d5dd;"
-HEADER_BACKGROUND = "#f1f3f6"
 TOTAL_BACKGROUND = "#e8efff"
+HEADER_BACKGROUND = TOTAL_BACKGROUND
 NO_NAME = "(none)"
 DESCRIPTION_LIMIT = 100   # characters of the description shown per rule
 TOP_LIMIT = 10            # number of most important issues listed above the table per rule
@@ -75,13 +75,6 @@ def cell(tag, text, align="left", bold=False, background=None, rowspan=1):
     bgcolor = f' bgcolor="{background}"' if background else ""
     span = f' rowspan="{rowspan}"' if rowspan > 1 else ""
     return f'<{tag} align="{align}" valign="top"{bgcolor}{span} style="{style}">{text}</{tag}>'
-
-
-def rule_cell(rule, total, rows):
-    text = html.escape(rule)
-    if rows > 1:
-        text += f'<br/><span style="{FONT} font-size: 12px; color: #667085;">{plural(total, "issue")}</span>'
-    return cell("td", text, bold=True, rowspan=rows)
 
 
 def file_link(parts):
@@ -144,18 +137,21 @@ def create_summary(issues, report_url=""):
     result.append(heading(f"Top {len(top)} issues") + create_top_table(top))
     result.append(heading("Issues per rule"))
     result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n')
-    result.append(header_row([("Prio", "right"), ("Rule", "left"), ("Description", "left"), ("Team", "left"),
+    # 'Total' is the number of issues of the rule, the order of the rules; 'Issues' the number per team, component and category
+    result.append(header_row([("Prio", "right"), ("Rule", "left"), ("Total", "right"), ("Description", "left"), ("Team", "left"),
                               ("Component", "left"), ("Category", "left"), ("Issues", "right")]))
     for rule, priorities, description, rule_total, rows in rules:
         for index, (team, component, category, count) in enumerate(rows):
             result.append('<tr>')
             if index == 0:
-                result.append(cell("td", html.escape(priorities), "right", rowspan=len(rows)) + rule_cell(rule, rule_total, len(rows)))
+                result.append(cell("td", html.escape(priorities), "right", rowspan=len(rows)))
+                result.append(cell("td", html.escape(rule), bold=True, rowspan=len(rows)))
+                result.append(cell("td", str(rule_total), "right", bold=True, rowspan=len(rows)))
                 result.append(cell("td", html.escape(description), rowspan=len(rows)))
             result.extend(cell("td", html.escape(value)) for value in (team, component, category))
             result.append(cell("td", str(count), "right") + '</tr>\n')
     result.append('<tr>' + cell("td", "", background=TOTAL_BACKGROUND) + cell("td", "Total", bold=True, background=TOTAL_BACKGROUND))
-    result.append(cell("td", "", background=TOTAL_BACKGROUND) * 4)
+    result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + cell("td", "", background=TOTAL_BACKGROUND) * 4)
     result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + '</tr>\n</table>\n</body>\n</html>\n')
     return "".join(result)
 

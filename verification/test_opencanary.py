@@ -177,13 +177,17 @@ class TestSummary(unittest.TestCase):
         self.assertNotIn("class=", summary)
         # rules by number of issues (fewest first), then name; within a rule by count; the first description of each rule
         self.assertEqual(self.table(summary), [
-            ["Prio", "Rule", "Description", "Team", "Component", "Category", "Issues"],
-            ["7, 9", "b<ad", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
-            ["10", "C4456", "d", "net", "x", "warning", "2"],
-            ["45", "AP#13 5 issues", "later", "gui", "CsGui", "redflag", "2"],
+            ["Prio", "Rule", "Total", "Description", "Team", "Component", "Category", "Issues"],
+            ["7, 9", "b<ad", "2", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
+            ["10", "C4456", "2", "d", "net", "x", "warning", "2"],
+            ["45", "AP#13", "5", "later", "gui", "CsGui", "redflag", "2"],
             ["core", "CsCore", "redflag", "3"],
-            ["", "Total", "", "", "", "", "9"],
+            ["", "Total", "9", "", "", "", "", "9"],
         ])
+        self.assertNotIn("#f1f3f6", summary)
+        self.assertEqual(summary.count('<th align='), 8 + 5)   # both tables have the header in the color of the total line
+        self.assertEqual(summary.count('<th align='), summary.count('<th align="left" valign="top" bgcolor="#e8efff"')
+                         + summary.count('<th align="right" valign="top" bgcolor="#e8efff"'))
         self.assertIn('rowspan="2"', summary)
         self.assertIn("9 issues for 3 rules in 3 categories for 4 teams", summary)
 

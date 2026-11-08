@@ -536,13 +536,14 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
 - **Issues per rule**: a table with a row per combination of rule, team, component and category, with the number of
   issues.
 - The rows of one rule are grouped. The rule's **priority** (all distinct priorities, comma separated, if there are
-  several), its **name** (with its total when it has more than one row) and the **description** of its first issue
+  several), its **name**, its **total** number of issues and the **description** of its first issue
   (the most important one, as the input is sorted) are shown once, in cells that span the group. The description is
   cut at the last space before 100 characters and ends with `…`.
-- Rules are ordered by number of issues (fewest first), then by name (ignoring case). Rows within a rule by number of
+- Rules are ordered by their total number of issues (fewest first, the Total column), then by name (ignoring case). Rows within a rule by number of
   issues (fewest first), then team, component and category.
 - An empty team, component or category is shown as `(none)`.
-- The last row is the total number of issues. With no input only the text line is written.
+- The last row is the total number of issues. The header rows of both tables and the total row have the same light
+  blue background. With no input only the text line is written.
 
 ### apply_environment.py
 
