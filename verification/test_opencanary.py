@@ -28,6 +28,27 @@ def is_valid_xml(text):
         return False
 
 
+def report_rows(report):
+    """the issues embedded in a report, with the [[keywords]] filled in the same way the page script does"""
+    import base64
+    import gzip
+    import html
+    import json
+    import re
+    data = json.loads(re.search(r'<script type="application/json" id="oc-data">(.*?)</script>', report, re.S).group(1))
+    environment = {key: html.unescape(value) for key, value in re.findall(r'<span data-key="([\w-]+)">(.*?)</span>', report)}
+
+    def fill(match):
+        key = match.group(1)
+        return json.dumps(environment[key])[1:-1] if key in environment else match.group(0)
+
+    rows = []
+    for block in data["blocks"]:
+        text = gzip.decompress(base64.b64decode(block)).decode("utf-8")
+        rows += json.loads(re.sub(r"\[\[([\w-]+)\]\]", fill, text))
+    return rows
+
+
 def run_script(script, args=(), stdin=""):
     """run one script of the pipeline, return its stdout as text"""
     result = subprocess.run([sys.executable, os.path.join(HERE, script), *args], input=stdin,
@@ -75,6 +96,38 @@ class TestParseGcc(unittest.TestCase):
         report = run_pipeline(stages, read_testdata("gcc_warnings.txt"))
         self.assertTrue(is_valid_xml(report))
         self.assertNotIn("[[permalink-prefix]]", report)
+        rows = report_rows(report)
+        self.assertEqual(len(rows), 6)
+        self.assertNotIn("[[permalink-prefix]]", str(rows))
+
+
+class TestReport(unittest.TestCase):
+
+    @staticmethod
+    def row(prio, description="d", link=""):
+        return "|".join([prio, "team", "comp", "a.cc:1", "src", "rule", "warning", description, link]) + "\n"
+
+    def test_issues_are_split_in_blocks(self):
+        import create_report
+        count = create_report.BLOCK_SIZE + 1
+        report = run_script("create_report.py", stdin="".join(self.row(str(i % 100)) for i in range(count)))
+        self.assertTrue(is_valid_xml(report))
+        self.assertEqual(report.count('"blocks":["'), 1)
+        rows = report_rows(report)
+        self.assertEqual(len(rows), count)
+        self.assertEqual([row[1] for row in rows[-3:]], ["98", "99", "0"])
+        self.assertEqual([row[0] for row in rows[-3:]], ["t4", "t4", "t1"])
+
+    def test_rows_are_plain_text_with_links(self):
+        report = run_script("create_report.py", stdin=self.row("5", "&#x27;a&#x27; &lt;b&gt; &amp;", "[3]{[[permalink-prefix]]/a.cc#L1}[5]{https://x/rule}"))
+        self.assertEqual(report_rows(report), [["t1", "5", "team", "comp", "a.cc:1", "src", "rule", "warning", "'a' <b> &",
+                                                {"3": "[[permalink-prefix]]/a.cc#L1", "5": "https://x/rule"}]])
+
+    def test_limit_and_empty_report(self):
+        report = run_script("create_report.py", ["/limit=2"], "".join(self.row("1") for _ in range(5)))
+        self.assertEqual(len(report_rows(report)), 2)
+        self.assertIn("limited to the first 2 of 5 issues", report)
+        self.assertEqual(report_rows(run_script("create_report.py", stdin="")), [])
 
 
 class TestParseMsvc(unittest.TestCase):
@@ -244,7 +297,7 @@ class TestRunner(unittest.TestCase):
             with open(os.path.join(d, "report.html"), encoding="utf-8") as f:
                 report = f.read()
             self.assertTrue(is_valid_xml(report))
-            self.assertIn("https://git.example.com/group/proj/blob/0123456789abcdef/w.cc", report)
+            self.assertIn("https://git.example.com/group/proj/blob/0123456789abcdef/w.cc", str(report_rows(report)))
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))

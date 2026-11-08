@@ -3,9 +3,11 @@
     the report is a single self-contained (X)HTML file, no external scripts or stylesheets are needed
 """
 
+import base64
+import gzip
 import html
+import json
 import os
-import re
 import sys
 import traceback
 import util
@@ -34,6 +36,12 @@ COLUMNS = [
     ("category", "Category", "Category of the issue"),
     ("description", "Description", "Description of the issue"),
 ]
+
+
+BLOCK_SIZE = 4000  # issues per compressed block
+
+# the [[keywords]] apply_environment.py fills in, the page script fills them into the issues as well
+ENVIRONMENT_KEYS = ["permalink-prefix", "wiki-issue-prefix", "wiki-url", "job-url", "branch-id", "user-name", "commit-message"]
 
 
 def get_tier(priority):
@@ -151,7 +159,15 @@ h1 { margin: 4px 0 8px; font-size: 26px; font-weight: 650; letter-spacing: -.01e
 kbd { padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface-2); font-family: var(--mono); font-size: 12px; }
 
 .table-wrap { overflow: auto; max-height: calc(100vh - 70px); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+/* fixed layout and one line per row, so every row has the same height and only the visible rows need to exist */
+table { width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+col.prio { width: 72px; }
+col.team { width: 110px; }
+col.component { width: 120px; }
+col.file { width: 30%; }
+col.source { width: 80px; }
+col.rule { width: 100px; }
+col.category { width: 100px; }
 thead th {
   position: sticky; top: 0; z-index: 1; padding: 0; text-align: left; white-space: nowrap;
   background: var(--surface-2); border-bottom: 1px solid var(--border);
@@ -165,18 +181,22 @@ thead th {
 th[aria-sort="ascending"] .sort, th[aria-sort="descending"] .sort { color: var(--accent); }
 th[aria-sort="ascending"] .sort::after { content: "\2191"; opacity: 1; }
 th[aria-sort="descending"] .sort::after { content: "\2193"; opacity: 1; }
-tbody td { padding: 8px 12px; vertical-align: top; border-bottom: 1px solid var(--border); }
-tbody tr:last-child td { border-bottom: 0; }
-tbody tr:hover td { background: var(--row-hover); }
-td.prio { width: 1%; }
-td.team, td.component, td.source, td.category { white-space: nowrap; color: var(--muted); }
-td.file { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; min-width: 220px; }
-td.rule { white-space: nowrap; }
+tbody td {
+  padding: 8px 12px; vertical-align: top; border-bottom: 1px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+tbody tr.expanded td { white-space: normal; overflow-wrap: anywhere; }
+tbody tr[data-index] { cursor: pointer; }
+tbody tr[data-index]:hover td, tbody tr[data-index]:focus td { background: var(--row-hover); }
+tbody tr[data-index]:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+tbody tr.spacer td, tbody tr.loading td { padding: 0; border: 0; }
+tbody tr.loading td { padding: 40px; text-align: center; color: var(--muted); }
+td.team, td.component, td.source, td.category { color: var(--muted); }
+td.file { font-family: var(--mono); font-size: 12.5px; }
+/* cut long paths at the start, the file name and line number at the end matter most */
+tbody tr:not(.expanded) td.file { direction: rtl; text-align: left; }
+td.file .path { direction: ltr; unicode-bidi: isolate; }
 td.rule span { padding: 1px 6px; border-radius: 4px; background: var(--surface-2); font-family: var(--mono); font-size: 12.5px; }
-td.description { min-width: 320px; }
-.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-.clamp.expanded { display: block; }
-td.description .more { display: inline-block; margin-top: 2px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 12px; cursor: pointer; }
 .badge {
   display: inline-block; min-width: 2.4em; padding: 1px 8px; border-radius: 999px; text-align: center;
   background: var(--tier-soft); color: var(--tier); font-weight: 700; font-size: 12.5px;
@@ -204,46 +224,196 @@ def get_script_section():
   }
 
   const table = document.getElementById('issues');
-  if (!table) return;
+  const dataElement = document.getElementById('oc-data');
+  if (!table || !dataElement) return;
+  const wrap = table.closest('.table-wrap');
   const tbody = table.tBodies[0];
   const filterInput = document.getElementById('filter');
   const shownCount = document.getElementById('shown');
+  const progress = document.getElementById('progress');
   const emptyMessage = document.getElementById('no-match');
   const tierButtons = [...document.querySelectorAll('.card[data-tier]')];
   const headers = [...table.tHead.rows[0].cells];
+  const columns = headers.map(th => th.dataset.column);
   const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+  const OVERSCAN = 12;    // rows rendered above and below the visible area
 
-  // read every row once, sorting and filtering then work on plain strings
-  const records = [...tbody.rows].map((row, index) => {
-    const cells = [...row.cells].map(cell => cell.textContent.trim());
-    return { row, index, cells, tier: row.dataset.tier, text: cells.join(' ').toLowerCase() };
-  });
+  // the issues are embedded as gzip compressed, base64 encoded JSON blocks, each row is [tier, ...cells, {column: link}]
+  // [[keywords]] in the rows are filled from #oc-env, which apply_environment.py filled in like the rest of the page
+  const data = JSON.parse(dataElement.textContent);
+  const environment = new Map([...document.querySelectorAll('#oc-env [data-key]')].map(e => [e.dataset.key, e.textContent]));
+  const fillEnvironment = json => json.replace(/\[\[([\w-]+)\]\]/g, (match, key) =>
+    environment.has(key) ? JSON.stringify(environment.get(key)).slice(1, -1) : match);
+
+  async function inflate(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  }
+
+  const records = [];             // every issue in report order
+  let ordered = records;          // records in the current sort order
+  let view = [];                  // ordered records that pass the filter
+  let offsets = new Float64Array(1);  // offsets[i] is the top of view[i] within the tbody
+  let rowHeight = 0;              // measured from a rendered row, 0 means measure again
+  const expanded = new Set();     // record indices of the expanded rows
+  const expandedHeights = new Map();
   let sortColumn = -1;
   let sortDirection = 1;
+  let loading = true;
+  let focusIndex = -1;
 
   const activeTiers = () => new Set(tierButtons.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.tier));
 
-  function applyFilter() {
+  function reorder() {
+    ordered = records.slice();
+    // ties keep the original order (priority, then file), also when sorting descending
+    if (sortColumn >= 0) ordered.sort((a, b) => sortDirection * collator.compare(a.cells[sortColumn], b.cells[sortColumn]) || a.index - b.index);
+  }
+
+  function updateView() {
     const words = filterInput.value.toLowerCase().split(/\s+/).filter(Boolean);
     const tiers = activeTiers();
-    let shown = 0;
-    for (const record of records) {
-      const visible = (tiers.size === 0 || tiers.has(record.tier)) && words.every(word => record.text.includes(word));
-      record.row.hidden = !visible;
-      if (visible) shown++;
+    view = ordered.filter(r => (tiers.size === 0 || tiers.has(r.tier)) && words.every(word => r.text.includes(word)));
+    shownCount.textContent = view.length;
+    emptyMessage.hidden = loading || view.length !== 0;
+    layout();
+  }
+
+  function layout() {
+    const height = rowHeight || 38;
+    offsets = new Float64Array(view.length + 1);
+    for (let i = 0; i < view.length; i++) {
+      const index = view[i].index;
+      offsets[i + 1] = offsets[i] + (expanded.has(index) ? expandedHeights.get(index) || height : height);
     }
-    shownCount.textContent = shown;
-    emptyMessage.hidden = shown !== 0;
+  }
+
+  // the position in view of the row at height y in the tbody
+  function rowAt(y) {
+    let low = 0;
+    let high = view.length;
+    while (low < high) {
+      const mid = (low + high + 1) >> 1;
+      if (offsets[mid] <= y) low = mid;
+      else high = mid - 1;
+    }
+    return low;
+  }
+
+  function element(name, className, text) {
+    const result = document.createElement(name);
+    if (className) result.className = className;
+    if (text !== undefined) result.textContent = text;
+    return result;
+  }
+
+  function spacer(height) {
+    const row = element('tr', 'spacer');
+    row.setAttribute('aria-hidden', 'true');
+    const cell = element('td');
+    cell.colSpan = columns.length;
+    cell.style.height = height + 'px';
+    row.append(cell);
+    return row;
+  }
+
+  function createRow(record) {
+    const isExpanded = expanded.has(record.index);
+    const row = element('tr', record.tier + (isExpanded ? ' expanded' : ''));
+    row.dataset.index = record.index;
+    row.tabIndex = 0;
+    row.setAttribute('aria-expanded', String(isExpanded));
+    record.cells.forEach((value, column) => {
+      const name = columns[column];
+      const cell = element('td', name);
+      let content = document.createTextNode(value);
+      const link = record.links[column];
+      if (link && !/^\s*javascript:/i.test(link)) {
+        content = element('a', '', value);
+        content.href = link;
+      }
+      if (name === 'prio' || name === 'file' || (name === 'rule' && value)) {
+        const wrapper = element('span', { prio: 'badge', file: 'path' }[name] || '');
+        wrapper.append(content);
+        content = wrapper;
+      }
+      cell.append(content);
+      if (value && name !== 'prio') cell.title = value;
+      row.append(cell);
+    });
+    return row;
+  }
+
+  let measuring = false;
+  function render() {
+    const top = Math.max(0, wrap.scrollTop - table.tHead.offsetHeight);
+    const first = Math.max(0, rowAt(top) - OVERSCAN);
+    const last = Math.min(view.length, rowAt(top + wrap.clientHeight) + 1 + OVERSCAN);
+    const fragment = document.createDocumentFragment();
+    if (offsets[first] > 0) fragment.append(spacer(offsets[first]));
+    for (let i = first; i < last; i++) fragment.append(createRow(view[i]));
+    const rest = offsets[view.length] - offsets[last];
+    if (rest > 0) fragment.append(spacer(rest));
+    const hadFocus = tbody.contains(document.activeElement);
+    tbody.replaceChildren(fragment);
+    if (focusIndex >= 0 && (hadFocus || document.activeElement === document.body)) {
+      const row = tbody.querySelector('tr[data-index="' + focusIndex + '"]');
+      if (row) row.focus({ preventScroll: true });
+    }
+    if (!measuring) measure();
+  }
+
+  // the row heights depend on fonts and zoom, measure them and lay out again when they differ from the estimate
+  function measure() {
+    let changed = false;
+    for (const row of tbody.rows) {
+      if (!row.dataset.index) continue;
+      const index = Number(row.dataset.index);
+      const height = row.getBoundingClientRect().height;
+      if (expanded.has(index)) {
+        if (Math.abs((expandedHeights.get(index) || 0) - height) > 0.5) {
+          expandedHeights.set(index, height);
+          changed = true;
+        }
+      } else if (rowHeight === 0) {
+        rowHeight = height;
+        changed = true;
+      }
+    }
+    if (changed) {
+      measuring = true;
+      layout();
+      render();
+      measuring = false;
+    }
+  }
+
+  let frame = 0;
+  function scheduleRender() {
+    if (!frame) frame = requestAnimationFrame(() => { frame = 0; render(); });
+  }
+
+  function refresh() {
+    updateView();
+    wrap.scrollTop = 0;
+    render();
+  }
+
+  function toggle(row) {
+    const index = Number(row.dataset.index);
+    if (!expanded.delete(index)) expanded.add(index);
+    focusIndex = index;
+    layout();
+    render();
   }
 
   function sortBy(column) {
     sortDirection = column === sortColumn ? -sortDirection : 1;
     sortColumn = column;
-    // ties keep the original order (priority, then file), also when sorting descending
-    records.sort((a, b) => sortDirection * collator.compare(a.cells[column], b.cells[column]) || a.index - b.index);
-    const fragment = document.createDocumentFragment();
-    for (const record of records) fragment.append(record.row);
-    tbody.append(fragment);
+    reorder();
+    refresh();
     headers.forEach((th, i) => {
       if (i === column) th.setAttribute('aria-sort', sortDirection === 1 ? 'ascending' : 'descending');
       else th.removeAttribute('aria-sort');
@@ -255,41 +425,48 @@ def get_script_section():
   for (const button of tierButtons) {
     button.addEventListener('click', () => {
       button.setAttribute('aria-pressed', button.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-      applyFilter();
+      refresh();
     });
   }
   document.getElementById('show-all').addEventListener('click', () => {
     tierButtons.forEach(b => b.setAttribute('aria-pressed', 'false'));
     filterInput.value = '';
-    applyFilter();
+    refresh();
   });
 
-  // long descriptions are clamped to a few lines, add a toggle to the ones that are cut off
-  // (measure all first, then change the DOM, so the layout is only calculated once)
-  const clamped = [...tbody.querySelectorAll('.clamp')].filter(clamp => clamp.scrollHeight > clamp.clientHeight + 1);
-  for (const clamp of clamped) {
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'more';
-    toggle.textContent = 'Show more';
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.addEventListener('click', () => {
-      const expanded = clamp.classList.toggle('expanded');
-      toggle.textContent = expanded ? 'Show less' : 'Show more';
-      toggle.setAttribute('aria-expanded', String(expanded));
-    });
-    clamp.after(toggle);
-  }
+  // click or Enter/Space on a row shows its full text, links and text selection keep working
+  tbody.addEventListener('click', event => {
+    const row = event.target.closest('tr[data-index]');
+    if (!row || event.target.closest('a') || String(window.getSelection()).length > 0) return;
+    toggle(row);
+  });
+  tbody.addEventListener('keydown', event => {
+    const row = event.target.closest('tr[data-index]');
+    if (row && event.target === row && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      toggle(row);
+    }
+  });
+  document.addEventListener('focusin', event => {
+    const row = event.target.closest && event.target.closest('tr[data-index]');
+    focusIndex = row ? Number(row.dataset.index) : -1;
+  });
+
+  wrap.addEventListener('scroll', scheduleRender, { passive: true });
+  window.addEventListener('resize', () => {
+    rowHeight = 0;
+    scheduleRender();
+  });
 
   let debounce;
   filterInput.addEventListener('input', () => {
     clearTimeout(debounce);
-    debounce = setTimeout(applyFilter, 120);
+    debounce = setTimeout(refresh, 120);
   });
   filterInput.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
       filterInput.value = '';
-      applyFilter();
+      refresh();
       filterInput.blur();
     }
   });
@@ -300,7 +477,34 @@ def get_script_section():
     }
   });
 
-  applyFilter();
+  // unpack block by block, the first rows are shown while the rest is still being unpacked
+  async function load() {
+    try {
+      if (typeof DecompressionStream === 'undefined') throw new Error('this browser has no DecompressionStream');
+      for (const block of data.blocks) {
+        for (const [tier, ...rest] of JSON.parse(fillEnvironment(await inflate(block)))) {
+          const links = rest.pop();
+          records.push({ index: records.length, tier, cells: rest, links, text: rest.join(' ').toLowerCase() });
+        }
+        progress.textContent = ' (unpacking ' + records.length + ' of ' + data.count + ')';
+        reorder();
+        updateView();
+        render();
+      }
+      progress.textContent = '';
+    } catch (error) {
+      progress.textContent = '';
+      emptyMessage.textContent = 'The issues could not be unpacked (' + error.message + '), use a current version of Chrome, Edge, Firefox or Safari.';
+      emptyMessage.hidden = false;
+      tbody.replaceChildren();
+      return;
+    }
+    loading = false;
+    updateView();
+    render();
+  }
+
+  load();
 })();
 /*]]>*/</script>
 '''
@@ -378,56 +582,71 @@ def create_toolbar(display_count, total_count):
 <input type="search" id="filter" placeholder="Filter, for example: C4701 core" aria-label="Filter issues" autocomplete="off"/>
 </label>
 '''
-    result += f'<span class="status">Showing <strong id="shown">{display_count}</strong> of {display_count} issues &#183; press <kbd>/</kbd> to filter</span>\n'
+    result += f'<span class="status">Showing <strong id="shown">0</strong> of {display_count} issues<span id="progress"></span> &#183; ' \
+              'click a row for the full text &#183; press <kbd>/</kbd> to filter</span>\n'
     result += '</div>\n'
     if display_count < total_count:
         result += f'<p class="notice">This report is limited to the first {display_count} of {total_count} issues.</p>\n'
     return result
 
 
-def create_cell(column, value, link):
-    text = value
-    if column == "file":
-        # allow long paths to wrap at the separators instead of anywhere
-        text = re.sub(r"([\\/])", r"\1<wbr/>", value)
-    content = f'<a href="{html.escape(link)}">{text}</a>' if link else text
-    if column == "prio":
-        return f'<td class="prio"><span class="badge">{content}</span></td>'
-    if column == "rule" and value:
-        return f'<td class="rule"><span>{content}</span></td>'
-    if column == "description":
-        return f'<td class="description"><div class="clamp">{content}</div></td>'
-    return f'<td class="{column}">{content}</td>'
+def create_record(parts):
+    """one issue as [tier, ...cells, {column: link}], the cells as plain text, the page script escapes them"""
+    cells = []
+    links = {}
+    for column, (value, link) in enumerate(get_link_map(parts)):
+        if column >= len(COLUMNS):
+            break
+        cells.append(html.unescape(value))
+        if link:
+            links[column] = link
+    return [get_tier(parts[Column.PRIO])] + cells + [links]
 
 
-def create_table(lines):
-    # collect the pieces in a list and join once, repeated string += is quadratic for large reports
-    result = ['<div class="table-wrap">\n<table id="issues">\n<thead><tr>\n']
-    for _column, name, title in COLUMNS:
-        result.append(f'<th scope="col" title="{title}"><button type="button" class="sort">{name}</button></th>\n')
-    result.append('</tr></thead>\n<tbody>\n')
-    tiers = []
-    for line in lines:
-        parts = util.read_structured_line(line)
-        tier = get_tier(parts[Column.PRIO])
-        tiers.append(tier)
-        cells = (create_cell(column[0], value, link) for column, (value, link) in zip(COLUMNS, get_link_map(parts)))
-        result.append(f'<tr class="{tier}" data-tier="{tier}">' + ''.join(cells) + '</tr>\n')
-    result.append('</tbody>\n</table>\n<p class="empty-message" id="no-match" hidden="hidden">No issues match the filter.</p>\n</div>\n')
-    return ''.join(result), tiers
+def encode_block(records):
+    """gzip compressed (deterministic, no timestamp) and base64 encoded JSON, the page unpacks it with DecompressionStream"""
+    data = json.dumps(records, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return base64.b64encode(gzip.compress(data, mtime=0)).decode("ascii")
+
+
+def create_table():
+    # only the table shell, the page script renders the rows that are visible from the embedded data
+    result = '<div class="table-wrap">\n<table id="issues">\n<colgroup>'
+    result += ''.join(f'<col class="{column}"/>' for column, _name, _title in COLUMNS)
+    result += '</colgroup>\n<thead><tr>\n'
+    for column, name, title in COLUMNS:
+        result += f'<th scope="col" data-column="{column}" title="{title}"><button type="button" class="sort">{name}</button></th>\n'
+    result += '</tr></thead>\n<tbody>\n'
+    result += f'<tr class="loading"><td colspan="{len(COLUMNS)}">Unpacking the issues&#8230;' \
+              '<noscript> this report needs JavaScript to show them.</noscript></td></tr>\n'
+    result += '</tbody>\n</table>\n<p class="empty-message" id="no-match" hidden="hidden">No issues match the filter.</p>\n</div>\n'
+    return result
+
+
+def create_environment():
+    # apply_environment.py cannot reach [[keywords]] inside the compressed data, it fills them here and the page script copies them
+    spans = ''.join(f'<span data-key="{key}">[[{key}]]</span>' for key in ENVIRONMENT_KEYS)
+    return f'<div id="oc-env" hidden="hidden">{spans}</div>\n'
+
+
+def create_data(records):
+    blocks = [encode_block(records[i:i + BLOCK_SIZE]) for i in range(0, len(records), BLOCK_SIZE)]
+    payload = json.dumps({"count": len(records), "blocks": blocks}, separators=(",", ":"))
+    return f'<script type="application/json" id="oc-data">{payload}</script>\n'
 
 
 def create_html_report(lines, count):
-    display_lines = lines[:count]
-    table, tiers = create_table(display_lines)
+    records = [create_record(util.read_structured_line(line)) for line in lines[:count]]
+    tiers = [record[0] for record in records]
 
     sys.stdout.write('<!DOCTYPE html>\n<html lang="en">\n' + get_html_head() + '<body>\n<div class="page">\n')
     sys.stdout.write(create_header())
-    sys.stdout.write(create_summary(tiers, len(display_lines)))
-    sys.stdout.write(create_toolbar(len(display_lines), len(lines)))
-    sys.stdout.write(table)
+    sys.stdout.write(create_summary(tiers, len(records)))
+    sys.stdout.write(create_toolbar(len(records), len(lines)))
+    sys.stdout.write(create_table())
     sys.stdout.write('<footer>Generated by <a href="https://github.com/janwilmans/OpenCanary">OpenCanary</a></footer>\n')
-    sys.stdout.write('</div>\n' + get_script_section() + '</body>\n</html>\n')
+    sys.stdout.write('</div>\n' + create_environment() + create_data(records))
+    sys.stdout.write(get_script_section() + '</body>\n</html>\n')
 
 
 def show_usage():
