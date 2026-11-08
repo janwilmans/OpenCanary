@@ -98,12 +98,50 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - `apply_team_priorities.py`, assigns the priority field (`rules/priorities.txt`), **should be customized** based on your preferences
 - `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur 20 times or less (`--threshold N`)
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename
-- `create_report.py`, transforms the 'structured CSV' to an HTML report.
-- `create_summary.py`, optional, the number of issues per category and team as an e-mail friendly HTML table (`summary = "summary.html"` in `[output]`).
+- `create_report.py`, transforms the 'structured CSV' to an HTML report, see [Reports](#reports).
+- `create_summary.py`, optional, the number of issues per category and team as an e-mail friendly HTML table, see [Reports](#reports).
 - `apply_environment.py`, replaces [[keyword]] placeholders using a `key=value` environment file (`CI_JOB_URL`, `CI_PROJECT_URL`, `CI_COMMIT_SHA`, ..., optional `WIKI_URL_PREFIX`, `PERMALINK_PREFIX` to link to a local checkout instead of `CI_PROJECT_URL/blob/CI_COMMIT_SHA`).
 - `tr_regression.py`, example of the regression gate: any line that passes fails the build.
 
-Other tools:
+## Reports
+
+Both scripts read the issues (the 'structured CSV', normally `issues.txt`) from stdin and write HTML to stdout,
+`-h` or `--help` shows their parameters.
+
+### create_report.py
+
+```
+create_report.py [/limit=N] < issues.txt > report.html
+```
+
+| Parameter    | Description |
+|--------------|-------------|
+| `/limit=N`   | Include only the first N issues; the report notes that it is limited. The input is normally sorted by priority, so these are the most important ones. |
+| `-h, --help` | Show the usage. |
+
+The report is a single self-contained file (no external scripts or stylesheets) that works offline and as an e-mail
+attachment. It needs a current browser (Chrome, Edge, Firefox or Safari). `[[keywords]]` such as `[[branch-id]]` are
+filled in by piping the report through `apply_environment.py env.txt`. In the report you can filter on text in any
+column, per priority band (the summary cards) and per column value (the funnel button in each column header).
+
+### create_summary.py
+
+```
+create_summary.py < issues.txt > summary.html
+```
+
+| Parameter    | Description |
+|--------------|-------------|
+| `-h, --help` | Show the usage. |
+
+A table of the number of issues per category (rows) and team (columns), with a total per category and per team.
+Categories and teams are ordered by number of issues first and by name second; an empty team or category is shown as
+`(none)`. The HTML only uses tables, attributes and inline styles, so Outlook shows it correctly as the body of an
+e-mail, for example `send_email.py summary.html report.html` sends it with the full report attached.
+`opencanary.py run` writes it when the configuration has `summary = "summary.html"` in `[output]`.
+
+## Other tools
+
 - `cmake_completeness.py`, `cmake_to_dot.py`: find sources not referenced by the build (from compile_commands.json), visualize cmake dependencies
 - `find_dead_code.py <arrays|functions|defines|variables|sources> [path]`: dead code candidates (words that occur once), and sources no CMakeLists.txt refers to. Replaces the `find_*.sh` scripts.
 - `run_clang_format.py` (`CLANG_FORMAT` env var selects the binary), `send_email.py`, `summarize.py`, `list_warnings.py`, `returncode.py`, `pype.py`

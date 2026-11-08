@@ -844,18 +844,23 @@ def create_html_report(lines, count):
 
 
 def show_usage():
-    if len(sys.argv) > 1:
-        eprint("  I got:", sys.argv)
-        eprint("")
-    eprint("Usage: type <foo> | " + os.path.basename(__file__) + " [/limit=N]")
-    eprint("   create an html report from a opencanary-formatted CSV input, optionally limiting the output")
-    eprint("   opencanary-format: ")
-    eprint("        priority|team|component|file|source|rule|category|description|link-info")
+    eprint("Usage: " + os.path.basename(__file__) + " [/limit=N] < issues.txt > report.html")
+    eprint("   create a self-contained html report from opencanary-formatted issues on stdin, written to stdout")
+    eprint("")
+    eprint("   /limit=N     include only the first N issues, the report notes that it is limited")
+    eprint("                (the input is normally sorted by priority, so these are the most important ones)")
+    eprint("   -h, --help   show this help")
+    eprint("")
+    eprint("   input, one issue per line: priority|team|component|file|source|rule|category|description|link-info")
+    eprint("   [[keywords]] in the report, such as [[branch-id]], are filled in by apply_environment.py")
     eprint("   see also: https://github.com/janwilmans/OpenCanary")
     eprint("")
 
 
 def main():
+    if sys.argv[1:] in (["-h"], ["--help"]):
+        show_usage()
+        sys.exit(0)
 
     limit = 0
 
