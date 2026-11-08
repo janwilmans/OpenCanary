@@ -378,6 +378,15 @@ class TestCppIssues(unittest.TestCase):
             self.assertEqual(len(ap9), 1, rows)
             self.assertIn("(_Reserved)", ap9[0][7])
 
+    def test_spelling_matches_are_limited_to_the_checked_files(self):
+        import oc_cpp_issues
+        root = os.path.abspath("project")
+        checked = os.path.join(root, "src", "a.cc")
+        rg_output = "\n".join([os.path.join("src", "a.cc") + ":12:5:recieve",
+                               os.path.join("ignored", "b.cc") + ":3:1:wich",
+                               "not a match line"])
+        self.assertEqual(oc_cpp_issues.get_spelling_violations(rg_output, root, [checked]), [(checked, "12", "recieve")])
+
 
 class TestIgnoreFiles(unittest.TestCase):
 

@@ -89,6 +89,7 @@
 15  =AP#14  # c-style-cast
 30  =AP#15  # casting literals
 30  =AP#16  # const_cast
+90  =AP#19  # spelling
 
 # categories
 category:ub =aggressive-loop-optimizations

@@ -266,6 +266,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `AP#16` | contains `const_cast<` | readability | do not cast away constness |
 | `AP#17` | starts with `using namespace` (headers only) | redflag | Using namespace found in header file (no prefix) |
 | `AP#18` | matches `(while\|if\|switch) (... = ...)`, an assignment in a condition | assign_in_condition | do not assign inside conditions |
+| `AP#19` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
 
 Every Visual Studio project (a file whose name ends with `proj`) is checked per `ItemDefinitionGroup`:
 
@@ -280,8 +281,9 @@ rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (
 **source** `opencanary`, **links** `[3]{[[permalink-prefix]]/<absolute path with />#L<line>}`. Because the path is
 absolute, use `reference_depth` (`tr_customize.py --reference-depth`) to make the links match the repository.
 
-The script also runs a spelling check (`AP#19`) with `rg` (ripgrep) in the current directory when ripgrep is
-installed, see [Known limitations](#known-limitations).
+The spelling check (`AP#19`) runs `rg` (ripgrep) once in `<path>` and reports only matches in the headers and sources
+that the other checks read, so `.opencanaryignore` applies to it too. Without ripgrep on the `PATH` it is skipped with a
+message on stderr. The default `rules/priorities.txt` gives it priority 90.
 
 ### cppcheck.py
 
@@ -678,8 +680,6 @@ field numeric: values that differ by at most DELTA (default 1) are equal. Needs 
 
 ## Known limitations
 
-- `oc_cpp_issues.py`: the spelling check (`AP#19`) is not finished. When ripgrep is installed it prints
-  `fileref: ...` debug lines to stdout, which are not valid issues.
 - `parse_gcc.py` takes the file name for the link up to the first `:`, so a Windows path with a drive letter gets a
   wrong `[3]` link; `tr_customize.py` replaces that link with a correct one.
 - `prettydiff.py` opens files with mode `'U'`, which Python 3.11 removed; it only runs on Python 3.10 and older.

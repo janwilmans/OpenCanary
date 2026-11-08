@@ -25,35 +25,46 @@ ignore_rule_list = []
 
 wrong_word_list = [
     'accomodate', 'aquire', 'arguement', 'athiest', 'belive', 'bizzare', 'calender', 'carribean',
-    'cemetary', 'cheif', 'collegue', 'collectable', 'columist', 'commitee', 'comitted', 'concensus',
+    'cemetary', 'cheif', 'collegue', 'columist', 'commitee', 'comitted', 'concensus',
     'definately', 'dilemna', 'dissapoint', 'embarras', 'embarassed', 'enviroment', 'exilerate',
-    'facinate', 'florescent', 'foriegn', 'fourty', 'freind', 'greyscale', 'goverment', 'greatful',
-    'happend', 'harras', 'horderves', 'humourous', 'immediatly', 'independant', 'jewelry',
-    'knowlege', 'liesure', 'liason', 'lightening', 'maintanance', 'manuever',
-    'medival', 'mementos', 'millenium', 'minature', 'mischevious', 'mispell', 'nausious',
-    'neccessary', 'ocassion', 'occured', 'paralel', 'parralel', 'pavilion', 'perseverence',
+    'facinate', 'florescent', 'foriegn', 'fourty', 'freind', 'goverment', 'greatful',
+    'happend', 'harras', 'horderves', 'humourous', 'immediatly', 'independant',
+    'knowlege', 'liesure', 'liason', 'maintanance', 'manuever',
+    'medival', 'millenium', 'minature', 'mischevious', 'mispell', 'nausious',
+    'neccessary', 'ocassion', 'occured', 'paralel', 'parralel', 'perseverence',
     'phillipines', 'playwrite', 'privelege', 'publically', 'questionaire', 'recieve', 'recomend',
     'resistence', 'responsability', 'rythm', 'sacreligious', 'seige', 'seperate', 'strenght',
     'succesful', 'successfull', 'sucessful', 'supercede', 'tatoo', 'tendancy', 'threshhold', 'tollerance',
-    'truely', 'unecessary', 'unforseen', 'untill', 'vacum', 'viscious', 'visibile', 'weather', 'wether',
+    'truely', 'unecessary', 'unforseen', 'untill', 'vacum', 'viscious', 'visibile', 'wether',
     'wich', 'wierd', 'whereever', 'writting', 'yatch', 'zealos', 'unkown', 'nolonger'
 ]
 
 
-def rip_grep(word):
-    result = []
-    command = f"rg -o -n -w --color=never --no-heading --with-filename --column {word}"
-    rg_result = subprocess.run(command, check=False, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    for line in rg_result.stdout.splitlines():
-        if line.strip() != "":
-            result += [[line, word]]
-    return result
-
-
-def get_spelling_violations():
-    result = []
+def rip_grep(rootpath):
+    """the output of one ripgrep run for all words of wrong_word_list in rootpath, empty when ripgrep is not installed"""
+    command = ["rg", "-o", "-n", "-w", "--column", "--color=never", "--no-heading", "--with-filename"]
     for word in wrong_word_list:
-        result += rip_grep(word)
+        command += ["-e", word]
+    try:
+        return subprocess.run(command, cwd=rootpath, check=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                              text=True, encoding="utf-8", errors="replace").stdout
+    except FileNotFoundError:
+        eprint("ripgrep (rg) not found, spelling check (AP#19) skipped")
+        return ""
+
+
+def get_spelling_violations(rg_output, rootpath, files):
+    """(filename, line_number, word) for every 'path:line:column:word' line of rg_output whose path, relative to
+    rootpath, is one of files (absolute paths), so the spelling check covers the same files as the other checks"""
+    checked = {os.path.normcase(file) for file in files}
+    result = []
+    for line in rg_output.splitlines():
+        parts = line.rsplit(":", 3)
+        if len(parts) != 4 or not parts[1].isdigit():
+            continue
+        filename = os.path.abspath(os.path.join(rootpath, parts[0]))
+        if os.path.normcase(filename) in checked:
+            result += [(filename, parts[1], parts[3])]
     return result
 
 
@@ -221,33 +232,9 @@ def check_cpp_header_AP17(filename):
             report_issue(filename, str(line_number), "AP#17", "redflag", "Using namespace found in header file")
 
 
-def get_file_reference(file):
-    pattern = r'^.*(:\d*)?(:\d*)?'
-    match = re.search(pattern, file)
-    if match:
-        return match.group(0)
-    return file
-
-
-def get_filename_and_line(file):
-    pattern = r'(^.*):(\d+)'
-    match = re.search(pattern, file)
-    if match.groups().count == 2:
-        return match.group(0), match.group(1)
-    return file, 0
-
-
-def check_spelling_AP19():
-    for file, word in get_spelling_violations():
-        category = "spelling"
-        description = f"Missspelled word '{word}' found'"
-        # util.report(get_priority(), team, component, fileref, source, "AP#19", category, description, links)
-        # report_issue(filename, str(line_number), "AP#19", "spelling", f"Missspelled word '{word}' found'")
-        fileref = get_file_reference(file)
-        filename, line_number = get_filename_and_line(fileref)
-        print(f"fileref: {fileref}, filename: '{filename}', line_number: {line_number}")
-
-        # report_issue_detail(fileref, filename, line_number, "AP#19", description, "", category)
+def check_spelling_AP19(rootpath, files):
+    for filename, line_number, word in get_spelling_violations(rip_grep(rootpath), rootpath, files):
+        report_issue(filename, line_number, "AP#19", "spelling", f"Misspelled word '{word}' found")
 
 
 def check_project(projectname):
@@ -314,8 +301,6 @@ def main():
         show_usage()
         sys.exit(1)
 
-    check_spelling_AP19()
-
     rootpath = os.path.abspath(sys.argv[1])
 
     eprint("checking folder", rootpath, "(recursively)")
@@ -350,6 +335,8 @@ def main():
         except Exception as e:
             eprint("OC Error parsing source:", filename, "\n", e, "\n\n")
             report_issue(filename, "", "PARSE", "parse", "Could not parse source file")
+
+    check_spelling_AP19(rootpath, headers + cpps)
 
     sys.stdout.flush()
     eprint(str(len(projects)) + " msvc project(s) checked")
