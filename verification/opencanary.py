@@ -31,6 +31,9 @@ COMMANDS = {
     "regression": "tr_regression.py",
 }
 
+# stages that produce their output without reading stdin
+NO_STDIN_COMMANDS = {"cpp-issues", "cppcheck"}
+
 STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative to this file.
 # run with: opencanary.py run
 
@@ -164,6 +167,12 @@ def main():
         return 0
 
     if command in COMMANDS:
+        if command not in NO_STDIN_COMMANDS and sys.stdin.isatty():
+            example = "report < issues.txt > report.html" if command == "report" else f"{command} < input > output"
+            print(f"opencanary: '{command}' reads its input from stdin, pipe or redirect data into it, e.g.\n"
+                  f"    opencanary.py {example}\n"
+                  f"or use 'opencanary.py run' to run the whole pipeline from opencanary.toml", file=sys.stderr)
+            return 1
         return subprocess.run(script(command) + argv[1:], check=False).returncode
 
     print(f"opencanary: unknown command {command!r}\n\n{__doc__}", file=sys.stderr)
