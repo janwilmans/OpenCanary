@@ -38,6 +38,9 @@ COLUMNS = [
 ]
 
 
+FUNNEL_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">' \
+              '<path d="M2 3h12l-4.5 5.5V13l-3 1.5v-6z"/></svg>'
+
 BLOCK_SIZE = 4000  # issues per compressed block
 
 # the [[keywords]] apply_environment.py fills in, the page script fills them into the issues as well
@@ -148,7 +151,10 @@ h1 { margin: 4px 0 8px; font-size: 26px; font-weight: 650; letter-spacing: -.01e
   position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
   justify-content: space-between; padding: 10px 0; background: var(--bg);
 }
-.filter { position: relative; flex: 1 1 320px; max-width: 520px; }
+.search { display: flex; flex: 1 1 400px; gap: 8px; max-width: 620px; }
+.filter { position: relative; flex: 1 1 auto; }
+.reset { flex: none; font: inherit; cursor: pointer; }
+.reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .filter input {
   width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--surface); color: var(--text); font: inherit; box-shadow: var(--shadow);
@@ -161,22 +167,54 @@ kbd { padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; bac
 .table-wrap { overflow: auto; max-height: calc(100vh - 70px); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 /* fixed layout and one line per row, so every row has the same height and only the visible rows need to exist */
 table { width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-col.prio { width: 72px; }
-col.team { width: 110px; }
-col.component { width: 120px; }
+col.prio { width: 96px; }
+col.team { width: 120px; }
+col.component { width: 140px; }
 col.file { width: 30%; }
-col.source { width: 80px; }
-col.rule { width: 100px; }
-col.category { width: 100px; }
+col.source { width: 120px; }
+col.rule { width: 112px; }
+col.category { width: 124px; }
 thead th {
   position: sticky; top: 0; z-index: 1; padding: 0; text-align: left; white-space: nowrap;
   background: var(--surface-2); border-bottom: 1px solid var(--border);
 }
+.head { display: flex; align-items: stretch; }
 .sort {
-  display: flex; gap: 6px; align-items: center; width: 100%; padding: 10px 12px; border: 0; background: none;
+  display: flex; flex: 1 1 auto; gap: 6px; align-items: center; min-width: 0; padding: 10px 12px 10px 2px; border: 0; background: none;
   color: var(--muted); font: inherit; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
 }
+.sort .name { overflow: hidden; text-overflow: ellipsis; }
 .sort:hover { color: var(--text); }
+.column-filter {
+  display: flex; flex: none; align-items: center; justify-content: center; width: 26px; margin: 6px 0 6px 5px; padding: 0;
+  border: 0; border-radius: 6px; background: none; color: var(--muted); opacity: .45; cursor: pointer;
+}
+.column-filter svg { width: 13px; height: 13px; }
+th:hover .column-filter, .column-filter:focus-visible, .column-filter[aria-expanded="true"], .column-filter.active { opacity: 1; }
+.column-filter:hover, .column-filter[aria-expanded="true"] { color: var(--text); background: var(--surface); }
+.column-filter.active { color: var(--accent); }
+.column-filter.active svg { fill: currentColor; }
+.column-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.value-filter {
+  position: fixed; z-index: 10; width: min(340px, calc(100vw - 32px)); padding: 10px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+}
+.value-search { width: 100%; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+.value-search:focus-visible, .value-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.value-actions { display: flex; gap: 6px; margin: 8px 0; }
+.value-actions button {
+  padding: 3px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-2);
+  color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.value-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.value-list { max-height: 300px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.value-list label { display: flex; gap: 8px; align-items: center; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
+.value-list label:hover { background: var(--row-hover); }
+.value-list input { margin: 0; accent-color: var(--accent); }
+.value-list .value { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.value-list .blank { font-style: italic; color: var(--muted); }
+.value-list .count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.value-more { margin: 6px 4px 0; color: var(--muted); font-size: 12px; }
 .sort::after { content: "\2195"; opacity: .35; }
 th[aria-sort="ascending"] .sort, th[aria-sort="descending"] .sort { color: var(--accent); }
 th[aria-sort="ascending"] .sort::after { content: "\2191"; opacity: 1; }
@@ -265,6 +303,19 @@ def get_script_section():
   let focusIndex = -1;
 
   const activeTiers = () => new Set(tierButtons.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.tier));
+  const searchWords = () => filterInput.value.toLowerCase().split(/\s+/).filter(Boolean);
+
+  // per column the values that are switched off, values not seen yet (still unpacking) stay visible
+  const excluded = columns.map(() => new Set());
+
+  // does the record pass the tier, text and column value filters, the value filter of column skip is ignored
+  function matches(record, words, tiers, skip) {
+    if (tiers.size !== 0 && !tiers.has(record.tier)) return false;
+    for (let column = 0; column < excluded.length; column++) {
+      if (column !== skip && excluded[column].has(record.cells[column])) return false;
+    }
+    return words.every(word => record.text.includes(word));
+  }
 
   function reorder() {
     ordered = records.slice();
@@ -273,9 +324,9 @@ def get_script_section():
   }
 
   function updateView() {
-    const words = filterInput.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const words = searchWords();
     const tiers = activeTiers();
-    view = ordered.filter(r => (tiers.size === 0 || tiers.has(r.tier)) && words.every(word => r.text.includes(word)));
+    view = ordered.filter(r => matches(r, words, tiers, -1));
     shownCount.textContent = view.length;
     emptyMessage.hidden = loading || view.length !== 0;
     layout();
@@ -420,7 +471,127 @@ def get_script_section():
     });
   }
 
-  headers.forEach((th, column) => th.querySelector('button').addEventListener('click', () => sortBy(column)));
+  headers.forEach((th, column) => th.querySelector('.sort').addEventListener('click', () => sortBy(column)));
+
+  // the value filter panel: a checkbox per distinct value of one column, unchecked values are hidden
+  const MAX_VALUES = 500;   // checkboxes rendered at once, the search narrows longer lists
+  const filterButtons = headers.map(th => th.querySelector('.column-filter'));
+  const valuePanel = document.getElementById('value-filter');
+  const valueSearch = valuePanel.querySelector('.value-search');
+  const valueList = valuePanel.querySelector('.value-list');
+  const valueMore = valuePanel.querySelector('.value-more');
+  let panelColumn = -1;
+  let panelValues = [];     // [value, count] of the open column, sorted by value
+  let shownValues = [];     // the panelValues that match the search
+
+  function openPanel(column) {
+    closePanel(false);
+    panelColumn = column;
+    // count the rows each value would show, given all other filters, like a spreadsheet does
+    const words = searchWords();
+    const tiers = activeTiers();
+    const counts = new Map();
+    for (const record of records) {
+      if (!matches(record, words, tiers, column)) continue;
+      const value = record.cells[column];
+      counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    for (const value of excluded[column]) if (!counts.has(value)) counts.set(value, 0);
+    panelValues = [...counts].sort((a, b) => collator.compare(a[0], b[0]));
+    valueSearch.value = '';
+    valuePanel.setAttribute('aria-label', filterButtons[column].getAttribute('aria-label'));
+    filterButtons[column].setAttribute('aria-expanded', 'true');
+    valuePanel.hidden = false;
+    fillPanel();
+    placePanel();
+    valueSearch.focus();
+  }
+
+  function closePanel(returnFocus) {
+    if (panelColumn < 0) return;
+    filterButtons[panelColumn].setAttribute('aria-expanded', 'false');
+    if (returnFocus) filterButtons[panelColumn].focus();
+    valuePanel.hidden = true;
+    valueList.replaceChildren();
+    panelColumn = -1;
+    panelValues = shownValues = [];
+  }
+
+  function fillPanel() {
+    const term = valueSearch.value.toLowerCase();
+    shownValues = term ? panelValues.filter(([value]) => value.toLowerCase().includes(term)) : panelValues;
+    const fragment = document.createDocumentFragment();
+    shownValues.slice(0, MAX_VALUES).forEach(([value, count], i) => {
+      const label = element('label');
+      const box = element('input');
+      box.type = 'checkbox';
+      box.checked = !excluded[panelColumn].has(value);
+      box.dataset.i = i;
+      label.append(box, element('span', value ? 'value' : 'value blank', value || '(empty)'), element('span', 'count', count));
+      if (value) label.title = value;
+      const item = element('li');
+      item.append(label);
+      fragment.append(item);
+    });
+    valueList.replaceChildren(fragment);
+    const rest = shownValues.length - MAX_VALUES;
+    valueMore.hidden = shownValues.length > 0 && rest <= 0;
+    valueMore.textContent = shownValues.length === 0 ? 'No values match.'
+      : rest + ' more values, search to narrow the list. Select all/none applies to all ' + shownValues.length + '.';
+  }
+
+  function placePanel() {
+    if (panelColumn < 0) return;
+    const rect = headers[panelColumn].getBoundingClientRect();
+    valuePanel.style.left = Math.max(16, Math.min(rect.left, window.innerWidth - valuePanel.offsetWidth - 16)) + 'px';
+    valuePanel.style.top = Math.max(8, rect.bottom + 4) + 'px';
+  }
+
+  function updateFilterButtons() {
+    excluded.forEach((values, column) => {
+      filterButtons[column].classList.toggle('active', values.size > 0);
+      filterButtons[column].title = values.size ? 'Filtered by value, ' + values.size + ' hidden' : 'Filter by value';
+    });
+  }
+
+  function valuesChanged() {
+    updateFilterButtons();
+    refresh();
+  }
+
+  filterButtons.forEach((button, column) => button.addEventListener('click', () => {
+    if (panelColumn === column) closePanel(false);
+    else openPanel(column);
+  }));
+  valueList.addEventListener('change', event => {
+    const value = shownValues[Number(event.target.dataset.i)][0];
+    if (event.target.checked) excluded[panelColumn].delete(value);
+    else excluded[panelColumn].add(value);
+    valuesChanged();
+  });
+  valuePanel.querySelector('.value-actions').addEventListener('click', event => {
+    const button = event.target.closest('button[data-action]');
+    if (!button) return;
+    const show = button.dataset.action === 'all';
+    for (const [value] of shownValues) {
+      if (show) excluded[panelColumn].delete(value);
+      else excluded[panelColumn].add(value);
+    }
+    for (const box of valueList.querySelectorAll('input')) box.checked = show;
+    valuesChanged();
+  });
+  valueSearch.addEventListener('input', fillPanel);
+  valuePanel.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closePanel(true);
+    }
+  });
+  document.addEventListener('pointerdown', event => {
+    if (panelColumn >= 0 && !valuePanel.contains(event.target) && !filterButtons[panelColumn].contains(event.target)) closePanel(false);
+  });
+  window.addEventListener('scroll', placePanel, { passive: true });
+  wrap.addEventListener('scroll', placePanel, { passive: true });
 
   for (const button of tierButtons) {
     button.addEventListener('click', () => {
@@ -428,11 +599,16 @@ def get_script_section():
       refresh();
     });
   }
-  document.getElementById('show-all').addEventListener('click', () => {
+  function clearFilters() {
     tierButtons.forEach(b => b.setAttribute('aria-pressed', 'false'));
     filterInput.value = '';
+    closePanel(false);
+    excluded.forEach(values => values.clear());
+    updateFilterButtons();
     refresh();
-  });
+  }
+  document.getElementById('show-all').addEventListener('click', clearFilters);
+  document.getElementById('reset').addEventListener('click', clearFilters);
 
   // click or Enter/Space on a row shows its full text, links and text selection keep working
   tbody.addEventListener('click', event => {
@@ -456,6 +632,7 @@ def get_script_section():
   window.addEventListener('resize', () => {
     rowHeight = 0;
     scheduleRender();
+    placePanel();
   });
 
   let debounce;
@@ -471,7 +648,7 @@ def get_script_section():
     }
   });
   document.addEventListener('keydown', event => {
-    if (event.key === '/' && document.activeElement !== filterInput) {
+    if (event.key === '/' && document.activeElement.tagName !== 'INPUT') {
       event.preventDefault();
       filterInput.focus();
     }
@@ -577,10 +754,13 @@ def create_summary(tiers, total):
 
 def create_toolbar(display_count, total_count):
     result = '''<div class="toolbar">
+<div class="search">
 <label class="filter">
 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="m14 14 4 4"/></svg>
-<input type="search" id="filter" placeholder="Filter, for example: C4701 core" aria-label="Filter issues" autocomplete="off"/>
+<input type="search" id="filter" placeholder="Filter on text in any column, for example: hides local" aria-label="Filter issues on text in any column" autocomplete="off"/>
 </label>
+<button type="button" class="button reset" id="reset" title="Clear all filters">Reset</button>
+</div>
 '''
     result += f'<span class="status">Showing <strong id="shown">0</strong> of {display_count} issues<span id="progress"></span> &#183; ' \
               'click a row for the full text &#183; press <kbd>/</kbd> to filter</span>\n'
@@ -615,12 +795,26 @@ def create_table():
     result += ''.join(f'<col class="{column}"/>' for column, _name, _title in COLUMNS)
     result += '</colgroup>\n<thead><tr>\n'
     for column, name, title in COLUMNS:
-        result += f'<th scope="col" data-column="{column}" title="{title}"><button type="button" class="sort">{name}</button></th>\n'
+        result += f'<th scope="col" data-column="{column}" title="{title}"><div class="head">' \
+                  f'<button type="button" class="column-filter" aria-haspopup="dialog" aria-expanded="false" ' \
+                  f'aria-label="Filter {name} values" title="Filter by value">{FUNNEL_ICON}</button>' \
+                  f'<button type="button" class="sort"><span class="name">{name}</span></button></div></th>\n'
     result += '</tr></thead>\n<tbody>\n'
     result += f'<tr class="loading"><td colspan="{len(COLUMNS)}">Unpacking the issues&#8230;' \
               '<noscript> this report needs JavaScript to show them.</noscript></td></tr>\n'
     result += '</tbody>\n</table>\n<p class="empty-message" id="no-match" hidden="hidden">No issues match the filter.</p>\n</div>\n'
-    return result
+    return result + create_value_filter()
+
+
+def create_value_filter():
+    # one shared panel, the page script opens it below the header of the column being filtered
+    return '''<div class="value-filter" id="value-filter" role="dialog" aria-label="Filter values" hidden="hidden">
+<input type="search" class="value-search" placeholder="Search values" aria-label="Search values" autocomplete="off"/>
+<div class="value-actions"><button type="button" data-action="all">Select all</button><button type="button" data-action="none">Select none</button></div>
+<ul class="value-list"></ul>
+<p class="value-more" hidden="hidden"></p>
+</div>
+'''
 
 
 def create_environment():

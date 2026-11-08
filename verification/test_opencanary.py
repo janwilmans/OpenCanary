@@ -123,6 +123,13 @@ class TestReport(unittest.TestCase):
         self.assertEqual(report_rows(report), [["t1", "5", "team", "comp", "a.cc:1", "src", "rule", "warning", "'a' <b> &",
                                                 {"3": "[[permalink-prefix]]/a.cc#L1", "5": "https://x/rule"}]])
 
+    def test_every_column_has_a_value_filter(self):
+        import create_report
+        report = run_script("create_report.py", stdin=self.row("5"))
+        self.assertTrue(is_valid_xml(report))
+        self.assertEqual(report.count('class="column-filter"'), len(create_report.COLUMNS))
+        self.assertEqual(report.count('id="value-filter"'), 1)
+
     def test_limit_and_empty_report(self):
         report = run_script("create_report.py", ["/limit=2"], "".join(self.row("1") for _ in range(5)))
         self.assertEqual(len(report_rows(report)), 2)
