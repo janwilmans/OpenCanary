@@ -487,6 +487,9 @@ Any other argument prints the usage and exits with code 1.
 Writes a short HTML page meant as the body of an e-mail. It only uses tables, HTML attributes and inline styles,
 because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
 
+- `Branch: [[branch-id]]` and `Committer: [[user-name]]`, filled in by `apply_environment.py` (see its table below:
+  the branch or tag name, and `GITLAB_USER_NAME`, the user who started the pipeline). A line whose value is missing
+  is left out.
 - One line of text: `<n> issues for <n> rules in <n> categories for <n> teams`.
 - **Top 10 issues**: the 10 most important issues, lowest priority number first; issues with the same priority keep
   their input order (by file, as `sortby.py` writes them). Columns: priority, file (a link to the `[3]` file link of
@@ -527,7 +530,9 @@ Replaces the placeholders in every input line (any text, normally the report):
 
 `WIKI_URL_PREFIX` defaults to `https://wiki.company.nl/wiki/index.php?title=OpenCanary`. A missing key for job URL,
 user name, commit message or permalink is written as `[[<KEY> not found by get_from_envfile()]]`, which makes the
-report hide that header item. `[[pipe]]` is not replaced.
+report hide that header item. A line that contains `data-optional=""` is removed entirely when one of its
+placeholders gets an empty or missing value, so pages without scripts (the summary) do not show such an item either;
+the report and the summary write each optional item on its own line. `[[pipe]]` is not replaced.
 
 ### tr_regression.py
 

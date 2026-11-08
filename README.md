@@ -137,12 +137,13 @@ create_summary.py < issues.txt > summary.html
 |--------------|-------------|
 | `-h, --help` | Show the usage. |
 
-First the 10 most important issues (lowest priority number first), with a link to the file. Then a table with a row
-per combination of rule, team, component and category, with the number of issues, and a total.
+The branch and committer, then the 10 most important issues (lowest priority number first), with a link to the file.
+Then a table with a row per combination of rule, team, component and category, with the number of issues, and a total.
 The rows of a rule are grouped: its priority, name (with its number of issues) and the description of its first issue
 (cut at 100 characters) are shown once for the group. Rules are ordered by number of issues (fewest first) and by name
 second, the rows within a rule by number of issues; an empty team, component or category is shown as `(none)`. The
-file links contain `[[permalink-prefix]]`, filled in by piping the summary through `apply_environment.py env.txt`. The HTML only
+branch, committer and file links are `[[keywords]]`, filled in by piping the summary through `apply_environment.py env.txt`
+(a branch or committer without a value is left out). The HTML only
 uses tables, attributes and inline styles, so Outlook shows it correctly as the body of an e-mail, for example `send_email.py summary.html report.html` sends it with the full report attached.
 `opencanary.py run` writes it when the configuration has `summary = "summary.html"` in `[output]`.
 

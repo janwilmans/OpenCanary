@@ -377,6 +377,8 @@ class TestRunner(unittest.TestCase):
             with open(os.path.join(d, "summary.html"), encoding="utf-8") as f:
                 summary = f.read()
             self.assertIn("6 issues for 6 rules", summary)
+            self.assertIn("Branch: <b>master</b>", summary)
+            self.assertIn("Committer: <b>Test User</b>", summary)
             self.assertIn('href="https://git.example.com/group/proj/blob/0123456789abcdef/', summary)
             self.assertNotIn("[[", summary)
 
@@ -501,6 +503,16 @@ class TestStages(unittest.TestCase):
                 with open(env, "w", encoding="utf-8") as f:
                     f.write(content)
                 self.assertEqual(run_script("apply_environment.py", [env], "[[branch-id]]\n"), expected + "\n", content)
+
+    def test_optional_lines_without_value_are_removed(self):
+        import tempfile
+        data = '<p data-optional="">Branch: [[branch-id]]</p>\n<p data-optional="">By: [[user-name]]</p>\nplain [[user-name]]\n'
+        with tempfile.TemporaryDirectory() as d:
+            env = os.path.join(d, "env.txt")
+            with open(env, "w", encoding="utf-8") as f:
+                f.write("CI_COMMIT_REF_NAME=main\n")
+            out = run_script("apply_environment.py", [env], data)
+        self.assertEqual(out, '<p data-optional="">Branch: main</p>\nplain [[GITLAB_USER_NAME not found by get_from_envfile()]]\n')
 
     def test_apply_environment_replaces_placeholders(self):
         out = run_script("apply_environment.py", [os.path.join(TESTDATA, "env.txt")], "[[job-url]] [[user-name]]\n")

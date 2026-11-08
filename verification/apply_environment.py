@@ -74,16 +74,32 @@ def get_permalink_prefix():
     return util.urljoin(util.normpath(util.get_from_envfile('CI_PROJECT_URL')), "blob", util.get_from_envfile('CI_COMMIT_SHA'))
 
 
+OPTIONAL_MARKER = 'data-optional=""'
+
+
+def is_missing(value):
+    return value == "" or "not found by get_from_envfile()" in value
+
+
 def transform(line):
-
-    line = line.replace("[[wiki-issue-prefix]]", get_wiki_issue_prefix())
-    line = line.replace("[[wiki-url]]", get_wiki_main_url())
-    line = line.replace("[[job-url]]", get_job_url())
-
-    line = line.replace("[[branch-id]]", get_branch_id())
-    line = line.replace("[[user-name]]", get_user_name())
-    line = line.replace("[[commit-message]]", get_commit_message())
-    line = line.replace("[[permalink-prefix]]", get_permalink_prefix())
+    """replaces the [[keys]]; a line with data-optional="" (one element per line) is removed entirely when one of its
+    [[keys]] has no value, so html without scripts, such as an e-mail, does not show an empty or 'not found' item"""
+    values = {
+        "[[wiki-issue-prefix]]": get_wiki_issue_prefix,
+        "[[wiki-url]]": get_wiki_main_url,
+        "[[job-url]]": get_job_url,
+        "[[branch-id]]": get_branch_id,
+        "[[user-name]]": get_user_name,
+        "[[commit-message]]": get_commit_message,
+        "[[permalink-prefix]]": get_permalink_prefix,
+    }
+    optional = OPTIONAL_MARKER in line
+    for key, get_value in values.items():
+        if key in line:
+            value = get_value()
+            if optional and is_missing(value):
+                return ""
+            line = line.replace(key, value)
     return line
 
 

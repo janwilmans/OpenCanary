@@ -127,7 +127,10 @@ def create_summary(issues):
     result = ['<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8"/>\n<title>OpenCanary summary</title>\n</head>\n']
     result.append(f'<body style="margin: 0; padding: 16px; {FONT}">\n')
     result.append(f'<p style="margin: 0 0 4px; {FONT} font-size: 18px; font-weight: bold;">Software Quality Summary</p>\n')
-    result.append(f'<p style="margin: 0 0 12px; {FONT} color: #667085;">{plural(total, "issue")} for '
+    for label, key in (("Branch", "branch-id"), ("Committer", "user-name")):
+        # one item per line: apply_environment.py removes a data-optional line when it has no value for its [[key]]
+        result.append(f'<p data-optional="" style="margin: 0 0 2px; {FONT}">{label}: <b>[[{key}]]</b></p>\n')
+    result.append(f'<p style="margin: 8px 0 12px; {FONT} color: #667085;">{plural(total, "issue")} for '
                   f'{plural(len(rules), "rule")} in {plural(len(categories), "category", "categories")} '
                   f'for {plural(len(teams), "team")}</p>\n')
     if total == 0:
