@@ -5,8 +5,8 @@
     opencanary.py run [-c opencanary.toml]  parse, filter, prioritize and report according to the configuration
     opencanary.py <command> [args...]       run one stage, input/output is stdin/stdout like the scripts themselves
 
-    commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, interest, customize, prioritize, low-hanging, sort,
-              report, summary, environment, regression
+    commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, interest, customize, links, prioritize, low-hanging,
+              sort, report, summary, environment, regression
 """
 
 import argparse
@@ -23,6 +23,7 @@ COMMANDS = {
     "cppcheck": "cppcheck.py",
     "interest": "tr_interest.py",
     "customize": "tr_customize.py",
+    "links": "apply_links.py",
     "prioritize": "apply_team_priorities.py",
     "low-hanging": "apply_low_hanging_fruit.py",
     "sort": "sortby.py",
@@ -56,6 +57,7 @@ path = "build/gcc.log"
 # priorities = "priorities.txt"
 # interest = "interest.txt"
 # customize = "customize.txt"
+# links = "links.txt"
 # low_hanging_threshold = 20
 
 [customize]
@@ -128,6 +130,7 @@ def run_pipeline(config, base):
 
     data = run_stage(script("interest") + rules_option("interest") + (["--msvc"] if customize.get("msvc") else []), data)
     data = run_stage(script("customize") + rules_option("customize") + customize_args, data)
+    data = run_stage(script("links") + rules_option("links"), data)
     data = run_stage(script("prioritize") + rules_option("priorities"), data)
     data = run_stage(script("low-hanging") + threshold, data)
     data = run_stage(script("sort"), data)

@@ -343,6 +343,35 @@ class TestInterest(unittest.TestCase):
         self.assertEqual(out, "|x|C4018 a/b\n")
 
 
+class TestLinks(unittest.TestCase):
+
+    @staticmethod
+    def links(rules, *rows):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "links.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(rules)
+            return [line.split("|")[8] for line in lines(run_script("apply_links.py", ["--rules", path], "".join(rows)))]
+
+    @staticmethod
+    def row(source, rule, links=""):
+        return "|".join(["8", "", "", "a.cc:1", source, rule, "w", "d", links]) + "\n"
+
+    def test_default_rule_link(self):
+        out = self.links("", self.row("gcc", "sign-compare", "[3]{f}[5]{https://parser}"), self.row("opencanary", "AP#13", "[3]{f}"),
+                         self.row("gcc", ""))
+        self.assertEqual(out, ["[3]{f}[5]{https://parser}", "[3]{f}[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}", ""])
+
+    def test_configured_links_and_placeholders(self):
+        rules = ("link:https://docs/<source>/<rule>  ?^C4\n"
+                 "solution:https://example/rules.md#<anchor>  ?^AP#\n"
+                 "solution:[[wiki-issue-prefix]]<rule>  ~C4\n")
+        out = self.links(rules, self.row("msvc", "C4100", "[5]{https://parser}"), self.row("opencanary", "AP#13"))
+        self.assertEqual(out, ["[5]{https://docs/msvc/C4100}[solution]{[[wiki-issue-prefix]]C4100}",
+                               "[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}[solution]{https://example/rules.md#ap13}"])
+
+
 class TestCustomize(unittest.TestCase):
     ROW = "8||c|build\\lib\\toolkit\\a.cc:12|gcc|rule|warning|d|[3]{old}\n"
 
@@ -416,6 +445,7 @@ class TestRunner(unittest.TestCase):
             self.assertIn("Committer: <b>Test User</b>", summary)
             self.assertIn('href="https://git.example.com/group/proj/blob/0123456789abcdef/', summary)
             self.assertIn('<a href="https://ci.example.com/group/proj/-/jobs/42/artifacts/file/report.html"', summary)
+            self.assertIn("https://duckduckgo.com/?q=!ducky+gcc+sign-compare", str(report_rows(report)))
             self.assertNotIn("[[", summary)
 
     def test_single_stage_command(self):

@@ -7,7 +7,7 @@ first setup, read [getting_started.md](getting_started.md) first.
 - [Rule files](#rule-files)
 - [opencanary.py, the entry point](#opencanarypy)
 - Gather: [parse_gcc.py](#parse_gccpy), [parse_msvc.py](#parse_msvcpy), [oc_cpp_issues.py](#oc_cpp_issuespy), [cppcheck.py](#cppcheckpy)
-- Transform: [tr_interest.py](#tr_interestpy), [tr_customize.py](#tr_customizepy),
+- Transform: [tr_interest.py](#tr_interestpy), [tr_customize.py](#tr_customizepy), [apply_links.py](#apply_linkspy),
   [apply_team_priorities.py](#apply_team_prioritiespy), [apply_low_hanging_fruit.py](#apply_low_hanging_fruitpy),
   [sortby.py](#sortbypy)
 - Output: [create_report.py](#create_reportpy), [create_summary.py](#create_summarypy),
@@ -61,7 +61,8 @@ Details:
 
 ## Rule files
 
-`tr_interest.py`, `tr_customize.py` and `apply_team_priorities.py` take their team specific behavior from rule files.
+`tr_interest.py`, `tr_customize.py`, `apply_links.py` and `apply_team_priorities.py` take their team specific behavior
+from rule files.
 The defaults are in `verification/rules/`, larger examples in `verification/examples/`.
 
 ```text
@@ -93,6 +94,7 @@ The defaults are in `verification/rules/`, larger examples in `verification/exam
 |------|---------|--------------|--------|
 | `rules/interest.txt` | `tr_interest.py` | the whole issue line, including its line ending | `drop` removes the line; any other value (for example `keep`) keeps it, so a `keep` rule above a `drop` rule is an exception |
 | `rules/customize.txt` | `tr_customize.py` | the fileref with `/` separators | `component:<name>`, `team:<name>` |
+| `rules/links.txt` | `apply_links.py` | the rule field | `link:<url>`, `solution:<url>` |
 | `rules/priorities.txt` | `apply_team_priorities.py` | the rule field | `<priority>` (an integer), `category:<name>` |
 
 Because the interest text includes the line ending, use `~` or `?` there; `=` never matches a whole line.
@@ -133,6 +135,7 @@ All relative paths are relative to the directory of the configuration file.
 | | `source` | the format | value for the source field (passed to the parser) |
 | `[rules]` | `interest` | `verification/rules/interest.txt` | rules for `tr_interest.py` |
 | | `customize` | `verification/rules/customize.txt` | rules for `tr_customize.py` |
+| | `links` | `verification/rules/links.txt` | rules for `apply_links.py` |
 | | `priorities` | `verification/rules/priorities.txt` | rules for `apply_team_priorities.py` |
 | | `low_hanging_threshold` | `20` | `--threshold` of `apply_low_hanging_fruit.py` |
 | `[customize]` | `msvc` | `false` | `--msvc` for both `tr_interest.py` and `tr_customize.py` |
@@ -142,6 +145,7 @@ All relative paths are relative to the directory of the configuration file.
 | | `report` | `report.html` | the HTML report |
 | | `environment` | none | environment file; when set the report is passed through `apply_environment.py` |
 | | `summary` | none | when set, the e-mail summary is written to this file |
+| | `report_url` | none | `--report-url` of `create_summary.py`, a link from the summary to the full report |
 
 A configuration without `[[input]]` stops with `no [[input]] defined in the configuration`. Reading the configuration
 needs Python 3.11+ or the `tomli` package.
@@ -153,11 +157,12 @@ needs Python 3.11+ or the `tomli` package.
    The results are concatenated.
 2. `tr_interest.py [--rules <interest>] [--msvc]`
 3. `tr_customize.py [--rules <customize>] [--display-depth=N] [--reference-depth=N] [--msvc]`
-4. `apply_team_priorities.py [--rules <priorities>]`
-5. `apply_low_hanging_fruit.py [--threshold N]`
-6. `sortby.py`, the result is written to the `issues` file.
-7. `create_report.py`, then `apply_environment.py <environment>` when configured; written to the `report` file.
-8. When `summary` is configured: `create_summary.py` on the issues, then `apply_environment.py <environment>` when
+4. `apply_links.py [--rules <links>]`
+5. `apply_team_priorities.py [--rules <priorities>]`
+6. `apply_low_hanging_fruit.py [--threshold N]`
+7. `sortby.py`, the result is written to the `issues` file.
+8. `create_report.py`, then `apply_environment.py <environment>` when configured; written to the `report` file.
+9. When `summary` is configured: `create_summary.py [--report-url <report_url>]` on the issues, then `apply_environment.py <environment>` when
    configured; written to the `summary` file.
 
 Each step prints its stderr messages. If a step exits with a non-zero code, `run` stops with
@@ -374,6 +379,35 @@ out:  8|||lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}[3]{[[permalink-p
 ```
 
 `verification/examples/tr_customize_copperspice.py` is an example of a project specific customizer.
+
+### apply_links.py
+
+```
+apply_links.py [--rules FILE] < issues
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--rules FILE` | `rules/links.txt` | `link:` and `solution:` rules |
+| `-h`, `--help` | | show the usage |
+
+For every issue with a rule, matched against the **rule** field:
+
+- **rule link** (`[5]`): the first matching `link:<url>` rule sets it. Without a match the link of the parser is kept,
+  and an issue without one gets `https://duckduckgo.com/?q=!ducky+<source>+<rule>`.
+- **solution link** (`[solution]`): the first matching `solution:<url>` rule sets it; the report shows it as a small
+  light bulb after the rule, a link to a page with a solution suggestion. Without a match there is none.
+
+In the url `<source>` and `<rule>` are replaced by the url encoded source and rule, `<anchor>` by the rule in lowercase
+with only its letters and digits (`AP#13` becomes `ap13`, the anchor of a `### AP#13` markdown heading).
+`[[keywords]]` such as `[[wiki-issue-prefix]]` are left for `apply_environment.py`. For example:
+
+```text
+link:https://clang.llvm.org/docs/DiagnosticsReference.html#w<rule>  ?^[a-z][a-z0-9-]*$
+solution:[[wiki-issue-prefix]]<rule>  ?^C4[0-9]+$
+```
+
+Issues without a rule are passed unchanged.
 
 ### apply_team_priorities.py
 

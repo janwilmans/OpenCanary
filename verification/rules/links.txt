@@ -1,0 +1,19 @@
+# rule and solution links: first matching line wins, the text that is matched is the rule name (as in priorities.txt)
+#
+# format:  link:<url> <matcher>...      the link of the rule (the rule column in the report)
+#          solution:<url> <matcher>...  a page with a solution suggestion, shown as an icon after the rule
+#   =text   rule equals text
+#   ~text   rule contains text
+#   ?regex  rule matches the regular expression
+# in the url:
+#   <source>  the source of the issue (gcc, clang, msvc, opencanary, ...), url encoded
+#   <rule>    the rule, url encoded
+#   <anchor>  the rule in lowercase with only letters and digits, AP#13 becomes ap13 (a markdown heading anchor)
+#   [[wiki-issue-prefix]] and other [[keywords]] are filled in by apply_environment.py (WIKI_URL_PREFIX in env.txt)
+# a rule without a matching link: line keeps the link of the parser, or gets https://duckduckgo.com/?q=!ducky+<source>+<rule>
+# a rule without a matching solution: line has no solution icon
+# use quotes around a matcher that contains spaces, '#' after a space starts a comment
+
+# examples:
+# link:https://clang.llvm.org/docs/DiagnosticsReference.html#w<rule>  ?^[a-z][a-z0-9-]*$
+# solution:[[wiki-issue-prefix]]<rule>  ?^C4[0-9]+$

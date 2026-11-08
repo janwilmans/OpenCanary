@@ -34,6 +34,7 @@ Team specific behavior lives in plain text rule files, first matching line wins 
 - `rules/priorities.txt` priority (and category) per rule, **customize this**
 - `rules/interest.txt` lines the team is not interested in (3rd party, known noise)
 - `rules/customize.txt` component and team per path
+- `rules/links.txt` the link of each rule and an optional solution suggestion (an icon after the rule in the report)
 - `examples/` has larger example rule sets (CopperSpice, MSVC system headers, toolkit) and a project specific customizer
 
 ## Gather
@@ -102,6 +103,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - Gather: `parse_gcc.py` (gcc and clang), `parse_msvc.py`, `cppcheck.py`, `oc_cpp_issues.py` (raw text search for common C++ problems, respects `.opencanaryignore`)
 - `tr_interest.py`, remove what the team is not interested in (`rules/interest.txt`, `--msvc` normalizes paths). Replaces `tr_interest_cs.py`, `tr_interest_vc.py` and `filter_thirdparty.py`.
 - `tr_customize.py`, assign 'component' and 'team', make the path presentable and add the permalink (`rules/customize.txt`). Replaces `tr_customize_vc.py`.
+- `apply_links.py`, sets the link of the rule and the solution suggestion shown as an icon after the rule (`rules/links.txt`), by default a search for `<source> <rule>`
 - `apply_team_priorities.py`, assigns the priority field (`rules/priorities.txt`), **should be customized** based on your preferences
 - `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur 20 times or less (`--threshold N`)
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename
