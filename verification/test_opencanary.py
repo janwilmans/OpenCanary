@@ -368,6 +368,9 @@ class TestLinks(unittest.TestCase):
                  "solution:https://example/rules.md#<anchor>  ?^AP#\n"
                  "solution:[[wiki-issue-prefix]]<rule>  ~C4\n")
         out = self.links(rules, self.row("msvc", "C4100", "[5]{https://parser}"), self.row("opencanary", "AP#13"))
+        import apply_links
+        self.assertEqual([apply_links.anchor(rule) for rule in ["AP#13", "C4100", "sign-compare", "format-truncation=", "a_b c"]],
+                         ["ap13", "c4100", "sign-compare", "format-truncation", "a_b-c"])
         self.assertEqual(out, ["[5]{https://docs/msvc/C4100}[solution]{[[wiki-issue-prefix]]C4100}",
                                "[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}[solution]{https://example/rules.md#ap13}"])
 
@@ -388,7 +391,7 @@ class TestRulesDocumentation(unittest.TestCase):
         for rule in rules:
             # <anchor> must be the anchor GitHub gives the '### <rule>' heading: lowercase, only letters and digits
             self.assertEqual(apply_links.fill(util.first_match(links, rule, "solution"), "opencanary", rule),
-                             "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + re.sub(r"[^a-z0-9]", "", rule.lower()))
+                             "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + apply_links.anchor(rule))
         self.assertIsNone(util.first_match(links, "sign-compare", "solution"))
 
 

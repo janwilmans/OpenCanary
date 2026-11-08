@@ -399,8 +399,9 @@ For every issue with a rule, matched against the **rule** field:
 - **solution link** (`[solution]`): the first matching `solution:<url>` rule sets it; the report shows it as a small
   light bulb after the rule, a link to a page with a solution suggestion. Without a match there is none.
 
-In the url `<source>` and `<rule>` are replaced by the url encoded source and rule, `<anchor>` by the rule in lowercase
-with only its letters and digits (`AP#13` becomes `ap13`, the anchor of a `### AP#13` markdown heading).
+In the url `<source>` and `<rule>` are replaced by the url encoded source and rule, `<anchor>` by the anchor GitHub and
+GitLab give a markdown heading with the rule: lowercase, only letters, digits, `-` and `_` (`### AP#13` gets `#ap13`,
+`### sign-compare` gets `#sign-compare`).
 `[[keywords]]` such as `[[wiki-issue-prefix]]` are left for `apply_environment.py`. For example:
 
 ```text

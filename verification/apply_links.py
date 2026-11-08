@@ -5,8 +5,9 @@
                     https://duckduckgo.com/?q=!ducky+<source>+<rule> when it has none
     solution:<url>  a page with a solution suggestion, shown as an icon after the rule in the report; none by default
 
-    in the url <source> and <rule> are replaced by the (url encoded) source and rule of the issue, <anchor> by the rule
-    in lowercase with only its letters and digits (AP#13 becomes ap13, a markdown heading anchor);
+    in the url <source> and <rule> are replaced by the (url encoded) source and rule of the issue, <anchor> by the
+    anchor GitHub and GitLab give a markdown heading with the rule: lowercase, only letters, digits, '-' and '_'
+    (AP#13 becomes ap13, sign-compare stays sign-compare);
     [[keywords]], such as [[wiki-issue-prefix]], are filled in later by apply_environment.py
 
     Usage: <input> | apply_links.py [--rules FILE]
@@ -27,7 +28,12 @@ def show_usage():
 def fill(template, source, rule):
     return (template.replace("<source>", urllib.parse.quote(source, safe=""))
                     .replace("<rule>", urllib.parse.quote(rule, safe=""))
-                    .replace("<anchor>", re.sub(r"[^a-z0-9]", "", rule.lower())))
+                    .replace("<anchor>", anchor(rule)))
+
+
+def anchor(text):
+    """the anchor of a markdown heading on GitHub and GitLab: lowercase, punctuation removed, spaces become '-'"""
+    return re.sub(r"[^\w\- ]", "", text.lower()).replace(" ", "-")
 
 
 def transform(rules, parts):
