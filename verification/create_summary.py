@@ -118,7 +118,7 @@ def create_top_table(issues):
     return "".join(result) + "</table>\n"
 
 
-def create_summary(issues):
+def create_summary(issues, report_url=""):
     rules = group(issues)
     total = len(issues)
     teams = {name(parts, Column.TEAM) for parts in issues}
@@ -130,6 +130,10 @@ def create_summary(issues):
     for label, key in (("Branch", "branch-id"), ("Committer", "user-name")):
         # one item per line: apply_environment.py removes a data-optional line when it has no value for its [[key]]
         result.append(f'<p data-optional="" style="margin: 0 0 2px; {FONT}">{label}: <b>[[{key}]]</b></p>\n')
+    if report_url:
+        # data-optional too, so the link disappears when a [[keyword]] in the url, such as [[job-url]], has no value
+        result.append(f'<p data-optional="" style="margin: 6px 0 0; {FONT}"><a href="{html.escape(report_url)}" '
+                      f'style="color: {LINK_COLOR};">Open the full report</a></p>\n')
     result.append(f'<p style="margin: 8px 0 12px; {FONT} color: #667085;">{plural(total, "issue")} for '
                   f'{plural(len(rules), "rule")} in {plural(len(categories), "category", "categories")} '
                   f'for {plural(len(teams), "team")}</p>\n')
@@ -157,7 +161,7 @@ def create_summary(issues):
 
 
 def show_usage():
-    eprint("Usage: " + os.path.basename(__file__) + " < issues.txt > summary.html")
+    eprint("Usage: " + os.path.basename(__file__) + " [--report-url URL] < issues.txt > summary.html")
     eprint("   create an html summary from opencanary-formatted issues on stdin, written to stdout:")
     eprint("   - the " + str(TOP_LIMIT) + " most important issues (lowest priority number first), with a link to the file")
     eprint("   - the number of issues per rule (with its priority and the description of its first issue, cut at")
@@ -166,7 +170,10 @@ def show_usage():
     eprint("   [[keywords]] in the links, such as [[permalink-prefix]], are filled in by apply_environment.py")
     eprint("   the html only uses tables and inline styles, so it works as an Outlook e-mail body (see send_email.py)")
     eprint("")
-    eprint("   -h, --help   show this help")
+    eprint("   --report-url URL   add a link to the full report (create_report.py), for example in the artifacts of a GitLab job:")
+    eprint("                      --report-url \"[[job-url]]/artifacts/file/report.html\"")
+    eprint("                      the link is removed by apply_environment.py when a [[keyword]] in it has no value")
+    eprint("   -h, --help         show this help")
     eprint("")
     eprint("   input, one issue per line: priority|team|component|file|source|rule|category|description|link-info")
     eprint("")
@@ -177,13 +184,19 @@ def main():
         show_usage()
         sys.exit(0)
 
-    if len(sys.argv) != 1:
+    arguments = sys.argv[1:]
+    report_url = ""
+    if len(arguments) == 2 and arguments[0] == "--report-url":
+        report_url = arguments[1]
+    elif len(arguments) == 1 and arguments[0].startswith("--report-url="):
+        report_url = arguments[0].split("=", 1)[1]
+    elif arguments:
         eprint(os.path.basename(__file__) + " commandline error: invalid argument(s)\n")
         show_usage()
         sys.exit(1)
 
     issues = [util.read_structured_line(line) for line in sys.stdin if line.strip()]
-    sys.stdout.write(create_summary(issues))
+    sys.stdout.write(create_summary(issues, report_url))
 
 
 if __name__ == "__main__":

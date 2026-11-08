@@ -130,12 +130,13 @@ column, per priority band (the summary cards) and per column value (the funnel b
 ### create_summary.py
 
 ```
-create_summary.py < issues.txt > summary.html
+create_summary.py [--report-url URL] < issues.txt > summary.html
 ```
 
-| Parameter    | Description |
-|--------------|-------------|
-| `-h, --help` | Show the usage. |
+| Parameter          | Description |
+|--------------------|-------------|
+| `--report-url URL` | Add a link to the full report below the branch and committer. The URL can contain `[[keywords]]`, for example `"[[job-url]]/artifacts/file/report.html"` for the report in the artifacts of a GitLab job; the link is left out when a keyword has no value. |
+| `-h, --help`       | Show the usage. |
 
 The branch and committer, then the 10 most important issues (lowest priority number first), with a link to the file.
 Then a table with a row per combination of rule, team, component and category, with the number of issues, and a total.
@@ -145,7 +146,8 @@ second, the rows within a rule by number of issues; an empty team, component or 
 branch, committer and file links are `[[keywords]]`, filled in by piping the summary through `apply_environment.py env.txt`
 (a branch or committer without a value is left out). The HTML only
 uses tables, attributes and inline styles, so Outlook shows it correctly as the body of an e-mail, for example `send_email.py summary.html report.html` sends it with the full report attached.
-`opencanary.py run` writes it when the configuration has `summary = "summary.html"` in `[output]`.
+`opencanary.py run` writes it when the configuration has `summary = "summary.html"` in `[output]`, and adds the link
+when it also has `report_url = "..."`.
 
 ## Other tools
 

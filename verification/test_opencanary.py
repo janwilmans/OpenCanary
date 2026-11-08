@@ -190,6 +190,22 @@ class TestSummary(unittest.TestCase):
         self.assertIn('<a href="[[permalink-prefix]]/b.cc#L7"', summary)
         self.assertNotIn("https://rule", summary)
 
+    def test_report_link(self):
+        import tempfile
+        data = self.row("5", "first", "core", "c", "w")
+        self.assertNotIn("Open the full report", run_script("create_summary.py", stdin=data))
+        summary = run_script("create_summary.py", ["--report-url", "[[job-url]]/artifacts/file/report.html"], data)
+        self.assertTrue(is_valid_xml(summary))
+        self.assertEqual(run_script("create_summary.py", ["--report-url=[[job-url]]/artifacts/file/report.html"], data), summary)
+        with tempfile.TemporaryDirectory() as d:
+            env = os.path.join(d, "env.txt")
+            with open(env, "w", encoding="utf-8") as f:
+                f.write("CI_JOB_URL=https://ci/jobs/42/\n")
+            self.assertIn('<a href="https://ci/jobs/42/artifacts/file/report.html"', run_script("apply_environment.py", [env], summary))
+            with open(env, "w", encoding="utf-8") as f:
+                f.write("CI_COMMIT_REF_NAME=main\n")
+            self.assertNotIn("Open the full report", run_script("apply_environment.py", [env], summary))
+
     def test_empty_input(self):
         summary = run_script("create_summary.py", stdin="")
         self.assertTrue(is_valid_xml(summary))
@@ -365,7 +381,8 @@ class TestRunner(unittest.TestCase):
             shutil.copy(os.path.join(TESTDATA, "gcc_warnings.txt"), os.path.join(d, "gcc.log"))
             shutil.copy(os.path.join(TESTDATA, "env.txt"), os.path.join(d, "env.txt"))
             with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
-                f.write('[[input]]\nformat = "gcc"\npath = "gcc.log"\n[output]\nenvironment = "env.txt"\nsummary = "summary.html"\n')
+                f.write('[[input]]\nformat = "gcc"\npath = "gcc.log"\n[output]\nenvironment = "env.txt"\nsummary = "summary.html"\n'
+                        'report_url = "[[job-url]]/artifacts/file/report.html"\n')
             out = run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
             self.assertEqual(out, "")
             with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
@@ -380,6 +397,7 @@ class TestRunner(unittest.TestCase):
             self.assertIn("Branch: <b>master</b>", summary)
             self.assertIn("Committer: <b>Test User</b>", summary)
             self.assertIn('href="https://git.example.com/group/proj/blob/0123456789abcdef/', summary)
+            self.assertIn('<a href="https://ci.example.com/group/proj/-/jobs/42/artifacts/file/report.html"', summary)
             self.assertNotIn("[[", summary)
 
     def test_single_stage_command(self):

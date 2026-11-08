@@ -68,6 +68,7 @@ path = "build/gcc.log"
 issues = "issues.txt"       # the prioritized work list
 report = "report.html"      # the html report, [[keywords]] are filled using the environment file
 # summary = "summary.html"  # issues per category and team, as e-mail body (Outlook friendly)
+# report_url = "[[job-url]]/artifacts/file/report.html"  # link from the summary to the full report
 # environment = "env.txt"   # key=value file (CI_JOB_URL, CI_PROJECT_URL, CI_COMMIT_SHA, ...), see apply_environment.py
 '''
 
@@ -146,7 +147,8 @@ def run_pipeline(config, base):
 
     if "summary" in output:
         summary_file = path(output["summary"])
-        summary = run_stage(script("summary"), data)
+        report_url = ["--report-url", output["report_url"]] if "report_url" in output else []
+        summary = run_stage(script("summary") + report_url, data)
         if "environment" in output:
             summary = run_stage(script("environment") + [path(output["environment"])], summary)
         with open(summary_file, "wb") as f:
