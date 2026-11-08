@@ -98,23 +98,10 @@ def create_display_path(parts):
     return file
 
 
-def links_to_dict(links):
-    result = dict(re.findall(r'\[(.*?)\]\{(.*?)\}', links))
-    return result
-
-
-def dict_to_links(links):
-    result = ""
-    for k, v in links.items():
-        result += f"[{k}]" + "{" + f"{v}" + "}"
-    return result
-
-
 def replace_links(new_links, existing_links):
-    result = links_to_dict(existing_links)
-    for k, v in links_to_dict(new_links).items():
-        result[k] = v
-    return dict_to_links(result)
+    result = util.links_to_dict(existing_links)
+    result.update(util.links_to_dict(new_links))
+    return util.dict_to_links(result)
 
 
 def customize(line):

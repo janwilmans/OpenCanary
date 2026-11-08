@@ -44,7 +44,7 @@ priority|team|component|fileref|source|rule|category|description|links
 | 5 | rule | The tool's name for the check, e.g. `C4701`, `sign-compare`, `AP#13`. | parsers | |
 | 6 | category | Broad group, e.g. `warning`, `redflag`, `ub`. | parsers | `apply_team_priorities.py` |
 | 7 | description | The message, HTML-escaped (`&`, `<`, `>`, `"`, `'`). | parsers | `apply_low_hanging_fruit.py` (`[LOW] ` prefix) |
-| 8 | links | `[n]{url}` repeated; `n` is the field the link belongs to. | parsers | `tr_customize.py` (`[3]`) |
+| 8 | links | `[n]{url}` repeated; `n` is the field the link belongs to. `[solution]{url}` is a page with a solution suggestion for the rule, the report shows it as a small icon after the rule. | parsers | `tr_customize.py` (`[3]`) |
 
 Details:
 

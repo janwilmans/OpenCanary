@@ -235,6 +235,11 @@ td.file { font-family: var(--mono); font-size: 12.5px; }
 tbody tr:not(.expanded) td.file { direction: rtl; text-align: left; }
 td.file .path { direction: ltr; unicode-bidi: isolate; }
 td.rule span { padding: 1px 6px; border-radius: 4px; background: var(--surface-2); font-family: var(--mono); font-size: 12.5px; }
+/* the solution icon stays visible after a long rule name, the name is cut instead */
+td.rule .rule-cell { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 0; background: none; }
+td.rule .rule-cell > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+td.rule a.solution { flex: none; display: inline-flex; color: var(--accent); }
+td.rule a.solution svg { width: 15px; height: 15px; }
 .badge {
   display: inline-block; min-width: 2.4em; padding: 1px 8px; border-radius: 999px; text-align: center;
   background: var(--tier-soft); color: var(--tier); font-weight: 700; font-size: 12.5px;
@@ -353,6 +358,11 @@ def get_script_section():
     return low;
   }
 
+  // a light bulb, after the rule of an issue with a solution suggestion ([solution]{url} link)
+  const SOLUTION_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    'stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4"/>' +
+    '<path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>';
+
   function element(name, className, text) {
     const result = document.createElement(name);
     if (className) result.className = className;
@@ -389,6 +399,17 @@ def get_script_section():
         const wrapper = element('span', { prio: 'badge', file: 'path' }[name] || '');
         wrapper.append(content);
         content = wrapper;
+      }
+      const solution = record.links.solution;
+      if (name === 'rule' && value && solution && !/^\s*javascript:/i.test(solution)) {
+        const icon = element('a', 'solution');
+        icon.href = solution;
+        icon.title = 'How to solve ' + value;
+        icon.setAttribute('aria-label', icon.title);
+        icon.innerHTML = SOLUTION_ICON;
+        const cellContent = element('span', 'rule-cell');
+        cellContent.append(content, icon);
+        content = cellContent;
       }
       cell.append(content);
       if (value && name !== 'prio') cell.title = value;
@@ -713,7 +734,8 @@ def get_link_map(parts):
     for index_with_link in link_string:
         kv = index_with_link[1:].split("]{")
         if len(kv) == 2:
-            links[int(kv[0])] = kv[1]
+            if kv[0].isdigit():   # named links, such as [solution]{url}, are not a column, see create_record()
+                links[int(kv[0])] = kv[1]
         else:
             eprint("REPORT ERROR: assumed we would get a key/value pair, got ", kv)
             sys.exit(1)
@@ -780,6 +802,9 @@ def create_record(parts):
         cells.append(html.unescape(value))
         if link:
             links[column] = link
+    solution = util.links_to_dict(parts[Column.LINK]).get(util.SOLUTION_LINK)
+    if solution:
+        links[util.SOLUTION_LINK] = solution
     return [get_tier(parts[Column.PRIO])] + cells + [links]
 
 

@@ -266,6 +266,19 @@ def create_link(index, url):
     return "[" + str(index) + "]{" + url + "}"
 
 
+# key of the [solution]{url} link: a page with a solution suggestion for the rule of the issue, shown as an icon after the rule
+SOLUTION_LINK = "solution"
+
+
+def links_to_dict(links):
+    """the "[key]{url}[key]{url}..." link field as a {key: url} dict, the key is a column number or a name (SOLUTION_LINK)"""
+    return dict(re.findall(r'\[(.*?)\]\{(.*?)\}', links))
+
+
+def dict_to_links(links):
+    return "".join("[" + str(key) + "]{" + url + "}" for key, url in links.items())
+
+
 def get_timestamp():
     now = datetime.now()
     return now.strftime("%H:%M:%S.%f")[:12]

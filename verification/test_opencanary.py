@@ -129,6 +129,12 @@ class TestReport(unittest.TestCase):
         self.assertEqual(report_rows(report), [["t1", "5", "team", "comp", "a.cc:1", "src", "rule", "warning", "'a' <b> &",
                                                 {"3": "[[permalink-prefix]]/a.cc#L1", "5": "https://x/rule"}]])
 
+    def test_solution_link_is_not_a_column(self):
+        report = run_script("create_report.py", stdin=self.row("5", link="[5]{https://x/rule}[solution]{[[wiki-issue-prefix]]rule}"))
+        self.assertTrue(is_valid_xml(report))
+        self.assertEqual(report_rows(report)[0][-1], {"5": "https://x/rule", "solution": "[[wiki-issue-prefix]]rule"})
+        self.assertIn("How to solve", report)
+
     def test_every_column_has_a_value_filter(self):
         import create_report
         report = run_script("create_report.py", stdin=self.row("5"))
@@ -350,6 +356,12 @@ class TestCustomize(unittest.TestCase):
         self.assertEqual(parts[2], "toolkit")
         self.assertEqual(parts[3], "build/lib/toolkit/a.cc:12")
         self.assertIn("[3]{[[permalink-prefix]]/build/lib/toolkit/a.cc#L12}", parts[8])
+
+    def test_named_links_are_kept(self):
+        row = self.ROW.replace("[3]{old}", "[3]{old}[5]{https://x/rule}[solution]{https://x/solve}")
+        rules = os.path.join(HERE, "examples", "customize_toolkit.txt")
+        links = run_script("tr_customize.py", ["--rules", rules], row).split("|")[8].strip()
+        self.assertEqual(links, "[3]{[[permalink-prefix]]/build/lib/toolkit/a.cc#L12}[5]{https://x/rule}[solution]{https://x/solve}")
 
     def test_component_without_matching_rule_is_kept(self):
         row = "8||compiler|cl : Command line warning|msvc|D9002|cmdline|d|\n"

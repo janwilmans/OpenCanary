@@ -63,7 +63,8 @@ that way issues are clustered per-file as good as possible.
 * [5] rule - optional tools specific fields (warnings Cxxxx, or POR#xxx")
 * [6] category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * [7] description - the actual message that was reported
-* link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.)
+* link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.), and the named
+  link `[solution]{url}`: a page with a solution suggestion for the rule, shown as a small icon after the rule
 
 ## category and rule
 Its important that the rule is specific enough so advice can be offered on how to handle a particular issue. This is because the rule is what makes links to the Wiki pages unique. Conversely the category must be broad enough to group silimar issues together, but typically only issues with the same priority. However, the latter is not strictly required, specfic rules _can_ have a different priority from their category.
