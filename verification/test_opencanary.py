@@ -366,6 +366,19 @@ class TestRunner(unittest.TestCase):
         self.assertEqual([line.split("|")[0] for line in lines(out)], ["1", "9"])
 
 
+class TestCppIssues(unittest.TestCase):
+
+    def test_reserved_define_names_the_macro(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "a.cc"), "w", encoding="utf-8") as f:
+                f.write("#define _Reserved 1\n")
+            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d]))]
+            ap9 = [row for row in rows if row[5] == "AP#9"]
+            self.assertEqual(len(ap9), 1, rows)
+            self.assertIn("(_Reserved)", ap9[0][7])
+
+
 class TestIgnoreFiles(unittest.TestCase):
 
     def test_cpp_files_respect_ignore_file(self):

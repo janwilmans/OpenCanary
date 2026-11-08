@@ -177,7 +177,7 @@ def check_line_impl(filename, line_number, line):
         report_issue(filename, line_number, "AP#8", "modernize", "Anti-pattern: dont use c-style casts")
     match_group = re.search(r"#define\s+(_\w+)", line)
     if match_group:
-        report_issue(filename, line_number, "AP#9", "ub", "prevent UB: names starting with underscore, followed by a capital ({clean_group(match_group)}) are reserved ")
+        report_issue(filename, line_number, "AP#9", "ub", f"prevent UB: names starting with underscore, followed by a capital ({clean_group(match_group)}) are reserved ")
     match_group = re.search(r"#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
     if match_group:
         report_issue(filename, line_number, "AP#10", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")

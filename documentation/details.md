@@ -679,8 +679,7 @@ field numeric: values that differ by at most DELTA (default 1) are equal. Needs 
 ## Known limitations
 
 - `oc_cpp_issues.py`: the spelling check (`AP#19`) is not finished. When ripgrep is installed it prints
-  `fileref: ...` debug lines to stdout, which are not valid issues. The `AP#9` description contains the literal text
-  `{clean_group(match_group)}` instead of the macro name.
+  `fileref: ...` debug lines to stdout, which are not valid issues.
 - `parse_gcc.py` takes the file name for the link up to the first `:`, so a Windows path with a drive letter gets a
   wrong `[3]` link; `tr_customize.py` replaces that link with a correct one.
 - `prettydiff.py` opens files with mode `'U'`, which Python 3.11 removed; it only runs on Python 3.10 and older.
