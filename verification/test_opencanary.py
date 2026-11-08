@@ -140,34 +140,39 @@ class TestReport(unittest.TestCase):
 class TestSummary(unittest.TestCase):
 
     @staticmethod
-    def row(team, category):
-        return "|".join(["8", team, "comp", "a.cc:1", "src", "rule", category, "d", ""]) + "\n"
+    def row(prio, rule, team, component, category, description="d"):
+        return "|".join([prio, team, component, "a.cc:1", "src", rule, category, description, ""]) + "\n"
 
     @staticmethod
     def table(summary):
-        """the summary table as rows of cell texts"""
+        """the summary table as rows of cell texts, markup inside a cell is replaced by a space"""
         import html
         import re
         rows = re.findall(r"<tr>(.*?)</tr>", summary, re.S)
-        return [[html.unescape(text) for text in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", row)] for row in rows]
+        return [[" ".join(html.unescape(re.sub(r"<[^>]+>", " ", text)).split())
+                 for text in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", row)] for row in rows]
 
-    def test_counts_and_order(self):
-        data = (self.row("gui", "style") * 2 + self.row("core", "style") * 2 + self.row("core", "bug") * 4
-                + self.row("core", "b<ad") * 4 + self.row("", "style") + self.row("net", ""))
+    def test_rows_grouped_per_rule(self):
+        long_description = " ".join(["word"] * 30)
+        data = (self.row("45", "AP#13", "gui", "CsGui", "redflag", "later") * 2
+                + self.row("45", "AP#13", "core", "CsCore", "redflag", "do not use delete &lt;p&gt;") * 3
+                + self.row("9", "b<ad", "", "", "", long_description) + self.row("7", "b<ad", "", "", "")
+                + self.row("10", "C4456", "net", "x", "warning") * 2)
         summary = run_script("create_summary.py", stdin=data)
         self.assertTrue(is_valid_xml(summary))
         self.assertNotIn("<script", summary)
         self.assertNotIn("class=", summary)
-        # most issues first, ties by name; teams likewise; empty cells for zero
+        # rules by number of issues, then name; within a rule by count; the first description of each rule
         self.assertEqual(self.table(summary), [
-            ["Category", "Total", "core", "gui", "(none)", "net"],
-            ["style", "5", "2", "2", "1", ""],
-            ["b<ad", "4", "4", "", "", ""],
-            ["bug", "4", "4", "", "", ""],
-            ["(none)", "1", "", "", "", "1"],
-            ["Total", "14", "10", "2", "1", "1"],
+            ["Prio", "Rule", "Description", "Team", "Component", "Category", "Issues"],
+            ["45", "AP#13 5 issues", "later", "core", "CsCore", "redflag", "3"],
+            ["gui", "CsGui", "redflag", "2"],
+            ["7, 9", "b<ad", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
+            ["10", "C4456", "d", "net", "x", "warning", "2"],
+            ["", "Total", "", "", "", "", "9"],
         ])
-        self.assertIn("14 issues in 4 categories for 4 teams", summary)
+        self.assertIn('rowspan="2"', summary)
+        self.assertIn("9 issues for 3 rules in 3 categories for 4 teams", summary)
 
     def test_empty_input(self):
         summary = run_script("create_summary.py", stdin="")
@@ -345,7 +350,7 @@ class TestRunner(unittest.TestCase):
             self.assertTrue(is_valid_xml(report))
             self.assertIn("https://git.example.com/group/proj/blob/0123456789abcdef/w.cc", str(report_rows(report)))
             with open(os.path.join(d, "summary.html"), encoding="utf-8") as f:
-                self.assertIn("6 issues in", f.read())
+                self.assertIn("6 issues for 6 rules", f.read())
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))

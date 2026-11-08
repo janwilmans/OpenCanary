@@ -99,7 +99,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur 20 times or less (`--threshold N`)
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename
 - `create_report.py`, transforms the 'structured CSV' to an HTML report, see [Reports](#reports).
-- `create_summary.py`, optional, the number of issues per category and team as an e-mail friendly HTML table, see [Reports](#reports).
+- `create_summary.py`, optional, the number of issues per rule, team, component and category as an e-mail friendly HTML table, see [Reports](#reports).
 - `apply_environment.py`, replaces [[keyword]] placeholders using a `key=value` environment file (`CI_JOB_URL`, `CI_PROJECT_URL`, `CI_COMMIT_SHA`, ..., optional `WIKI_URL_PREFIX`, `PERMALINK_PREFIX` to link to a local checkout instead of `CI_PROJECT_URL/blob/CI_COMMIT_SHA`).
 - `tr_regression.py`, example of the regression gate: any line that passes fails the build.
 
@@ -134,10 +134,11 @@ create_summary.py < issues.txt > summary.html
 |--------------|-------------|
 | `-h, --help` | Show the usage. |
 
-A table of the number of issues per category (rows) and team (columns), with a total per category and per team.
-Categories and teams are ordered by number of issues first and by name second; an empty team or category is shown as
-`(none)`. The HTML only uses tables, attributes and inline styles, so Outlook shows it correctly as the body of an
-e-mail, for example `send_email.py summary.html report.html` sends it with the full report attached.
+A table with a row per combination of rule, team, component and category, with the number of issues, and a total.
+The rows of a rule are grouped: its priority, name (with its number of issues) and the description of its first issue
+(cut at 100 characters) are shown once for the group. Rules are ordered by number of issues first and by name second,
+the rows within a rule by number of issues; an empty team, component or category is shown as `(none)`. The HTML only
+uses tables, attributes and inline styles, so Outlook shows it correctly as the body of an e-mail, for example `send_email.py summary.html report.html` sends it with the full report attached.
 `opencanary.py run` writes it when the configuration has `summary = "summary.html"` in `[output]`.
 
 ## Other tools
