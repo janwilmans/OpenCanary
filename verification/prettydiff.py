@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Usage: 
     PrettyDiff <file1> <file2> [--num=COLUMN,DELTA...] [--sep=SEP]
