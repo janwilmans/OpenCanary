@@ -6,6 +6,7 @@
 
 import html
 import os
+import re
 import sys
 import traceback
 import util
@@ -18,6 +19,8 @@ HEADER_BACKGROUND = "#f1f3f6"
 TOTAL_BACKGROUND = "#e8efff"
 NO_NAME = "(none)"
 DESCRIPTION_LIMIT = 100   # characters of the description shown per rule
+TOP_LIMIT = 10            # number of most important issues listed above the table per rule
+LINK_COLOR = "#1a56db"
 
 
 def plural(value, one, many=None):
@@ -39,7 +42,7 @@ def priority_order(priority):
 
 def group(issues):
     """per rule the number of issues of each (team, component, category) combination, as an ordered list of
-    (rule, priorities, total, [(team, component, category, count), ...])
+    (rule, priorities, description, total, [(team, component, category, count), ...])
     priorities are assigned per rule, so a rule normally has one; if it has more they are all listed"""
     rules = {}
     priorities = {}
@@ -81,6 +84,40 @@ def rule_cell(rule, total, rows):
     return cell("td", text, bold=True, rowspan=rows)
 
 
+def file_link(parts):
+    """the url of the [3]{url} link (the file), empty when the issue has none"""
+    links = dict(re.findall(r"\[(\d+)\]\{(.*?)\}", parts[Column.LINK]))
+    return links.get(str(Column.FILE.value), "")
+
+
+def top_issues(issues, limit=TOP_LIMIT):
+    """the most important issues: lowest priority first, in input order (normally by file) for equal priorities"""
+    return sorted(issues, key=lambda parts: priority_order(parts[Column.PRIO].strip()))[:limit]
+
+
+def heading(text):
+    return f'<p style="margin: 16px 0 6px; {FONT} font-size: 15px; font-weight: bold;">{text}</p>\n'
+
+
+def header_row(columns):
+    """columns is a list of (heading, align)"""
+    return "<tr>" + "".join(cell("th", text, align, True, HEADER_BACKGROUND) for text, align in columns) + "</tr>\n"
+
+
+def create_top_table(issues):
+    result = ['<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n']
+    result.append(header_row([("Prio", "right"), ("File", "left"), ("Rule", "left"), ("Team", "left"), ("Description", "left")]))
+    for parts in issues:
+        file = html.escape(html.unescape(parts[Column.FILE]).strip())
+        url = file_link(parts)
+        if url:
+            file = f'<a href="{html.escape(url)}" style="color: {LINK_COLOR};">{file}</a>'
+        result.append("<tr>" + cell("td", html.escape(parts[Column.PRIO].strip()), "right") + cell("td", file))
+        result.append(cell("td", html.escape(name(parts, Column.RULE))) + cell("td", html.escape(name(parts, Column.TEAM))))
+        result.append(cell("td", html.escape(shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))) + "</tr>\n")
+    return "".join(result) + "</table>\n"
+
+
 def create_summary(issues):
     rules = group(issues)
     total = len(issues)
@@ -96,11 +133,12 @@ def create_summary(issues):
     if total == 0:
         return "".join(result) + "</body>\n</html>\n"
 
-    result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n<tr>')
-    result.append(cell("th", "Prio", "right", True, HEADER_BACKGROUND))
-    for heading in ("Rule", "Description", "Team", "Component", "Category"):
-        result.append(cell("th", heading, bold=True, background=HEADER_BACKGROUND))
-    result.append(cell("th", "Issues", "right", True, HEADER_BACKGROUND) + '</tr>\n')
+    top = top_issues(issues)
+    result.append(heading(f"Top {len(top)} issues") + create_top_table(top))
+    result.append(heading("Issues per rule"))
+    result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n')
+    result.append(header_row([("Prio", "right"), ("Rule", "left"), ("Description", "left"), ("Team", "left"),
+                              ("Component", "left"), ("Category", "left"), ("Issues", "right")]))
     for rule, priorities, description, rule_total, rows in rules:
         for index, (team, component, category, count) in enumerate(rows):
             result.append('<tr>')
@@ -117,10 +155,12 @@ def create_summary(issues):
 
 def show_usage():
     eprint("Usage: " + os.path.basename(__file__) + " < issues.txt > summary.html")
-    eprint("   create an html summary of the number of issues per rule (with its priority and the description of its")
-    eprint("   first issue, cut at " + str(DESCRIPTION_LIMIT) + " characters), team, component and category,")
-    eprint("   from opencanary-formatted issues on stdin, written to stdout")
+    eprint("   create an html summary from opencanary-formatted issues on stdin, written to stdout:")
+    eprint("   - the " + str(TOP_LIMIT) + " most important issues (lowest priority number first), with a link to the file")
+    eprint("   - the number of issues per rule (with its priority and the description of its first issue, cut at")
+    eprint("     " + str(DESCRIPTION_LIMIT) + " characters), team, component and category")
     eprint("   the rows of a rule are grouped, rules are ordered by number of issues (fewest first) and by name second")
+    eprint("   [[keywords]] in the links, such as [[permalink-prefix]], are filled in by apply_environment.py")
     eprint("   the html only uses tables and inline styles, so it works as an Outlook e-mail body (see send_email.py)")
     eprint("")
     eprint("   -h, --help   show this help")

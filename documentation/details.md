@@ -157,7 +157,8 @@ needs Python 3.11+ or the `tomli` package.
 5. `apply_low_hanging_fruit.py [--threshold N]`
 6. `sortby.py`, the result is written to the `issues` file.
 7. `create_report.py`, then `apply_environment.py <environment>` when configured; written to the `report` file.
-8. When `summary` is configured: `create_summary.py` on the issues, written to the `summary` file.
+8. When `summary` is configured: `create_summary.py` on the issues, then `apply_environment.py <environment>` when
+   configured; written to the `summary` file.
 
 Each step prints its stderr messages. If a step exits with a non-zero code, `run` stops with
 `opencanary: stage '<script>' failed with exit code N`. `run` does not run `tr_regression.py`; run it as a separate
@@ -487,7 +488,12 @@ Writes a short HTML page meant as the body of an e-mail. It only uses tables, HT
 because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
 
 - One line of text: `<n> issues for <n> rules in <n> categories for <n> teams`.
-- A table with a row per combination of rule, team, component and category, with the number of issues.
+- **Top 10 issues**: the 10 most important issues, lowest priority number first; issues with the same priority keep
+  their input order (by file, as `sortby.py` writes them). Columns: priority, file (a link to the `[3]` file link of
+  the issue when it has one), rule, team and description (cut like below). The links still contain
+  `[[permalink-prefix]]`; pipe the summary through `apply_environment.py` to fill it in, as `opencanary.py run` does.
+- **Issues per rule**: a table with a row per combination of rule, team, component and category, with the number of
+  issues.
 - The rows of one rule are grouped. The rule's **priority** (all distinct priorities, comma separated, if there are
   several), its **name** (with its total when it has more than one row) and the **description** of its first issue
   (the most important one, as the input is sorted) are shown once, in cells that span the group. The description is

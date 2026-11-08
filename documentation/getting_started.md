@@ -12,7 +12,7 @@ in [details.md](details.md).
 |--------|------------|
 | `issues.txt` | The work list: one issue per line, most important first. Plain text, easy to diff and to use in scripts. |
 | `report.html` | One self-contained HTML file to browse the issues: filter, sort and click through to the source. Works offline and as an e-mail attachment. |
-| `summary.html` | Optional: a short table per rule, team, component and category, made to be the body of an e-mail (also in Outlook). |
+| `summary.html` | Optional: the 10 most important issues and a short table per rule, team, component and category, made to be the body of an e-mail (also in Outlook). |
 | exit code | Optional: `tr_regression.py` fails the build when issues appear that you have not accepted yet. |
 
 ## Requirements

@@ -146,8 +146,11 @@ def run_pipeline(config, base):
 
     if "summary" in output:
         summary_file = path(output["summary"])
+        summary = run_stage(script("summary"), data)
+        if "environment" in output:
+            summary = run_stage(script("environment") + [path(output["environment"])], summary)
         with open(summary_file, "wb") as f:
-            f.write(run_stage(script("summary"), data))
+            f.write(summary)
         print(f"opencanary: summary written to {summary_file}", file=sys.stderr)
 
 

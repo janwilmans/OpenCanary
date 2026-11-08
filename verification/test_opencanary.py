@@ -140,15 +140,16 @@ class TestReport(unittest.TestCase):
 class TestSummary(unittest.TestCase):
 
     @staticmethod
-    def row(prio, rule, team, component, category, description="d"):
-        return "|".join([prio, team, component, "a.cc:1", "src", rule, category, description, ""]) + "\n"
+    def row(prio, rule, team, component, category, description="d", file="a.cc:1", links=""):
+        return "|".join([prio, team, component, file, "src", rule, category, description, links]) + "\n"
 
     @staticmethod
-    def table(summary):
-        """the summary table as rows of cell texts, markup inside a cell is replaced by a space"""
+    def table(summary, index=1):
+        """a table of the summary (0 is the top issues, 1 the issues per rule) as rows of cell texts,
+        markup inside a cell is replaced by a space"""
         import html
         import re
-        rows = re.findall(r"<tr>(.*?)</tr>", summary, re.S)
+        rows = re.findall(r"<tr>(.*?)</tr>", re.findall(r"<table.*?</table>", summary, re.S)[index], re.S)
         return [[" ".join(html.unescape(re.sub(r"<[^>]+>", " ", text)).split())
                  for text in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", row)] for row in rows]
 
@@ -173,6 +174,21 @@ class TestSummary(unittest.TestCase):
         ])
         self.assertIn('rowspan="2"', summary)
         self.assertIn("9 issues for 3 rules in 3 categories for 4 teams", summary)
+
+    def test_top_10_most_important_issues(self):
+        data = "".join(self.row("50", "late", "t", "c", "w", file=f"z.cc:{i}") for i in range(1, 11))
+        data += self.row("5", "first", "core", "c", "w", "x &lt; y", "b.cc:7", "[5]{https://rule}[3]{[[permalink-prefix]]/b.cc#L7}")
+        data += self.row("20", "second", "", "c", "w", "d", "c.cc:2")
+        summary = run_script("create_summary.py", stdin=data)
+        self.assertTrue(is_valid_xml(summary))
+        self.assertIn("Top 10 issues", summary)
+        top = self.table(summary, 0)
+        self.assertEqual(top[0], ["Prio", "File", "Rule", "Team", "Description"])
+        self.assertEqual(top[1:4], [["5", "b.cc:7", "first", "core", "x < y"], ["20", "c.cc:2", "second", "(none)", "d"],
+                                    ["50", "z.cc:1", "late", "t", "d"]])
+        self.assertEqual(len(top), 11)
+        self.assertIn('<a href="[[permalink-prefix]]/b.cc#L7"', summary)
+        self.assertNotIn("https://rule", summary)
 
     def test_empty_input(self):
         summary = run_script("create_summary.py", stdin="")
@@ -359,7 +375,10 @@ class TestRunner(unittest.TestCase):
             self.assertTrue(is_valid_xml(report))
             self.assertIn("https://git.example.com/group/proj/blob/0123456789abcdef/w.cc", str(report_rows(report)))
             with open(os.path.join(d, "summary.html"), encoding="utf-8") as f:
-                self.assertIn("6 issues for 6 rules", f.read())
+                summary = f.read()
+            self.assertIn("6 issues for 6 rules", summary)
+            self.assertIn('href="https://git.example.com/group/proj/blob/0123456789abcdef/', summary)
+            self.assertNotIn("[[", summary)
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))
