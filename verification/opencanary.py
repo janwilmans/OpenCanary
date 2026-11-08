@@ -6,7 +6,7 @@
     opencanary.py <command> [args...]       run one stage, input/output is stdin/stdout like the scripts themselves
 
     commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, interest, customize, prioritize, low-hanging, sort,
-              report, environment, regression
+              report, summary, environment, regression
 """
 
 import argparse
@@ -27,6 +27,7 @@ COMMANDS = {
     "low-hanging": "apply_low_hanging_fruit.py",
     "sort": "sortby.py",
     "report": "create_report.py",
+    "summary": "create_summary.py",
     "environment": "apply_environment.py",
     "regression": "tr_regression.py",
 }
@@ -66,6 +67,7 @@ path = "build/gcc.log"
 [output]
 issues = "issues.txt"       # the prioritized work list
 report = "report.html"      # the html report, [[keywords]] are filled using the environment file
+# summary = "summary.html"  # issues per category and team, as e-mail body (Outlook friendly)
 # environment = "env.txt"   # key=value file (CI_JOB_URL, CI_PROJECT_URL, CI_COMMIT_SHA, ...), see apply_environment.py
 '''
 
@@ -142,6 +144,12 @@ def run_pipeline(config, base):
         f.write(html)
     print(f"opencanary: report written to {report_file}", file=sys.stderr)
 
+    if "summary" in output:
+        summary_file = path(output["summary"])
+        with open(summary_file, "wb") as f:
+            f.write(run_stage(script("summary"), data))
+        print(f"opencanary: summary written to {summary_file}", file=sys.stderr)
+
 
 def main():
     argv = sys.argv[1:]
@@ -168,7 +176,7 @@ def main():
 
     if command in COMMANDS:
         if command not in NO_STDIN_COMMANDS and sys.stdin.isatty():
-            example = "report < issues.txt > report.html" if command == "report" else f"{command} < input > output"
+            example = f"{command} < issues.txt > {command}.html" if command in ("report", "summary") else f"{command} < input > output"
             print(f"opencanary: '{command}' reads its input from stdin, pipe or redirect data into it, e.g.\n"
                   f"    opencanary.py {example}\n"
                   f"or use 'opencanary.py run' to run the whole pipeline from opencanary.toml", file=sys.stderr)

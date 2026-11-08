@@ -137,6 +137,45 @@ class TestReport(unittest.TestCase):
         self.assertEqual(report_rows(run_script("create_report.py", stdin="")), [])
 
 
+class TestSummary(unittest.TestCase):
+
+    @staticmethod
+    def row(team, category):
+        return "|".join(["8", team, "comp", "a.cc:1", "src", "rule", category, "d", ""]) + "\n"
+
+    @staticmethod
+    def table(summary):
+        """the summary table as rows of cell texts"""
+        import html
+        import re
+        rows = re.findall(r"<tr>(.*?)</tr>", summary, re.S)
+        return [[html.unescape(text) for text in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", row)] for row in rows]
+
+    def test_counts_and_order(self):
+        data = (self.row("gui", "style") * 2 + self.row("core", "style") * 2 + self.row("core", "bug") * 4
+                + self.row("core", "b<ad") * 4 + self.row("", "style") + self.row("net", ""))
+        summary = run_script("create_summary.py", stdin=data)
+        self.assertTrue(is_valid_xml(summary))
+        self.assertNotIn("<script", summary)
+        self.assertNotIn("class=", summary)
+        # most issues first, ties by name; teams likewise; empty cells for zero
+        self.assertEqual(self.table(summary), [
+            ["Category", "Total", "core", "gui", "(none)", "net"],
+            ["style", "5", "2", "2", "1", ""],
+            ["b<ad", "4", "4", "", "", ""],
+            ["bug", "4", "4", "", "", ""],
+            ["(none)", "1", "", "", "", "1"],
+            ["Total", "14", "10", "2", "1", "1"],
+        ])
+        self.assertIn("14 issues in 4 categories for 4 teams", summary)
+
+    def test_empty_input(self):
+        summary = run_script("create_summary.py", stdin="")
+        self.assertTrue(is_valid_xml(summary))
+        self.assertIn("0 issues", summary)
+        self.assertNotIn("<table", summary)
+
+
 class TestParseMsvc(unittest.TestCase):
 
     def test_parse_msvc_finds_rules(self):
@@ -296,7 +335,7 @@ class TestRunner(unittest.TestCase):
             shutil.copy(os.path.join(TESTDATA, "gcc_warnings.txt"), os.path.join(d, "gcc.log"))
             shutil.copy(os.path.join(TESTDATA, "env.txt"), os.path.join(d, "env.txt"))
             with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
-                f.write('[[input]]\nformat = "gcc"\npath = "gcc.log"\n[output]\nenvironment = "env.txt"\n')
+                f.write('[[input]]\nformat = "gcc"\npath = "gcc.log"\n[output]\nenvironment = "env.txt"\nsummary = "summary.html"\n')
             out = run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
             self.assertEqual(out, "")
             with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
@@ -305,6 +344,8 @@ class TestRunner(unittest.TestCase):
                 report = f.read()
             self.assertTrue(is_valid_xml(report))
             self.assertIn("https://git.example.com/group/proj/blob/0123456789abcdef/w.cc", str(report_rows(report)))
+            with open(os.path.join(d, "summary.html"), encoding="utf-8") as f:
+                self.assertIn("6 issues in", f.read())
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))

@@ -99,6 +99,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur 20 times or less (`--threshold N`)
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename
 - `create_report.py`, transforms the 'structured CSV' to an HTML report.
+- `create_summary.py`, optional, the number of issues per category and team as an e-mail friendly HTML table (`summary = "summary.html"` in `[output]`).
 - `apply_environment.py`, replaces [[keyword]] placeholders using a `key=value` environment file (`CI_JOB_URL`, `CI_PROJECT_URL`, `CI_COMMIT_SHA`, ..., optional `WIKI_URL_PREFIX`, `PERMALINK_PREFIX` to link to a local checkout instead of `CI_PROJECT_URL/blob/CI_COMMIT_SHA`).
 - `tr_regression.py`, example of the regression gate: any line that passes fails the build.
 
