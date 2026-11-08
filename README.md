@@ -139,7 +139,7 @@ create_summary.py < issues.txt > summary.html
 
 A table with a row per combination of rule, team, component and category, with the number of issues, and a total.
 The rows of a rule are grouped: its priority, name (with its number of issues) and the description of its first issue
-(cut at 100 characters) are shown once for the group. Rules are ordered by number of issues first and by name second,
+(cut at 100 characters) are shown once for the group. Rules are ordered by number of issues (fewest first) and by name second,
 the rows within a rule by number of issues; an empty team, component or category is shown as `(none)`. The HTML only
 uses tables, attributes and inline styles, so Outlook shows it correctly as the body of an e-mail, for example `send_email.py summary.html report.html` sends it with the full report attached.
 `opencanary.py run` writes it when the configuration has `summary = "summary.html"` in `[output]`.

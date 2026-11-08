@@ -29,8 +29,8 @@ def name(parts, column):
 
 
 def sort_key(value, count):
-    """most issues first, then by name"""
-    return (-count, value.lower(), value)
+    """fewest issues first, then by name"""
+    return (count, value.lower(), value)
 
 
 def priority_order(priority):
@@ -53,7 +53,7 @@ def group(issues):
         descriptions.setdefault(rule, shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))
     result = []
     for rule, combinations in rules.items():
-        rows = sorted(combinations.items(), key=lambda item: (-item[1], [part.lower() for part in item[0]], item[0]))
+        rows = sorted(combinations.items(), key=lambda item: (item[1], [part.lower() for part in item[0]], item[0]))
         rule_priorities = ", ".join(sorted(priorities[rule], key=priority_order))
         result.append((rule, rule_priorities, descriptions[rule], sum(combinations.values()), [key + (count,) for key, count in rows]))
     return sorted(result, key=lambda item: sort_key(item[0], item[3]))
@@ -120,7 +120,7 @@ def show_usage():
     eprint("   create an html summary of the number of issues per rule (with its priority and the description of its")
     eprint("   first issue, cut at " + str(DESCRIPTION_LIMIT) + " characters), team, component and category,")
     eprint("   from opencanary-formatted issues on stdin, written to stdout")
-    eprint("   the rows of a rule are grouped, rules are ordered by number of issues first and by name second")
+    eprint("   the rows of a rule are grouped, rules are ordered by number of issues (fewest first) and by name second")
     eprint("   the html only uses tables and inline styles, so it works as an Outlook e-mail body (see send_email.py)")
     eprint("")
     eprint("   -h, --help   show this help")

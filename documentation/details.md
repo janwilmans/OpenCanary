@@ -492,8 +492,8 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
   several), its **name** (with its total when it has more than one row) and the **description** of its first issue
   (the most important one, as the input is sorted) are shown once, in cells that span the group. The description is
   cut at the last space before 100 characters and ends with `…`.
-- Rules are ordered by number of issues (most first), then by name (ignoring case). Rows within a rule by number of
-  issues, then team, component and category.
+- Rules are ordered by number of issues (fewest first), then by name (ignoring case). Rows within a rule by number of
+  issues (fewest first), then team, component and category.
 - An empty team, component or category is shown as `(none)`.
 - The last row is the total number of issues. With no input only the text line is written.
 

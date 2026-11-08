@@ -162,13 +162,13 @@ class TestSummary(unittest.TestCase):
         self.assertTrue(is_valid_xml(summary))
         self.assertNotIn("<script", summary)
         self.assertNotIn("class=", summary)
-        # rules by number of issues, then name; within a rule by count; the first description of each rule
+        # rules by number of issues (fewest first), then name; within a rule by count; the first description of each rule
         self.assertEqual(self.table(summary), [
             ["Prio", "Rule", "Description", "Team", "Component", "Category", "Issues"],
-            ["45", "AP#13 5 issues", "later", "core", "CsCore", "redflag", "3"],
-            ["gui", "CsGui", "redflag", "2"],
             ["7, 9", "b<ad", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
             ["10", "C4456", "d", "net", "x", "warning", "2"],
+            ["45", "AP#13 5 issues", "later", "gui", "CsGui", "redflag", "2"],
+            ["core", "CsCore", "redflag", "3"],
             ["", "Total", "", "", "", "", "9"],
         ])
         self.assertIn('rowspan="2"', summary)
