@@ -511,7 +511,7 @@ Replaces the placeholders in every input line (any text, normally the report):
 |-------------|-------------|
 | `[[permalink-prefix]]` | `PERMALINK_PREFIX` (with `\` as `/`, without trailing `/`) when present, else `CI_PROJECT_URL/blob/CI_COMMIT_SHA` |
 | `[[job-url]]` | `CI_JOB_URL` (with `/`, without trailing `/`) |
-| `[[branch-id]]` | `CI_BUILD_REF_NAME`; when empty or missing: `CI_COMMIT_REF_NAME (commit_id)` |
+| `[[branch-id]]` | `CI_COMMIT_REF_NAME` (the branch or tag), else `CI_BUILD_REF_NAME` (its name before GitLab 9.0), else `CI_COMMIT_SHA (commit_id)` |
 | `[[user-name]]` | `GITLAB_USER_NAME`; `Scheduled build` when the `CI_PIPELINE_SOURCE` environment variable of the process contains `schedule` |
 | `[[commit-message]]` | `CI_COMMIT_TITLE` |
 | `[[wiki-url]]` | `WIKI_URL_PREFIX` + `_Issues` |
@@ -678,8 +678,6 @@ field numeric: values that differ by at most DELTA (default 1) are equal. Needs 
 
 ## Known limitations
 
-- `apply_environment.py` reads the branch from `CI_BUILD_REF_NAME`, the old GitLab name; set
-  `CI_BUILD_REF_NAME=$CI_COMMIT_REF_NAME` in the environment file on current GitLab versions.
 - `oc_cpp_issues.py`: the spelling check (`AP#19`) is not finished. When ripgrep is installed it prints
   `fileref: ...` debug lines to stdout, which are not valid issues. The `AP#9` description contains the literal text
   `{clean_group(match_group)}` instead of the macro name.

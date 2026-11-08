@@ -29,12 +29,14 @@ def get_commit_message():
     return util.get_from_envfile('CI_COMMIT_TITLE')
 
 
+# CI_COMMIT_REF_NAME is the branch or tag name, CI_BUILD_REF_NAME its name before GitLab 9.0
 def get_branch_id():
-    return util.get_from_envfile_or('CI_BUILD_REF_NAME', '')
-
-
-def get_commit_id():
-    return util.get_from_envfile_or('CI_COMMIT_REF_NAME', '')
+    for key in ('CI_COMMIT_REF_NAME', 'CI_BUILD_REF_NAME'):
+        branch_id = util.get_from_envfile_or(key, '')
+        if branch_id != "":
+            return branch_id
+    commit_id = util.get_from_envfile_or('CI_COMMIT_SHA', '')
+    return commit_id + " (commit_id)" if commit_id != "" else ""
 
 
 def show_usage():
@@ -78,10 +80,7 @@ def transform(line):
     line = line.replace("[[wiki-url]]", get_wiki_main_url())
     line = line.replace("[[job-url]]", get_job_url())
 
-    branch_id = get_branch_id()
-    if branch_id == "":
-        branch_id = get_commit_id() + " (commit_id)"
-    line = line.replace("[[branch-id]]", branch_id)
+    line = line.replace("[[branch-id]]", get_branch_id())
     line = line.replace("[[user-name]]", get_user_name())
     line = line.replace("[[commit-message]]", get_commit_message())
     line = line.replace("[[permalink-prefix]]", get_permalink_prefix())

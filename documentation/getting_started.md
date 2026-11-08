@@ -115,7 +115,7 @@ CI_PROJECT_URL=https://gitlab.example.com/group/project
 CI_COMMIT_SHA=0123456789abcdef
 CI_JOB_URL=https://gitlab.example.com/group/project/-/jobs/42
 CI_COMMIT_TITLE=Fix the frobnicator
-CI_BUILD_REF_NAME=main
+CI_COMMIT_REF_NAME=main
 GITLAB_USER_NAME=Jane Doe
 ```
 
@@ -183,10 +183,9 @@ opencanary:
   needs: [build]
   script:
     - |
-      for v in CI_PROJECT_URL CI_COMMIT_SHA CI_JOB_URL CI_COMMIT_TITLE GITLAB_USER_NAME; do
+      for v in CI_PROJECT_URL CI_COMMIT_SHA CI_COMMIT_REF_NAME CI_JOB_URL CI_COMMIT_TITLE GITLAB_USER_NAME; do
         echo "$v=${!v}"
       done > env.txt
-      echo "CI_BUILD_REF_NAME=$CI_COMMIT_REF_NAME" >> env.txt
     - python3 OpenCanary/verification/opencanary.py run -c opencanary.toml
   artifacts:
     when: always

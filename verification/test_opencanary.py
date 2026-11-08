@@ -433,6 +433,17 @@ class TestStages(unittest.TestCase):
         out = lines(run_script("sortby.py", stdin=data))
         self.assertEqual([line.split("|")[3] for line in out], ["z.cc:1", "b.cc:2", "b.cc:10"])
 
+    def test_branch_id_from_current_and_old_gitlab_names(self):
+        import tempfile
+        cases = [("CI_COMMIT_REF_NAME=main\nCI_BUILD_REF_NAME=old\n", "main"), ("CI_BUILD_REF_NAME=old\n", "old"),
+                 ("CI_COMMIT_SHA=0123abc\n", "0123abc (commit_id)"), ("", "")]
+        with tempfile.TemporaryDirectory() as d:
+            env = os.path.join(d, "env.txt")
+            for content, expected in cases:
+                with open(env, "w", encoding="utf-8") as f:
+                    f.write(content)
+                self.assertEqual(run_script("apply_environment.py", [env], "[[branch-id]]\n"), expected + "\n", content)
+
     def test_apply_environment_replaces_placeholders(self):
         out = run_script("apply_environment.py", [os.path.join(TESTDATA, "env.txt")], "[[job-url]] [[user-name]]\n")
         self.assertEqual(out.strip(), "https://ci.example.com/group/proj/-/jobs/42 Test User")
