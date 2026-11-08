@@ -353,7 +353,7 @@ The old spellings `/msvc`, `-display_depth=2`, `-reference_depth=2` and `-depth=
 For every issue, in this order:
 
 1. **component**: the first `component:<name>` rule that matches the fileref (with `/` separators) sets it to
-   `<name>`; when none matches the component becomes empty (a value set by a parser is replaced).
+   `<name>`; when none matches the component is left as it was (for example `compiler`).
 2. **team**: the first `team:<name>` rule that matches sets it; when none matches the team is left as it was.
 3. **fileref clean-up**: `\` becomes `/`. A path into a Visual Studio installation (matching
    `.*Program Files/Microsoft.*/<digits>/<word>/`) is cut after that part and gets no file link. Otherwise a drive
@@ -678,8 +678,6 @@ field numeric: values that differ by at most DELTA (default 1) are equal. Needs 
 
 ## Known limitations
 
-- `tr_customize.py` always replaces the component, so the `compiler` component set by the parsers for command line
-  warnings is lost unless a `component:` rule matches.
 - `apply_environment.py` reads the branch from `CI_BUILD_REF_NAME`, the old GitLab name; set
   `CI_BUILD_REF_NAME=$CI_COMMIT_REF_NAME` in the environment file on current GitLab versions.
 - `oc_cpp_issues.py`: the spelling check (`AP#19`) is not finished. When ripgrep is installed it prints

@@ -21,7 +21,7 @@ rules = []       # set by main()
 
 def define_component(parts):
     file = parts[Column.FILE].replace(windows_separator, unix_separator)
-    return util.first_match(rules, file, "component") or ""
+    return util.first_match(rules, file, "component") or parts[Column.COMPONENT]
 
 
 def define_team(parts):

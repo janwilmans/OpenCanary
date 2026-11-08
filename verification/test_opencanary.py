@@ -313,6 +313,11 @@ class TestCustomize(unittest.TestCase):
         self.assertEqual(parts[3], "build/lib/toolkit/a.cc:12")
         self.assertIn("[3]{[[permalink-prefix]]/build/lib/toolkit/a.cc#L12}", parts[8])
 
+    def test_component_without_matching_rule_is_kept(self):
+        row = "8||compiler|cl : Command line warning|msvc|D9002|cmdline|d|\n"
+        rules = os.path.join(HERE, "examples", "customize_toolkit.txt")
+        self.assertEqual(run_script("tr_customize.py", ["--rules", rules], row).split("|")[2], "compiler")
+
     def test_drive_letter_is_removed_and_path_is_linked(self):
         row = self.ROW.replace("|build", "|C:\\build")
         rules = os.path.join(HERE, "examples", "customize_toolkit.txt")
