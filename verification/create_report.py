@@ -401,19 +401,20 @@ def create_cell(column, value, link):
 
 
 def create_table(lines):
-    result = '<div class="table-wrap">\n<table id="issues">\n<thead><tr>\n'
+    # collect the pieces in a list and join once, repeated string += is quadratic for large reports
+    result = ['<div class="table-wrap">\n<table id="issues">\n<thead><tr>\n']
     for _column, name, title in COLUMNS:
-        result += f'<th scope="col" title="{title}"><button type="button" class="sort">{name}</button></th>\n'
-    result += '</tr></thead>\n<tbody>\n'
+        result.append(f'<th scope="col" title="{title}"><button type="button" class="sort">{name}</button></th>\n')
+    result.append('</tr></thead>\n<tbody>\n')
     tiers = []
     for line in lines:
         parts = util.read_structured_line(line)
         tier = get_tier(parts[Column.PRIO])
         tiers.append(tier)
         cells = (create_cell(column[0], value, link) for column, (value, link) in zip(COLUMNS, get_link_map(parts)))
-        result += f'<tr class="{tier}" data-tier="{tier}">' + ''.join(cells) + '</tr>\n'
-    result += '</tbody>\n</table>\n<p class="empty-message" id="no-match" hidden="hidden">No issues match the filter.</p>\n</div>\n'
-    return result, tiers
+        result.append(f'<tr class="{tier}" data-tier="{tier}">' + ''.join(cells) + '</tr>\n')
+    result.append('</tbody>\n</table>\n<p class="empty-message" id="no-match" hidden="hidden">No issues match the filter.</p>\n</div>\n')
+    return ''.join(result), tiers
 
 
 def create_html_report(lines, count):
