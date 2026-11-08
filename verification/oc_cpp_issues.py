@@ -45,9 +45,11 @@ def rip_grep(rootpath):
     command = ["rg", "-o", "-n", "-w", "--column", "--color=never", "--no-heading", "--with-filename"]
     for word in wrong_word_list:
         command += ["-e", word]
+    # without a path (and with a stdin that is not a terminal, as in CI) ripgrep searches stdin instead of the directory
+    command += ["--", "."]
     try:
-        return subprocess.run(command, cwd=rootpath, check=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                              text=True, encoding="utf-8", errors="replace").stdout
+        return subprocess.run(command, cwd=rootpath, check=False, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace").stdout
     except FileNotFoundError:
         eprint("ripgrep (rg) not found, spelling check (AP#19) skipped")
         return ""

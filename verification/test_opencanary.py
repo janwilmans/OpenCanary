@@ -417,6 +417,15 @@ class TestCppIssues(unittest.TestCase):
             self.assertEqual(len(ap9), 1, rows)
             self.assertIn("(_Reserved)", ap9[0][7])
 
+    @unittest.skipUnless(__import__("shutil").which("rg"), "needs ripgrep (rg)")
+    def test_spelling_check_ignores_stdin(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "a.cc"), "w", encoding="utf-8") as f:
+                f.write("// recieve\n")
+            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d], stdin="wich\n"))]
+            self.assertEqual([(row[5], row[3].rsplit(":", 1)[1]) for row in rows if row[5] == "AP#19"], [("AP#19", "1")], rows)
+
     def test_spelling_matches_are_limited_to_the_checked_files(self):
         import oc_cpp_issues
         root = os.path.abspath("project")
