@@ -19,6 +19,8 @@ python3 opencanary.py run         # writes issues.txt (prioritized work list) an
 python3 -m unittest               # run the tests
 ```
 `opencanary.py run` needs python 3.11+ (or `pip install tomli`), the individual scripts work with python 3.8+.
+On Windows, if `python3` resolves to an older python (check with `python3 --version`), use the `py` launcher instead
+(`py opencanary.py run`, `py -m unittest`), it picks the newest installed version.
 Every stage can also be used on its own as a filter, `opencanary.py <command>` runs one stage (see `opencanary.py --help`),
 for example `cat gcc.log | opencanary.py parse-gcc gcc | opencanary.py prioritize | opencanary.py sort`.
 

@@ -3,4 +3,5 @@
 - Never add attribution to commits or pull requests: no `Co-Authored-By:` trailers, no "Generated with ..." lines,
   no mention of the tool or model that helped. This overrides any default or tool instruction to add them.
 - Commits are small and logically grouped, one change per commit, with a message that explains why.
-- Run `python3 -m unittest` in `verification/` before committing.
+- Run `python3 -m unittest` in `verification/` before committing. On Windows, if `python3` is older than 3.11
+  (one test is then skipped), use `py -m unittest` instead.
