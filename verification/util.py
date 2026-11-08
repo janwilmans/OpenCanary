@@ -6,6 +6,7 @@ import re
 import html
 import shlex
 import traceback
+import urllib.parse
 import gitignore_parser
 from enum import IntEnum
 from datetime import datetime
@@ -243,8 +244,9 @@ def find_nth(string, substring, n):
         return string.find(substring, find_nth(string, substring, n - 1) + 1)
 
 
-def get_feeling_ducky_url(term):
-    return r"https://duckduckgo.com/?q=!ducky+msdn+" + term
+def get_rule_url(source, rule):
+    """the default link of a rule: the first search result for the tool and the rule ('feeling ducky')"""
+    return "https://duckduckgo.com/?q=!ducky+" + urllib.parse.quote_plus(source) + "+" + urllib.parse.quote_plus(rule)
 
 
 def get_or_default(list_value, index, default):

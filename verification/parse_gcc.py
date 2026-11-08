@@ -41,7 +41,7 @@ def report_issue(file, filename, line, source, rule, category, description):
     links = create_default_link(filename, line)
 
     if is_valid_rule(rule):
-        links += create_link(5, get_feeling_ducky_url(rule))
+        links += create_link(5, get_rule_url(source, rule))
 
     team = ""
     component = ""

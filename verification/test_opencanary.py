@@ -91,6 +91,12 @@ class TestParseGcc(unittest.TestCase):
         self.assertIn("sign-compare", rules)
         self.assertIn("unused-parameter", rules)
 
+    def test_rule_links_to_a_search_for_source_and_rule(self):
+        result = run_script("parse_gcc.py", ["clang"], read_testdata("gcc_warnings.txt"))
+        self.assertIn("[5]{https://duckduckgo.com/?q=!ducky+clang+sign-compare}", result)
+        import util
+        self.assertEqual(util.get_rule_url("cpp check", "AP#13"), "https://duckduckgo.com/?q=!ducky+cpp+check+AP%2313")
+
     def test_parse_gcc_full_integration(self):
         stages = [("parse_gcc.py", ["gcc"])] + DEFAULT_STAGES + ["create_report.py", ("apply_environment.py", [os.path.join(TESTDATA, "env.txt")])]
         report = run_pipeline(stages, read_testdata("gcc_warnings.txt"))

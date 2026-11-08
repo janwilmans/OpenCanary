@@ -23,7 +23,7 @@ def shorten_path_stem(v):
 def report_issue(filename, line, rule, description, component, category):
     links = create_link(3, urljoin("[[permalink-prefix]]", shorten_path_stem(filename) + "#L" + str(line)))
     if not rule == "":
-        links += create_link(5, "https://duckduckgo.com/?q=!ducky+msdn+" + rule)
+        links += create_link(5, get_rule_url("cppcheck", rule))
 
     priority = 10
     if int(line) == 0:

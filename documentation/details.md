@@ -31,7 +31,7 @@ Every stage between the parsers and the report passes *issues*: one issue per li
 
 ```
 priority|team|component|fileref|source|rule|category|description|links
-8|||src/w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness|[3]{[[permalink-prefix]]/src/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+msdn+sign-compare}
+8|||src/w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness|[3]{[[permalink-prefix]]/src/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+gcc+sign-compare}
 ```
 
 | # | Field | Meaning | Written by | Changed by |
@@ -192,11 +192,11 @@ Reads a gcc or clang build log (clang and clang-tidy use the same format) and wr
 - **priority** `8`, **team** empty, **component** `compiler` for `cmdline` warnings and empty otherwise,
   **category** `warning`.
 - **links**: `[3]{[[permalink-prefix]]/<file>#L<line>}` and, unless the rule is `rule-missing`, `unused`,
-  `uninitialized` or `cmdline`, `[5]{https://duckduckgo.com/?q=!ducky+msdn+<rule>}`.
+  `uninitialized` or `cmdline`, `[5]{https://duckduckgo.com/?q=!ducky+<source>+<rule>}`.
 
 ```
 in:   w.cc:9:11: warning: comparison of integer expressions of different signedness: 'int' and 'unsigned int' [-Wsign-compare]
-out:  8|||w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness: &#x27;int&#x27; and &#x27;unsigned int&#x27; |[3]{[[permalink-prefix]]/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+msdn+sign-compare}
+out:  8|||w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness: &#x27;int&#x27; and &#x27;unsigned int&#x27; |[3]{[[permalink-prefix]]/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+gcc+sign-compare}
 ```
 
 ### parse_msvc.py
@@ -224,11 +224,11 @@ Reads an MSVC (cl.exe, MASM, link) build log and writes one issue per warning.
   up to and including `Command line warning`, the rule (`D9002`) and description follow, **component** `compiler`,
   **category** `cmdline`.
 - **priority** `8`, **team** empty, description HTML-escaped.
-- **links**: only `[5]{https://duckduckgo.com/?q=!ducky+msdn+<rule>}`; the file link is added by `tr_customize.py`.
+- **links**: only `[5]{https://duckduckgo.com/?q=!ducky+<source>+<rule>}`; the file link is added by `tr_customize.py`.
 
 ```
 in:   C:\project\lib\toolkit\slot.h(75): warning C4251: 'Slot::m_name': class 'std::string' needs to have dll-interface
-out:  8|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_name&#x27;: class &#x27;std::string&#x27; needs to have dll-interface|[5]{https://duckduckgo.com/?q=!ducky+msdn+C4251}
+out:  8|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_name&#x27;: class &#x27;std::string&#x27; needs to have dll-interface|[5]{https://duckduckgo.com/?q=!ducky+msvc+C4251}
 ```
 
 ### oc_cpp_issues.py
