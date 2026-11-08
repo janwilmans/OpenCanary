@@ -12,6 +12,9 @@ The process works in a couple of steps that are executed as post-build steps as 
 
 ## Quickstart
 
+New to OpenCanary? [documentation/getting_started.md](documentation/getting_started.md) walks through the first steps,
+[documentation/details.md](documentation/details.md) describes every script, its arguments and what it does exactly.
+
 ```
 cd verification
 python3 opencanary.py init        # writes opencanary.toml, point [[input]] at your build log(s)
