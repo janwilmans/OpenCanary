@@ -368,8 +368,8 @@ class TestLinks(unittest.TestCase):
                  "solution:https://example/rules.md#<anchor>  ?^AP#\n"
                  "solution:[[wiki-issue-prefix]]<rule>  ~C4\n")
         out = self.links(rules, self.row("msvc", "C4100", "[5]{https://parser}"), self.row("opencanary", "AP#13"))
-        import apply_links
-        self.assertEqual([apply_links.anchor(rule) for rule in ["AP#13", "C4100", "sign-compare", "format-truncation=", "a_b c"]],
+        import util
+        self.assertEqual([util.heading_anchor(rule) for rule in ["AP#13", "C4100", "sign-compare", "format-truncation=", "a_b c"]],
                          ["ap13", "c4100", "sign-compare", "format-truncation", "a_b-c"])
         self.assertEqual(out, ["[5]{https://docs/msvc/C4100}[solution]{[[wiki-issue-prefix]]C4100}",
                                "[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}[solution]{https://example/rules.md#ap13}"])
@@ -389,9 +389,9 @@ class TestRulesDocumentation(unittest.TestCase):
         self.assertEqual(rules - headings, set())
         links = util.load_rules(util.default_rules_file("links.txt"))
         for rule in rules:
-            # <anchor> must be the anchor GitHub gives the '### <rule>' heading: lowercase, only letters and digits
+            # <anchor> must be the anchor GitHub gives the '### <rule>' heading
             self.assertEqual(apply_links.fill(util.first_match(links, rule, "solution"), "opencanary", rule),
-                             "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + apply_links.anchor(rule))
+                             "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + util.heading_anchor(rule))
         self.assertIsNone(util.first_match(links, "sign-compare", "solution"))
 
 
@@ -487,6 +487,7 @@ class TestCppIssues(unittest.TestCase):
             ap9 = [row for row in rows if row[5] == "AP#9"]
             self.assertEqual(len(ap9), 1, rows)
             self.assertIn("(_Reserved)", ap9[0][7])
+            self.assertIn("[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#ap9}", ap9[0][8])
 
     @unittest.skipUnless(__import__("shutil").which("rg"), "needs ripgrep (rg)")
     def test_spelling_check_ignores_stdin(self):

@@ -2,8 +2,8 @@
 
 The rules that OpenCanary reports itself: `oc_cpp_issues.py` checks every line of the headers and sources (and the
 Visual Studio projects) for common C++ problems. This page explains, per rule, why it is reported and how to solve it.
-In the report, the light bulb after one of these rules links to its section here (see `rules/links.txt`), and every
-section has an anchor: `rules.md#ap13` for `AP#13`.
+In the report, the rule links to its section here, and so does the light bulb after it (see `rules/links.txt`);
+every section has an anchor: `rules.md#ap13` for `AP#13`.
 
 The prefix tells the kind of rule: `MO` modernize, `AP` anti-pattern, `UD` project setting. The number is unique over
 all prefixes. The checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a

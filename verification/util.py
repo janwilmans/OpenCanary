@@ -266,6 +266,15 @@ def create_link(index, url):
     return "[" + str(index) + "]{" + url + "}"
 
 
+def heading_anchor(text):
+    """the anchor of a markdown heading on GitHub and GitLab: lowercase, punctuation removed, spaces become '-'"""
+    return re.sub(r"[^\w\- ]", "", text.lower()).replace(" ", "-")
+
+
+# the documentation of the rules of oc_cpp_issues.py, one section per rule: RULES_DOCUMENTATION_URL + "#" + heading_anchor(rule)
+RULES_DOCUMENTATION_URL = "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md"
+
+
 # key of the [solution]{url} link: a page with a solution suggestion for the rule of the issue, shown as an icon after the rule
 SOLUTION_LINK = "solution"
 

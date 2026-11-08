@@ -14,7 +14,6 @@
 """
 
 import argparse
-import re
 import sys
 import urllib.parse
 import util
@@ -28,12 +27,7 @@ def show_usage():
 def fill(template, source, rule):
     return (template.replace("<source>", urllib.parse.quote(source, safe=""))
                     .replace("<rule>", urllib.parse.quote(rule, safe=""))
-                    .replace("<anchor>", anchor(rule)))
-
-
-def anchor(text):
-    """the anchor of a markdown heading on GitHub and GitLab: lowercase, punctuation removed, spaces become '-'"""
-    return re.sub(r"[^\w\- ]", "", text.lower()).replace(" ", "-")
+                    .replace("<anchor>", util.heading_anchor(rule)))
 
 
 def transform(rules, parts):

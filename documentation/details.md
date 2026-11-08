@@ -285,7 +285,9 @@ Every Visual Studio project (a file whose name ends with `proj`) is checked per 
 
 Fields: **priority** `11` (to be set by `apply_team_priorities.py`, the default `rules/priorities.txt` lists all these
 rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (`:0` for project checks),
-**source** `opencanary`, **links** `[3]{[[permalink-prefix]]/<absolute path with />#L<line>}`. Because the path is
+**source** `opencanary`, **links** `[3]{[[permalink-prefix]]/<absolute path with />#L<line>}` and
+`[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>}`, the section of the rule in
+[rules.md](rules.md). Because the path is
 absolute, use `reference_depth` (`tr_customize.py --reference-depth`) to make the links match the repository.
 
 The spelling check (`AP#19`) runs `rg` (ripgrep) once in `<path>` and reports only matches in the headers and sources

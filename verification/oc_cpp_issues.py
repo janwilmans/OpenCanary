@@ -126,7 +126,8 @@ def create_default_link(filename, line):
 
 
 def report_issue_detail(fileref, filename, line, rule, description, component, category):
-    links = create_default_link(filename, line)
+    # the rule links to its section in documentation/rules.md, why it is reported and how to solve it
+    links = create_default_link(filename, line) + util.create_link(5, util.RULES_DOCUMENTATION_URL + "#" + util.heading_anchor(rule))
     team = ""
     component = ""
     util.report(get_priority(), team, component, fileref,
