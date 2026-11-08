@@ -23,6 +23,26 @@ in [details.md](details.md).
   `py opencanary.py run`, it picks the newest installed version.
 - A current browser (Chrome, Edge, Firefox or Safari) to open the report.
 
+Some scripts use other tools; without them only that part is skipped or unavailable:
+
+| Tool | Needed by | Without it |
+|------|-----------|------------|
+| `rg` ([ripgrep](https://github.com/BurntSushi/ripgrep)) | `oc_cpp_issues.py`, the spelling check (`AP#19`) | the spelling check is skipped, with a message on stderr |
+| `tomli` (python package) | `opencanary.py run` on Python older than 3.11 | `opencanary.py run` stops; the individual scripts still work |
+| `cppcheck` | `cppcheck.py` | no cppcheck issues |
+| `clang-format` | `run_clang_format.py` (`CLANG_FORMAT` selects the binary, default `clang-format-11`) | the script cannot check formatting |
+| `git` | `send_email.py`, to find the recent authors | `send_email.py` fails |
+| `docopt` (python package) | `prettydiff.py` | the script cannot run |
+
+On Debian or Ubuntu, install all of them with:
+
+```
+sudo apt install python3 ripgrep python3-tomli cppcheck clang-format git python3-docopt
+```
+
+On other systems use the package manager (for example `winget`, `choco` or `brew`) or `pip install tomli docopt` for
+the python packages.
+
 The examples below use `python3`; all scripts are in the `verification/` directory of this repository.
 
 ## Step 1: capture a build log

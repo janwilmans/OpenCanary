@@ -22,6 +22,9 @@ python3 opencanary.py run         # writes issues.txt (prioritized work list) an
 python3 -m unittest               # run the tests
 ```
 `opencanary.py run` needs python 3.11+ (or `pip install tomli`), the individual scripts work with python 3.8+.
+Optional tools: `rg` (ripgrep, spelling check in `oc_cpp_issues.py`), `cppcheck`, `clang-format`, `git` and `docopt`, see
+[Requirements](documentation/getting_started.md#requirements). On Debian or Ubuntu, install everything with
+`sudo apt install python3 ripgrep python3-tomli cppcheck clang-format git python3-docopt`.
 On Windows, if `python3` resolves to an older python (check with `python3 --version`), use the `py` launcher instead
 (`py opencanary.py run`, `py -m unittest`), it picks the newest installed version.
 Every stage can also be used on its own as a filter, `opencanary.py <command>` runs one stage (see `opencanary.py --help`),
