@@ -13,7 +13,8 @@ The process works in a couple of steps that are executed as post-build steps as 
 ## Quickstart
 
 New to OpenCanary? [documentation/getting_started.md](documentation/getting_started.md) walks through the first steps,
-[documentation/details.md](documentation/details.md) describes every script, its arguments and what it does exactly.
+[documentation/details.md](documentation/details.md) describes every script, its arguments and what it does exactly,
+[documentation/rules.md](documentation/rules.md) explains OpenCanary's own rules and how to solve them.
 
 ```
 cd verification

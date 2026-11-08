@@ -372,6 +372,26 @@ class TestLinks(unittest.TestCase):
                                "[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}[solution]{https://example/rules.md#ap13}"])
 
 
+class TestRulesDocumentation(unittest.TestCase):
+
+    def test_every_rule_has_a_section_and_a_solution_link(self):
+        import re
+        import apply_links
+        import util
+        with open(os.path.join(HERE, "oc_cpp_issues.py"), encoding="utf-8") as f:
+            rules = set(re.findall(r'"((?:AP|MO|UD)#\d+|PARSE)"', f.read()))
+        with open(os.path.join(HERE, "..", "documentation", "rules.md"), encoding="utf-8") as f:
+            headings = set(re.findall(r"^### (\S+)$", f.read(), re.M))
+        self.assertTrue({"AP#13", "AP#19", "MO#1", "UD#5", "PARSE"} <= rules, rules)
+        self.assertEqual(rules - headings, set())
+        links = util.load_rules(util.default_rules_file("links.txt"))
+        for rule in rules:
+            # <anchor> must be the anchor GitHub gives the '### <rule>' heading: lowercase, only letters and digits
+            self.assertEqual(apply_links.fill(util.first_match(links, rule, "solution"), "opencanary", rule),
+                             "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + re.sub(r"[^a-z0-9]", "", rule.lower()))
+        self.assertIsNone(util.first_match(links, "sign-compare", "solution"))
+
+
 class TestCustomize(unittest.TestCase):
     ROW = "8||c|build\\lib\\toolkit\\a.cc:12|gcc|rule|warning|d|[3]{old}\n"
 

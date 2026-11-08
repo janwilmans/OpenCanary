@@ -249,7 +249,8 @@ oc_cpp_issues.py <path>
 Searches C++ sources and Visual Studio projects for common problems with plain text checks (no compiler involved).
 Files and directories listed in a `.opencanaryignore` file (`.gitignore` syntax) are skipped.
 
-Every line of every header (`.h`, `.hpp`) and source file (`.cpp`, `.cc`) is checked:
+Every line of every header (`.h`, `.hpp`) and source file (`.cpp`, `.cc`) is checked. Why each rule is reported and
+how to solve it is in [rules.md](rules.md); the default `rules/links.txt` links the solution icon of each rule there.
 
 The descriptions below are shortened; the reported text starts with `Anti-pattern: ` or `prevent UB: `.
 

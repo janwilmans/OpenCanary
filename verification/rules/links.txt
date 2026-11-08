@@ -14,6 +14,10 @@
 # a rule without a matching solution: line has no solution icon
 # use quotes around a matcher that contains spaces, '#' after a space starts a comment
 
+# the rules of oc_cpp_issues.py: the solution is their section in documentation/rules.md
+solution:https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>  ?^(AP|MO|UD)#[0-9]+$
+solution:https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>  =PARSE
+
 # examples:
 # link:https://clang.llvm.org/docs/DiagnosticsReference.html#w<rule>  ?^[a-z][a-z0-9-]*$
 # solution:[[wiki-issue-prefix]]<rule>  ?^C4[0-9]+$
