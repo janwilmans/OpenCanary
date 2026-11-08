@@ -66,8 +66,8 @@ options = docopt.docopt(__doc__, version='1.0')
 
 fromfile = options['<file1>']
 tofile = options['<file2>']
-fromlines = open(fromfile, 'U').readlines()
-tolines = open(tofile, 'U').readlines()
+fromlines = open(fromfile).readlines()
+tolines = open(tofile).readlines()
 
 plusLines = diff(fromlines, tolines)
 minLines = diff(tolines, fromlines)

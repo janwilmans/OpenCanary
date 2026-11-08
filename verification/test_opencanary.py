@@ -388,6 +388,23 @@ class TestCppIssues(unittest.TestCase):
         self.assertEqual(oc_cpp_issues.get_spelling_violations(rg_output, root, [checked]), [(checked, "12", "recieve")])
 
 
+class TestPrettyDiff(unittest.TestCase):
+
+    @unittest.skipUnless(__import__("importlib.util").util.find_spec("docopt"), "prettydiff.py needs docopt")
+    def test_numeric_tolerance(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            old, new = os.path.join(d, "old.txt"), os.path.join(d, "new.txt")
+            with open(old, "w", encoding="utf-8") as f:
+                f.write("a|10|x\nb|1|x\n")
+            with open(new, "w", encoding="utf-8") as f:
+                f.write("a|11|x\nc|1|x\n")
+            out = lines(run_script("prettydiff.py", [old, new, "--num=1,1"]))
+            self.assertIn("+ c|1|x", out)
+            self.assertIn("- b|1|x", out)
+            self.assertFalse(any(line.startswith(("+ a", "- a")) for line in out), out)
+
+
 class TestIgnoreFiles(unittest.TestCase):
 
     def test_cpp_files_respect_ignore_file(self):

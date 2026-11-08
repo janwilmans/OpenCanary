@@ -682,4 +682,3 @@ field numeric: values that differ by at most DELTA (default 1) are equal. Needs 
 
 - `parse_gcc.py` takes the file name for the link up to the first `:`, so a Windows path with a drive letter gets a
   wrong `[3]` link; `tr_customize.py` replaces that link with a correct one.
-- `prettydiff.py` opens files with mode `'U'`, which Python 3.11 removed; it only runs on Python 3.10 and older.
