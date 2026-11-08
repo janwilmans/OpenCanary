@@ -409,6 +409,37 @@ class TestCppIssues(unittest.TestCase):
         self.assertEqual(oc_cpp_issues.get_spelling_violations(rg_output, root, [checked]), [(checked, "12", "recieve")])
 
 
+class TestPype(unittest.TestCase):
+
+    def test_summary_log(self):
+        import tempfile
+        output = ["building a.cc", "FAILED: a.o", "a.cc:3:1: error: oops", "[  PASSED  ] 3 tests",
+                  "x_test.cc:12: Failure", "SUMMARY: AddressSanitizer: heap-use-after-free src/a.cc:9 in f",
+                  "SUMMARY: AddressSanitizer: heap-use-after-free src/a.cc:9 in f", "lib.so: ubsan: overflow"]
+        script = "; ".join(f"print({line!r})" for line in output) + "; raise SystemExit(3)"
+        with tempfile.TemporaryDirectory() as d:
+            command = [sys.executable, os.path.join(HERE, "pype.py"), "build.log", "build_summary", "test_summary",
+                       "--", f'"{sys.executable}"', "-c", f'"{script}"']
+            result = subprocess.run(command, cwd=d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+            self.assertEqual(result.returncode, 3, result.stderr)
+            with open(os.path.join(d, "build.log"), encoding="utf-8") as f:
+                self.assertEqual(f.read().splitlines(), output)
+            with open(os.path.join(d, "summary.log"), encoding="utf-8") as f:
+                summary = f.read().splitlines()
+        self.assertEqual(summary[:3], ["FAILED: a.o", "a.cc:3:1: error: oops", "x_test.cc:12: Failure"])
+        self.assertIn("ASAN: 2 issues (1 unique)", summary)
+        self.assertIn("UBSAN: 1 issues (1 unique)", summary)
+        self.assertEqual(summary[-2:], ["----- Sanitizer issues with direct source references ----",
+                                        "SUMMARY: AddressSanitizer: heap-use-after-free src/a.cc:9 in f"])
+
+    def test_no_summary_log_without_options(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            command = [sys.executable, os.path.join(HERE, "pype.py"), "build.log", "--", f'"{sys.executable}"', "-c", '"print(1)"']
+            subprocess.run(command, cwd=d, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            self.assertFalse(os.path.exists(os.path.join(d, "summary.log")))
+
+
 class TestPrettyDiff(unittest.TestCase):
 
     @unittest.skipUnless(__import__("importlib.util").util.find_spec("docopt"), "prettydiff.py needs docopt")

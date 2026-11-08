@@ -661,13 +661,20 @@ specific project, and an admin address when not running on CI.
 ### pype.py
 
 ```
-pype.py <logfile> [filter-msvc-warnings] [add-msvc-summary] [filter-gcc-warnings] [add-gcc-summary] -- <command ...>
+pype.py <logfile> [filter-msvc-warnings] [add-msvc-summary] [filter-gcc-warnings] [add-gcc-summary] [build_summary] [test_summary] -- <command ...>
 ```
 
 Runs the command through the shell, writes its combined stdout and stderr to `<logfile>`, and streams it to stderr at
-the same time (unbuffered, for live CI logs). The options only change what is streamed: `filter-*-warnings` hides
-warning and note lines, `add-*-summary` repeats all `: error ` lines at the end. Exits with the command's exit code and
-prints the elapsed time.
+the same time (unbuffered, for live CI logs). `filter-*-warnings` hides warning and note lines from the stream,
+`add-*-summary` repeats all `: error ` lines at the end. Exits with the command's exit code and prints the elapsed time.
+
+`build_summary` and `test_summary` append to `summary.log` in the current directory, so a CI job can show the
+failures at the end (for example `cat summary.log` in `after_script`), also when several commands are run with pype:
+
+| Option          | Appends to `summary.log` |
+|-----------------|--------------------------|
+| `build_summary` | lines with `FAILED:`, `Failed`, `error:` or `Killed` |
+| `test_summary`  | gtest/ctest failures (`[  FAILED  ]`, `***Failed`, `: Failure`), and at the end all unique AddressSanitizer, UndefinedBehaviorSanitizer and ThreadSanitizer lines, their counts, and the sanitizer lines that refer to a source file |
 
 ### returncode.py
 
