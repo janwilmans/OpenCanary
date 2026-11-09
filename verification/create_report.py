@@ -58,11 +58,36 @@ def get_tier(priority):
     return TIERS[-1][0]
 
 
+# the dark colors, used both for the system setting and for the theme button
+DARK_VARIABLES = """
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #1e222b;
+  --text: #e6e8ec;
+  --muted: #98a2b3;
+  --border: #2a2f3a;
+  --accent: #6c9dff;
+  --accent-soft: #1d2a45;
+  --row-hover: #1c2230;
+  --t1: #ff6b5e; --t1-soft: #3a1d1b;
+  --t2: #ffa04d; --t2-soft: #3a2a17;
+  --t3: #e8c547; --t3-soft: #352f15;
+  --t4: #98a2b3; --t4-soft: #262b35;
+  --shadow: none;
+"""
+
+
 def get_html_head():
     return r'''<head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>OpenCanary issue report</title>
+<script>/*<![CDATA[*/
+try {
+  const theme = localStorage.getItem('opencanary-theme');
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+} catch (error) { /* no storage, follow the system setting */ }
+/*]]>*/</script>
 <style>
 :root {
   color-scheme: light dark;
@@ -83,24 +108,13 @@ def get_html_head():
   --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
   --mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
+/* the theme button sets data-theme on the html element, without it the page follows the system setting */
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1115;
-    --surface: #171a21;
-    --surface-2: #1e222b;
-    --text: #e6e8ec;
-    --muted: #98a2b3;
-    --border: #2a2f3a;
-    --accent: #6c9dff;
-    --accent-soft: #1d2a45;
-    --row-hover: #1c2230;
-    --t1: #ff6b5e; --t1-soft: #3a1d1b;
-    --t2: #ffa04d; --t2-soft: #3a2a17;
-    --t3: #e8c547; --t3-soft: #352f15;
-    --t4: #98a2b3; --t4-soft: #262b35;
-    --shadow: none;
-  }
+  :root:not([data-theme="light"]) {/*DARK*/}
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;/*DARK*/}
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -126,6 +140,10 @@ h1 { margin: 4px 0 8px; font-size: 26px; font-weight: 650; letter-spacing: -.01e
   background: var(--surface); color: var(--text); font-weight: 500; box-shadow: var(--shadow);
 }
 .button:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+button.button { font: inherit; cursor: pointer; }
+.button.theme { display: inline-flex; align-items: center; padding: 6px 8px; }
+.button.theme svg { width: 18px; height: 18px; }
+.button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
 .card {
@@ -251,7 +269,7 @@ footer { padding: 16px 0 0; color: var(--muted); font-size: 12px; text-align: ce
 [hidden] { display: none !important; }
 </style>
 </head>
-'''
+'''.replace("/*DARK*/", DARK_VARIABLES)
 
 
 def get_script_section():
@@ -264,6 +282,36 @@ def get_script_section():
     const value = (item.querySelector('dd') || item).textContent.trim();
     const href = item.getAttribute('href') || '';
     if (!value || value === '(commit_id)' || value.includes('[[') || href.includes('[[')) item.remove();
+  }
+
+  // the theme button cycles auto (follow the system setting), light and dark, and remembers the choice
+  const themeButton = document.getElementById('theme');
+  if (themeButton) {
+    const THEMES = ['auto', 'light', 'dark'];
+    const SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+    const ICONS = {
+      auto: SVG + '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>',
+      light: SVG + '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+      dark: SVG + '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+    };
+    const showTheme = () => {
+      const theme = document.documentElement.dataset.theme || 'auto';
+      themeButton.innerHTML = ICONS[theme];
+      themeButton.title = 'Theme: ' + theme + ', click to switch between auto (system setting), light and dark';
+      themeButton.setAttribute('aria-label', 'Theme: ' + theme);
+    };
+    themeButton.addEventListener('click', () => {
+      const current = document.documentElement.dataset.theme || 'auto';
+      const next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+      if (next === 'auto') delete document.documentElement.dataset.theme;
+      else document.documentElement.dataset.theme = next;
+      try {
+        if (next === 'auto') localStorage.removeItem('opencanary-theme');
+        else localStorage.setItem('opencanary-theme', next);
+      } catch (error) { /* no storage, the choice lasts until the page is closed */ }
+      showTheme();
+    });
+    showTheme();
   }
 
   const table = document.getElementById('issues');
@@ -756,6 +804,7 @@ def create_header():
 <nav class="links">
 <a class="button" data-optional="" href="[[job-url]]">CI job</a>
 <a class="button" data-optional="" href="[[wiki-url]]">Wiki</a>
+<button type="button" class="button theme" id="theme" title="Theme: auto" aria-label="Theme: auto"></button>
 </nav>
 </header>
 '''

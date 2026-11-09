@@ -135,6 +135,15 @@ class TestReport(unittest.TestCase):
         self.assertEqual(report_rows(report)[0][-1], {"5": "https://x/rule", "solution": "[[wiki-issue-prefix]]rule"})
         self.assertIn("How to solve", report)
 
+    def test_theme_button(self):
+        report = run_script("create_report.py", stdin=self.row("5"))
+        self.assertTrue(is_valid_xml(report))
+        self.assertIn('id="theme"', report)
+        # the dark colors apply both for the system setting and for the button
+        self.assertIn(':root:not([data-theme="light"])', report)
+        self.assertIn(':root[data-theme="dark"]', report)
+        self.assertNotIn("/*DARK*/", report)
+
     def test_every_column_has_a_value_filter(self):
         import create_report
         report = run_script("create_report.py", stdin=self.row("5"))
