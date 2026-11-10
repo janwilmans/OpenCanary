@@ -37,6 +37,65 @@
 17  ~C4714
 5   ~C4918
 
+# clang warnings (-Weverything), placed before the gcc section so these exact matches win over its ~ matchers (like ~unused-)
+# likely a bug
+15  =undefined-reinterpret-cast  # ub, type punning through reinterpret_cast
+15  =tautological-unsigned-enum-zero-compare  # comparison is always true/false
+20  =unreachable-code
+20  =cast-align  # ub, misaligned access
+25  =deprecated-copy-with-user-provided-dtor  # rule of three, copies may double free
+25  =deprecated-copy-with-dtor
+25  =shadow-field
+30  =cast-qual  # drops const, writing through it is ub
+30  =shadow
+35  =shadow-uncaptured-local
+35  =float-conversion  # floating point truncated to integer
+40  =shorten-64-to-32
+40  =format-signedness
+40  =undef  # undefined macro silently evaluates to 0
+40  =old-style-cast  # same as AP#8
+45  =implicit-int-conversion
+45  =float-equal
+50  =sign-conversion
+# the wrong way to do it
+60  =unsafe-buffer-usage-in-libc-call  # fgets, sprintf, memcpy...
+60  =implicit-float-conversion
+65  =implicit-int-float-conversion
+65  =reserved-identifier
+65  =reserved-macro-identifier
+70  =c++20-extensions
+70  =missing-prototypes
+70  =missing-variable-declarations
+70  =unused-member-function
+75  =global-constructors  # static initialization order
+75  =suggest-destructor-override
+75  =inconsistent-missing-destructor-override
+# style
+80  =used-but-marked-unused
+80  =unreachable-code-return
+85  =unreachable-code-break
+85  =unused-macros
+85  =zero-as-null-pointer-constant  # same as MO#5
+85  =switch-default
+85  =covered-switch-default
+90  =unsafe-buffer-usage-in-container
+90  =unsafe-buffer-usage-in-unique-ptr-array-access
+90  =unused-exception-parameter
+90  =missing-noreturn
+90  =nrvo
+90  =ctad-maybe-unsupported
+90  =exit-time-destructors
+90  =date-time
+95  =unsafe-buffer-usage
+95  =double-promotion
+95  =weak-vtables
+95  =redundant-parens
+95  =extra-semi
+95  =extra-semi-stmt
+98  =newline-eof
+98  =documentation-unknown-command
+98  =padded
+
 # gcc warnings, exact matches if possible, some contains trailing =
 
 # for example `implicit-fallthrough=`, `format-overflow=`, `stringop-overflow=` or `format-truncation=`
@@ -87,6 +146,7 @@
 99  =AP#12  # ??
 45  =AP#13  # delete
 15  =AP#14  # c-style-cast
+60  =AP#17  # using namespace in a header
 30  =AP#15  # casting literals
 30  =AP#16  # const_cast
 50  =AP#18  # assign inside condition
@@ -97,3 +157,4 @@ category:ub =aggressive-loop-optimizations
 category:ub ~stringop-truncation
 category:ub ~varargs
 category:ub ~array-bounds
+category:ub =undefined-reinterpret-cast
