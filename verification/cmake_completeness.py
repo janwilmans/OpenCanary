@@ -67,7 +67,7 @@ def main():
             continue
         if file not in all_transitive_files:
             sprint(file)
-            #util.report(Priority.UNSET.value, "", "cmake", file, "cmake_completeness", "CM#1", "build", "C++ source not build", "")
+            #util.report(Priority.UNASSIGNED.value, "", "cmake", file, "cmake_completeness", "CM#1", "build", "C++ source not build", "")
 
 
 if __name__ == "__main__":

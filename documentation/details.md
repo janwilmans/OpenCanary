@@ -31,7 +31,7 @@ Every stage between the parsers and the report passes *issues*: one issue per li
 
 ```
 priority|team|component|fileref|source|rule|category|description|links
-8|||src/w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness|[3]{[[permalink-prefix]]/src/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+gcc+sign-compare}
+99|||src/w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness|[3]{[[permalink-prefix]]/src/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+gcc+sign-compare}
 ```
 
 | # | Field | Meaning | Written by | Changed by |
@@ -54,8 +54,8 @@ Details:
   quotes from each field. A line that does not have nine fields is reported on stderr
   (`assertion failed: broken structured CSV`) but is still processed.
 - In the report the `[3]` link makes the file clickable and `[5]` makes the rule clickable; any field can carry a link.
-- Special priorities: `7` low hanging fruit, `8` unassigned (no priority rule matched), `11` not set yet
-  (`oc_cpp_issues.py`), `10` and `1` (`cppcheck.py`).
+- Special priorities: `7` low hanging fruit, `99` unassigned (no priority rule matched yet, also what the parsers
+  and `oc_cpp_issues.py` write), `10` and `1` (`cppcheck.py`).
 - Placeholders in double brackets are filled in later by `apply_environment.py`, see
   [apply_environment.py](#apply_environmentpy) for the list.
 
@@ -194,14 +194,14 @@ Reads a gcc or clang build log (clang and clang-tidy use the same format) and wr
   Without brackets the rule is `cmdline` when the message starts with `command line`, `unused` when the line contains
   `not used`, `uninitialized` when it contains `uninitialized`, and `rule-missing` otherwise.
 - **description**: the message up to the last `[`, HTML-escaped.
-- **priority** `8`, **team** empty, **component** `compiler` for `cmdline` warnings and empty otherwise,
+- **priority** `99`, **team** empty, **component** `compiler` for `cmdline` warnings and empty otherwise,
   **category** `warning`.
 - **links**: `[3]{[[permalink-prefix]]/<file>#L<line>}` and, unless the rule is `rule-missing`, `unused`,
   `uninitialized` or `cmdline`, `[5]{https://duckduckgo.com/?q=!ducky+<source>+<rule>}`.
 
 ```
 in:   w.cc:9:11: warning: comparison of integer expressions of different signedness: 'int' and 'unsigned int' [-Wsign-compare]
-out:  8|||w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness: &#x27;int&#x27; and &#x27;unsigned int&#x27; |[3]{[[permalink-prefix]]/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+gcc+sign-compare}
+out:  99|||w.cc:9:11|gcc|sign-compare|warning|comparison of integer expressions of different signedness: &#x27;int&#x27; and &#x27;unsigned int&#x27; |[3]{[[permalink-prefix]]/w.cc#L9}[5]{https://duckduckgo.com/?q=!ducky+gcc+sign-compare}
 ```
 
 ### parse_msvc.py
@@ -228,12 +228,12 @@ Reads an MSVC (cl.exe, MASM, link) build log and writes one issue per warning.
 - **Command line warnings** (`cl : Command line warning D9002 : ignoring unknown option '/foo'`): fileref is the text
   up to and including `Command line warning`, the rule (`D9002`) and description follow, **component** `compiler`,
   **category** `cmdline`.
-- **priority** `8`, **team** empty, description HTML-escaped.
+- **priority** `99`, **team** empty, description HTML-escaped.
 - **links**: only `[5]{https://duckduckgo.com/?q=!ducky+<source>+<rule>}`; the file link is added by `tr_customize.py`.
 
 ```
 in:   C:\project\lib\toolkit\slot.h(75): warning C4251: 'Slot::m_name': class 'std::string' needs to have dll-interface
-out:  8|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_name&#x27;: class &#x27;std::string&#x27; needs to have dll-interface|[5]{https://duckduckgo.com/?q=!ducky+msvc+C4251}
+out:  99|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_name&#x27;: class &#x27;std::string&#x27; needs to have dll-interface|[5]{https://duckduckgo.com/?q=!ducky+msvc+C4251}
 ```
 
 ### oc_cpp_issues.py
@@ -283,7 +283,7 @@ Every Visual Studio project (a file whose name ends with `proj`) is checked per 
 | `UD#5` | `ClCompile/WarningLevel` is missing or does not end with `4` | redflag |
 | `PARSE` | the project, header or source could not be read (for example not UTF-8) | parse |
 
-Fields: **priority** `11` (to be set by `apply_team_priorities.py`, the default `rules/priorities.txt` lists all these
+Fields: **priority** `99` (to be set by `apply_team_priorities.py`, the default `rules/priorities.txt` lists all these
 rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (`:0` for project checks),
 **source** `opencanary`, **links** `[3]{[[permalink-prefix]]/<absolute path with />#L<line>}` and
 `[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>}`, the section of the rule in
@@ -376,9 +376,9 @@ For every issue, in this order:
    `\`.
 
 ```
-in:   8|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}
+in:   99|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}
       tr_customize.py --msvc --display-depth 1
-out:  8|||lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}[3]{[[permalink-prefix]]/project/lib/toolkit/slot.h#L75}
+out:  99|||lib\toolkit\slot.h:75|msvc|C4251|warning|...|[5]{...}[3]{[[permalink-prefix]]/project/lib/toolkit/slot.h#L75}
 ```
 
 `verification/examples/tr_customize_copperspice.py` is an example of a project specific customizer.
@@ -426,7 +426,7 @@ apply_team_priorities.py [--rules FILE] < issues
 
 For every issue, matched against the **rule** field:
 
-- **priority**: the value of the first matching rule without a `key:`; `8` when no rule matches. The priority set by a
+- **priority**: the value of the first matching rule without a `key:`; `99` when no rule matches. The priority set by a
   parser is always replaced.
 - **category**: the first matching `category:<name>` rule sets it to `<name>`; otherwise it is left as it was.
 

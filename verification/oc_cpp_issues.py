@@ -105,7 +105,7 @@ def read_lines(filename):
 
 def get_priority():
     # assignment of priority is done in apply_team_priorities.py
-    return Priority.UNSET.value
+    return Priority.UNASSIGNED.value
 
 
 def get_source():

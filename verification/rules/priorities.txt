@@ -11,7 +11,7 @@
 #   =text   rule equals text
 #   ~text   rule contains text
 # use quotes around a matcher that contains spaces, '#' starts a comment
-# rules not listed here get priority 8 (UNASSIGNED)
+# rules not listed here get priority 99 (UNASSIGNED), so assign 98 or less to every rule you list
 
 
 # MSVC warnings

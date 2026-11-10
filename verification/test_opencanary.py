@@ -338,7 +338,7 @@ class TestRules(unittest.TestCase):
             path = os.path.join(d, "p.txt")
             with open(path, "w", encoding="utf-8") as f:
                 f.write("3 =my-rule\n")
-            row = "|".join(["8", "", "", "a.cc:1", "src", "my-rule", "warning", "d", ""]) + "\n"
+            row = "|".join(["99", "", "", "a.cc:1", "src", "my-rule", "warning", "d", ""]) + "\n"
             out = run_script("apply_team_priorities.py", ["--rules", path], row)
             self.assertTrue(out.startswith("3|"))
 
@@ -369,7 +369,7 @@ class TestLinks(unittest.TestCase):
 
     @staticmethod
     def row(source, rule, links=""):
-        return "|".join(["8", "", "", "a.cc:1", source, rule, "w", "d", links]) + "\n"
+        return "|".join(["99", "", "", "a.cc:1", source, rule, "w", "d", links]) + "\n"
 
     def test_default_rule_link(self):
         out = self.links("", self.row("gcc", "sign-compare", "[3]{f}[5]{https://parser}"), self.row("opencanary", "AP#13", "[3]{f}"),
@@ -615,7 +615,7 @@ class TestStages(unittest.TestCase):
     def test_priorities_assigned(self):
         out = run_script("apply_team_priorities.py", stdin=self.row(rule="array-bounds") + self.row(rule="no-such-rule"))
         prios = [line.split("|")[0] for line in lines(out)]
-        self.assertEqual(prios, ["5", "8"])
+        self.assertEqual(prios, ["5", "99"])
 
     def test_msvc_priorities_come_from_the_rules_file(self):
         out = run_script("apply_team_priorities.py", stdin=self.row(rule="C4100") + self.row(rule="C4701") + self.row(rule="C4505"))

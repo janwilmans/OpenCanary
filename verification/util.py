@@ -17,8 +17,7 @@ envfile = {}
 
 class Priority(IntEnum):
     LOW_HANGING = 7
-    UNASSIGNED = 8
-    UNSET = 11
+    UNASSIGNED = 99  # no priority rule matched (yet), sorts after every assigned priority
 
 
 class Column(IntEnum):

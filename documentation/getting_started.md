@@ -107,9 +107,10 @@ Open `report.html` in a browser. You will see:
   hide them.
 - **Reset** clears all filters. Click a column name to sort; click a row to see its full text.
 
-Every issue starts with priority 8 ("unassigned") unless a rule in `rules/priorities.txt` matches it, and rules
+Every issue starts with priority 99 ("unassigned") unless a rule in `rules/priorities.txt` matches it, and rules
 with only a few issues are moved to priority 7 ("low hanging fruit", the description gets a `[LOW]` prefix) so they can
-be cleared first. Both land in *Fix now* until you tune the priorities in step 5.
+be cleared first. Unassigned issues land in *Style* and low hanging fruit in *Fix now* until you tune the priorities
+in step 5.
 
 ## Step 4: make the links work
 
