@@ -15,27 +15,27 @@
 
 
 # MSVC warnings
-5   =C4701  #ub, Potentially uninitialized local variable
+5   =C4701    # ub, potentially uninitialized local variable
 
 # MSVC warnings that used to be prioritized in parse_msvc.py (C4505 and C4611 were listed twice, the first one won; C4701 is defined above)
-70  ~C4100
-15  ~C4127
-20  ~C4211
-20  ~C4239
-40  ~C4244
-50  ~C4245
-15  ~C4310
-20  ~C4324
-50  ~C4389
-10  ~C4456
-10  ~C4457
-10  ~C4458
-55  ~C4499
-60  ~C4505
-60  ~C4611
-30  ~C4706
-17  ~C4714
-5   ~C4918
+70  ~C4100    # unreferenced formal parameter
+15  ~C4127    # conditional expression is constant
+20  ~C4211    # nonstandard extension used: redefined extern to static
+20  ~C4239    # nonstandard extension used: temporary bound to non-const reference
+40  ~C4244    # conversion, possible loss of data
+50  ~C4245    # conversion, signed/unsigned mismatch
+15  ~C4310    # cast truncates constant value
+20  ~C4324    # structure was padded due to alignment specifier
+50  ~C4389    # '==': signed/unsigned mismatch
+10  ~C4456    # declaration hides previous local declaration
+10  ~C4457    # declaration hides function parameter
+10  ~C4458    # declaration hides class member
+55  ~C4499    # explicit specialization cannot have a storage class (ignored)
+60  ~C4505    # unreferenced function with internal linkage has been removed
+60  ~C4611    # interaction between '_setjmp' and C++ object destruction is non-portable
+30  ~C4706    # assignment within conditional expression
+17  ~C4714    # function marked as __forceinline not inlined
+5   ~C4918    # invalid character in pragma optimization list
 
 # clang warnings (-Weverything), placed before the gcc section so these exact matches win over its ~ matchers (like ~unused-)
 # likely a bug
@@ -140,10 +140,10 @@
 65  =AP#6  # non-english words
 80  =AP#7  # ifdef
 40  =AP#8  # c-style-cast
-75  =AP#9  # c-style-cast
-70  =AP#10
-60  =AP#11
-99  =AP#12  # ??
+75  =AP#9  # reserved words
+70  =AP#10 # min/max
+60  =AP#11 # extern keyword
+99  =AP#12  # register keyword
 45  =AP#13  # delete
 15  =AP#14  # c-style-cast
 60  =AP#17  # using namespace in a header
