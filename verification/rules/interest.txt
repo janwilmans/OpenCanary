@@ -3,7 +3,7 @@
 #   =text    line equals text
 #   ~text    line contains text
 #   ?regex   regular expression (re.search), prefix with (?i) to ignore case
-# use quotes around a matcher that contains spaces, '#' starts a comment
+# use quotes around a matcher that contains spaces, '#' at the start of a line or after a space starts a comment
 # see examples/ for larger rule sets, for MSVC use --msvc so the paths are normalized to / first
 
 drop ~_autogen

@@ -2,4 +2,5 @@
 # format:  component:<name> <matcher>...    sets the component column, first match wins
 #          team:<name> <matcher>...         sets the team column, first match wins
 #   =text   path equals text   ~text   path contains text   ?regex   regular expression
-# '#' starts a comment, see examples/customize_toolkit.txt
+# use quotes around a matcher that contains spaces, '#' at the start of a line or after a space starts a comment
+# all matchers on a rule must match, see examples/customize_toolkit.txt

@@ -10,7 +10,8 @@
 #          category:<name> <matcher>...  assigns the category column instead
 #   =text   rule equals text
 #   ~text   rule contains text
-# use quotes around a matcher that contains spaces, '#' starts a comment
+#   ?regex  rule matches the regular expression (re.search)
+# use quotes around a matcher that contains spaces, '#' at the start of a line or after a space starts a comment
 # rules not listed here get priority 99 (UNASSIGNED), so assign 98 or less to every rule you list
 
 
