@@ -447,10 +447,20 @@ class TestRulesDocumentation(unittest.TestCase):
         with open(os.path.join(HERE, "oc_cpp_issues.py"), encoding="utf-8") as f:
             # the rule of every report_issue() call that is not commented out
             rules = set(re.findall(r'^\s*report_issue\([^,]+, [^,]+, "([^"]+)"', f.read(), re.M))
+        import oc_cpp_issues
+        rules |= {rule for rule, _category, _regex, _description in oc_cpp_issues.LINE_RULES}
         with open(os.path.join(HERE, "..", "documentation", "rules.md"), encoding="utf-8") as f:
             headings = set(re.findall(r"^### (\S+)$", f.read(), re.M))
-        self.assertTrue({"manual-delete", "misspelled-word", "make-unique-header", "warning-level-not-4", "parse-error"} <= rules, rules)
+        self.assertTrue({"manual-delete", "misspelled-word", "make-unique-header", "warning-level-not-4", "parse-error",
+                         "redundant-semicolon", "self-include", "uninitialized-variable", "throw-pointer"} <= rules, rules)
         self.assertEqual(rules - headings, set())
+        # every rule gets the priority of its own '=rule' line in the default priorities.txt (the project checks and
+        # parse-error excepted), not that of an earlier matcher for a compiler warning, such as gcc's ~comment
+        priorities = util.load_rules(util.default_rules_file("priorities.txt"))
+        own = {rule.matchers[0][1:]: rule.value for rule in priorities if rule.matchers[0][0] == "=" and ":" not in rule.value}
+        self.assertEqual({rule for rule in rules if rule not in own}, {"warnings-not-errors", "warning-level-not-4", "parse-error"})
+        self.assertEqual({rule: util.first_match(priorities, rule) for rule in rules if rule in own},
+                         {rule: own[rule] for rule in rules if rule in own})
         links = util.load_rules(util.default_rules_file("links.txt"))
         for rule in rules:
             # <anchor> must be the anchor GitHub gives the '### <rule>' heading
@@ -547,6 +557,87 @@ class TestRunner(unittest.TestCase):
 
 
 class TestCppIssues(unittest.TestCase):
+
+    SOURCE = """#include "a.h"
+#include <vector>
+#include <vector>
+#include "other.cpp"
+throw new std::runtime_error("x");
+throw "this is wrong";
+throw 1;
+throw std::runtime_error("fine");
+memset(p, sizeof(p), 0);
+memset(p, 0, sizeof(p));
+memset(a, 0, f(b, 0));
+f((void **)&p);
+g(reinterpret_cast<void**>(&p));
+std::string buffer{10};
+std::wstring wbuffer{ 4 };
+std::string name{other};
+#undef min
+x = x;
+this->x = x;
+other.x = x;
+y == y;
+#define AB 1
+#define ABCD 1
+catch (std::exception e)
+catch (const std::exception& e)
+catch (...)
+ptr.reset(new Foo);
+if (std::uncaught_exception()) {}
+if (std::uncaught_exceptions()) {}
+char *** p3;
+/*** comment ***/
+Foo::Foo() {}
+Foo::~Foo() { }
+Foo::Foo() : x(1) {}
+// TODO: fix this
+std::string todos;
+if (&ref == nullptr) {}
+if (a && b == nullptr) {}
+for (;;) {}
+foreach (auto x, list) {}
+for (auto & x : myList.transform().view()) {}
+for (auto & x : obj.items()) {}
+int a;; int b;
+for (int i = 0;; ++i) {}
+int count;
+int count = 0;
+#define __MY_MACRO 1
+#define MY__MACRO 1
+#define MY_MACRO 1
+"""
+    HEADER = """#ifndef MOVE_H
+#define MOVE_H
+#include "a.h"
+int member;
+#endif
+#ifndef MY_LIBRARY_MOVE_H
+#define MY_LIBRARY_MOVE_H
+#endif
+"""
+
+    def test_rules_of_issues_4_and_9(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in [("a.cpp", self.SOURCE), ("a.h", self.HEADER)]:
+                with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                    f.write(text)
+            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d]))]
+        found = sorted((os.path.basename(row[3].rsplit(":", 1)[0]), int(row[3].rsplit(":", 1)[1]), row[5]) for row in rows)
+        expected = {"a.cpp": [(3, "duplicate-include"), (4, "include-source-file"), (5, "throw-pointer"),
+                              (6, "throw-non-exception"), (7, "throw-non-exception"), (9, "memset-zero-size"),
+                              (12, "void-pointer-pointer-cast"), (13, "reinterpret-cast"), (13, "void-pointer-pointer-cast"),
+                              (14, "string-braced-size"), (15, "string-braced-size"), (17, "undef-macro"),
+                              (18, "assign-to-self"), (22, "short-macro-name"), (24, "catch-by-value"),
+                              (27, "reset-with-new"), (28, "deprecated-uncaught-exception"), (30, "triple-pointer"),
+                              (32, "empty-special-member"), (33, "empty-special-member"), (35, "todo"),
+                              (37, "address-null-check"), (39, "endless-for"), (40, "foreach-macro"),
+                              (41, "dangling-range-for"), (43, "redundant-semicolon"), (43, "uninitialized-variable"),
+                              (45, "uninitialized-variable"), (47, "reserved-macro-name"), (48, "reserved-macro-name")],
+                    "a.h": [(2, "short-include-guard"), (3, "self-include")]}
+        self.assertEqual(found, sorted((name, line, rule) for name, issues in expected.items() for line, rule in issues))
 
     def test_reserved_define_names_the_macro(self):
         import tempfile

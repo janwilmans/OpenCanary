@@ -158,6 +158,30 @@
 30  =const-cast  # const_cast
 50  =assign-in-condition  # assign inside condition
 90  =misspelled-word  # spelling
+5   =memset-zero-size  # memset with size 0
+15  =string-braced-size  # std::string s{n}
+15  =assign-to-self  # x = x;
+20  =self-include  # a header that includes itself
+20  =address-null-check  # &x == nullptr
+20  =void-pointer-pointer-cast  # cast to void **
+30  =throw-pointer  # throw new
+30  =dangling-range-for  # range-for over a member of a temporary
+30  =include-source-file  # #include of a .cpp file
+40  =throw-non-exception  # throw "text" or throw 1
+40  =catch-by-value  # catch (std::exception e)
+40  =uninitialized-variable  # int x; in a source file
+60  =short-macro-name  # macro with a name of 3 characters or less
+60  =deprecated-uncaught-exception  # std::uncaught_exception()
+70  =undef-macro  # #undef
+70  =reset-with-new  # .reset(new ...)
+75  =triple-pointer  # T ***
+80  =empty-special-member  # Foo::Foo() {}
+80  =duplicate-include  # the same #include twice
+80  =short-include-guard  # include guard such as MOVE_H
+80  =foreach-macro  # foreach, Q_FOREACH, BOOST_FOREACH
+90  =endless-for  # for (;;)
+90  =redundant-semicolon  # ;;
+95  =todo  # TODO
 
 # categories
 category:ub =aggressive-loop-optimizations

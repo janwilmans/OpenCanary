@@ -93,10 +93,13 @@ def get_cpp_files_from_project(project_root, project_directory):
 
 
 def check_cpp_source(filename):
-    line_number = 0
-    for line in read_lines(filename):
-        line_number = line_number + 1
+    lines = read_lines(filename)
+    for line_number, line in enumerate(lines, 1):
         check_line(filename, line_number, line)
+        # only in sources: in headers these are mostly members, initialized by a constructor
+        if re.search(r"^\s*(int|bool|double|float)\s+\w+\s*;", line):
+            report_issue(filename, str(line_number), "uninitialized-variable", "ub", "initialize variables where they are declared")
+    check_includes(filename, lines)
 
 
 def read_lines(filename):
@@ -166,7 +169,8 @@ def check_line(filename, line_number, line):
 
 
 # rule names are lowercase words separated by "-" like the clang warnings, but must not be the name of a compiler warning:
-# rules/priorities.txt matches on the rule name only, see documentation/rules.md
+# rules/priorities.txt matches on the rule name only, and its ~ matchers for compiler warnings (such as ~comment) must not
+# match it either; test_every_rule_has_a_section_and_a_solution_link checks this, see documentation/rules.md
 def check_line_impl(filename, line_number, line):
     if "/make_unique" in line:
         report_issue(filename, line_number, "make-unique-header", "modernize", "For C++14 and later use #include <memory>")
@@ -190,9 +194,9 @@ def check_line_impl(filename, line_number, line):
         report_issue(filename, line_number, "constant-if-directive", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
     if re.search(r"\(\w+\s*\*\s*\)", line):
         report_issue(filename, line_number, "c-style-pointer-cast", "modernize", "Anti-pattern: dont use c-style casts")
-    match_group = re.search(r"#define\s+(_\w+)", line)
+    match_group = re.search(r"#define\s+(_\w+|\w*__\w*)", line)
     if match_group:
-        report_issue(filename, line_number, "reserved-macro-name", "ub", f"prevent UB: names starting with underscore, followed by a capital ({clean_group(match_group)}) are reserved ")
+        report_issue(filename, line_number, "reserved-macro-name", "ub", f"prevent UB: names starting with an underscore or containing a double underscore ({clean_group(match_group)}) are reserved")
     match_group = re.search(r"#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
     if match_group:
         report_issue(filename, line_number, "min-max-macro", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
@@ -216,6 +220,8 @@ def check_line_impl(filename, line_number, line):
     if re.search(r"(while|if|switch)\s*\(.*\s=\s.*\)", line):
         report_issue(filename, line_number, "assign-in-condition", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
 
+    check_line_issues_4_and_9(filename, line_number, line)
+
     # if "catch\s+\(...\)" in line:
     # if "catch\s+(...).*\n*.*\{[\n.]*throw[\n.]*\}" in line:
     #    report_issue(filename, str(lineNumber), "catch-all-without-rethrow", "redflag", "Anti-pattern: catch(...) should always rethrow")    # too many false positives
@@ -226,13 +232,70 @@ def check_line_impl(filename, line_number, line):
 
 
 
+# rules suggested in https://github.com/janwilmans/OpenCanary/issues/4 and /9: (rule, category, regex, description)
+LINE_RULES = [
+    ("throw-pointer", "redflag", r"\bthrow\s+new\b", "do not throw a pointer, throw by value and catch by reference"),
+    ("throw-non-exception", "redflag", r"\bthrow\s+(\"|'|-?\d)", "throw an exception class, not a string or a number"),
+    ("memset-zero-size", "bug", r"\bmemset\s*\(.*,\s*0\s*\)\s*;", "memset with size 0 does nothing, are the last two arguments swapped?"),
+    ("void-pointer-pointer-cast", "ub", r"\(\s*void\s*\*\s*\*\s*\)|reinterpret_cast\s*<\s*void\s*\*\s*\*\s*>",
+     "prevent UB: writing through a T** cast to void** breaks strict aliasing"),
+    ("string-braced-size", "bug", r"\bstd::w?string\s+\w+\s*\{\s*\d+\s*\}",
+     "std::string s{n} is a string of one character n, use std::string s(n, 0) for n characters"),
+    ("undef-macro", "redflag", r"^\s*#\s*undef\b", "#undef changes a macro for everything that is included after it"),
+    ("assign-to-self", "bug", r"(?<![\w.>:*&])(\w+)\s*=\s*\1\s*;", "assignment of a variable to itself"),
+    ("include-source-file", "redflag", r"#\s*include\s*[\"<][^\">]*\.(cpp|cc|cxx)[\">]",
+     "do not include a source file, it is compiled twice (odr violation)"),
+    ("short-macro-name", "redflag", r"#\s*define\s+\w{1,3}\b", "a macro with a name of 3 characters or less clashes easily"),
+    ("catch-by-value", "redflag", r"\bcatch\s*\(\s*[^&*.)\s][^&*.)]*\)", "catch exceptions by (const) reference, catching by value slices"),
+    ("reset-with-new", "modernize", r"\.reset\s*\(\s*new\b", "use std::make_unique or std::make_shared instead of reset(new ...)"),
+    ("deprecated-uncaught-exception", "modernize", r"\buncaught_exception\s*\(",
+     "std::uncaught_exception is deprecated in C++17 and removed in C++20, use std::uncaught_exceptions"),
+    ("triple-pointer", "readability", r"\w\s*\*\s*\*\s*\*(?=\s*[\w)>,])", "a pointer to a pointer to a pointer is hard to understand"),
+    ("empty-special-member", "modernize", r"\b(\w+)::~?\1\s*\(\s*\)\s*\{\s*\}",
+     "an empty constructor or destructor, remove it or use = default"),
+    ("todo", "readability", r"(?i)\btodo\b", "a todo is left in the code"),
+    ("address-null-check", "ub", r"(?<![&\w)\]])&\s*\w+\s*[!=]=\s*nullptr|\bnullptr\s*[!=]=\s*&\s*\w",
+     "prevent UB: the address of a reference or object is never nullptr, the compiler may remove the check"),
+    ("endless-for", "readability", r"\bfor\s*\(\s*;\s*;\s*\)", "use while (true) for an endless loop, it is clearer"),
+    ("foreach-macro", "modernize", r"\b(foreach|Q_FOREACH|BOOST_FOREACH)\s*\(", "use a range-based for loop instead of a foreach macro"),
+    ("dangling-range-for", "bug", r"\bfor\s*\(.*:\s*[\w:.>-]*\w\([^()]*\)\s*(\.|->)\s*\w+\([^()]*\)\s*\)",
+     "a range-based for over a member of a temporary can dangle (before C++23)"),
+]
+
+
+def check_line_issues_4_and_9(filename, line_number, line):
+    for rule, category, regex, description in LINE_RULES:
+        if re.search(regex, line):
+            report_issue(filename, line_number, rule, category, description)
+    if re.search(r";\s*;", line) and not re.search(r"\bfor\s*\(", line):
+        report_issue(filename, line_number, "redundant-semicolon", "readability", "redundant semicolon")
+    match = re.match(r"\s*#\s*define\s+(\w+)\s*$", line)
+    if match and len(match[1]) <= 8 and re.search(r"_(H|HPP|HXX|INCLUDED)_?$", match[1]):
+        report_issue(filename, line_number, "short-include-guard", "readability", f"include guard {match[1]} is not unique enough")
+
+
+def check_includes(filename, lines):
+    """self-include and duplicate-include: rules that need the other lines of the file"""
+    seen = set()
+    for line_number, line in enumerate(lines, 1):
+        match = re.match(r"\s*#\s*include\s*[\"<]([^\">]+)[\">]", line)
+        if not match:
+            continue
+        included = match[1].replace("\\", "/")
+        if os.path.basename(included) == os.path.basename(filename) and os.path.splitext(filename)[1].lower() in (".h", ".hpp"):
+            report_issue(filename, str(line_number), "self-include", "bug", f"the header includes itself ({included})")
+        if included in seen:
+            report_issue(filename, str(line_number), "duplicate-include", "readability", f"{included} is already included")
+        seen.add(included)
+
+
 def check_cpp_header(filename):
-    line_number = 0
-    for line in read_lines(filename):
-        line_number = line_number + 1
+    lines = read_lines(filename)
+    for line_number, line in enumerate(lines, 1):
         check_line(filename, line_number, line)
         if re.search("^using namespace", line):
             report_issue(filename, str(line_number), "using-namespace-in-header", "redflag", "Using namespace found in header file")
+    check_includes(filename, lines)
 
 
 def check_spelling(rootpath, files):

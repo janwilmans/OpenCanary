@@ -266,7 +266,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `non-english-word` | matches the Dutch words `deze`, `niet`, `naam`, `als`, `...ectie`, `voet` (ignoring case) | readability | do not use non-english words |
 | `constant-if-directive` | matches `#if\s+<digit>` | readability | do not keep historical code in ifdefs |
 | `c-style-pointer-cast` | matches `(<word> *)`, a C-style pointer cast | modernize | dont use c-style casts |
-| `reserved-macro-name` | matches `#define _<name>` | ub | names starting with an underscore are reserved |
+| `reserved-macro-name` | matches `#define _<name>` or `#define <name with __>` | ub | names starting with an underscore or containing a double underscore are reserved |
 | `min-max-macro` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
 | `extern` | matches `extern` followed by something other than `"` | redflag | do not use extern |
 | `manual-delete` | matches `delete <name>;` | redflag | do not use delete |
@@ -276,6 +276,30 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `using-namespace-in-header` | starts with `using namespace` (headers only) | redflag | Using namespace found in header file (no prefix) |
 | `assign-in-condition` | matches `(while\|if\|switch) (... = ...)`, an assignment in a condition | assign_in_condition | do not assign inside conditions |
 | `misspelled-word` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
+| `memset-zero-size` | matches `memset(..., 0);` | bug | see [rules.md](rules.md#memset-zero-size) |
+| `string-braced-size` | matches `std::string <name>{<number>}` (or `std::wstring`) | bug | see [rules.md](rules.md#string-braced-size) |
+| `assign-to-self` | matches `<name> = <same name>;` (not `this->x = x` or `a.x = x`) | bug | see [rules.md](rules.md#assign-to-self) |
+| `self-include` | a header (`.h`, `.hpp`) includes a file with its own name | bug | see [rules.md](rules.md#self-include) |
+| `address-null-check` | matches `&<name> == nullptr` or `nullptr == &<name>` (also `!=`) | ub | see [rules.md](rules.md#address-null-check) |
+| `void-pointer-pointer-cast` | matches `(void **)` or `reinterpret_cast<void **>` | ub | see [rules.md](rules.md#void-pointer-pointer-cast) |
+| `throw-pointer` | matches `throw new` | redflag | see [rules.md](rules.md#throw-pointer) |
+| `dangling-range-for` | matches `for (... : <call>().<call>())` | bug | see [rules.md](rules.md#dangling-range-for) |
+| `include-source-file` | matches `#include` of a `.cpp`, `.cc` or `.cxx` file | redflag | see [rules.md](rules.md#include-source-file) |
+| `throw-non-exception` | matches `throw` followed by a string, a character or a number | redflag | see [rules.md](rules.md#throw-non-exception) |
+| `catch-by-value` | matches `catch (...)` with a type that is not a reference, pointer or `...` | redflag | see [rules.md](rules.md#catch-by-value) |
+| `uninitialized-variable` | starts with `int`, `bool`, `double` or `float` and a name without a value (sources only) | ub | see [rules.md](rules.md#uninitialized-variable) |
+| `short-macro-name` | matches `#define` of a name of 1 to 3 characters | redflag | see [rules.md](rules.md#short-macro-name) |
+| `deprecated-uncaught-exception` | matches `uncaught_exception(` | modernize | see [rules.md](rules.md#deprecated-uncaught-exception) |
+| `undef-macro` | starts with `#undef` | redflag | see [rules.md](rules.md#undef-macro) |
+| `reset-with-new` | matches `.reset(new` | modernize | see [rules.md](rules.md#reset-with-new) |
+| `triple-pointer` | matches a name followed by `***` | readability | see [rules.md](rules.md#triple-pointer) |
+| `empty-special-member` | matches `<class>::<class>() {}` or `<class>::~<class>() {}` | modernize | see [rules.md](rules.md#empty-special-member) |
+| `duplicate-include` | includes a file that the same file already included | readability | see [rules.md](rules.md#duplicate-include) |
+| `short-include-guard` | defines an include guard (`..._H`, `..._HPP`, `..._INCLUDED`) of 8 characters or less | readability | see [rules.md](rules.md#short-include-guard) |
+| `foreach-macro` | matches `foreach(`, `Q_FOREACH(` or `BOOST_FOREACH(` | modernize | see [rules.md](rules.md#foreach-macro) |
+| `endless-for` | matches `for (;;)` | readability | see [rules.md](rules.md#endless-for) |
+| `redundant-semicolon` | matches `;` followed by another `;` (not on a line with `for (`) | readability | see [rules.md](rules.md#redundant-semicolon) |
+| `todo` | contains the word `todo` (ignoring case) | readability | see [rules.md](rules.md#todo) |
 
 Every Visual Studio project (a file whose name ends with `proj`) is checked per `ItemDefinitionGroup`:
 

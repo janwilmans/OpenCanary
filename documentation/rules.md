@@ -7,11 +7,12 @@ every section has an anchor: `rules.md#manual-delete` for `manual-delete`.
 
 Rules are named like the clang warnings (lowercase words separated by `-`), but never with the name of a compiler
 warning: `rules/priorities.txt` matches on the rule name only, so `c-style-pointer-cast` can get another priority than
-clang's `old-style-cast`. (`rules/links.txt` gives the solution link to every issue with source `opencanary`.) Until
-November 2026 the rules were numbered (`AP#13` is now `manual-delete`); the table below also lists the old names. The
-checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a comment or a string,
-for example). Exclude files with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The default priorities
-are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
+clang's `old-style-cast`; for the same reason a name does not contain a part that `priorities.txt` matches for compiler
+warnings with `~`, such as `comment`. (`rules/links.txt` gives the solution link to every issue with source
+`opencanary`.) Until November 2026 the rules were numbered (`AP#13` is now `manual-delete`); the table below also lists
+the old names. The checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a
+comment or a string, for example). Exclude files with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The
+default priorities are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
 
 | Rule | Category | In short | Was |
 |------|----------|----------|-----|
@@ -25,7 +26,7 @@ are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_
 | [non-english-word](#non-english-word) | readability | Dutch words in code or comments | `AP#6` |
 | [constant-if-directive](#constant-if-directive) | readability | `#if 0` / `#if 1` | `AP#7` |
 | [c-style-pointer-cast](#c-style-pointer-cast) | modernize | C-style pointer cast | `AP#8` |
-| [reserved-macro-name](#reserved-macro-name) | ub | `#define` of a reserved name (starting with `_`) | `AP#9` |
+| [reserved-macro-name](#reserved-macro-name) | ub | `#define` of a reserved name (starting with `_` or with `__`) | `AP#9` |
 | [min-max-macro](#min-max-macro) | modernize | `min` or `max` macro | `AP#10` |
 | [extern](#extern) | redflag | `extern` | `AP#11` |
 | [register-keyword](#register-keyword) | redflag | `register` (disabled) | `AP#12` |
@@ -36,6 +37,30 @@ are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_
 | [using-namespace-in-header](#using-namespace-in-header) | redflag | `using namespace` in a header | `AP#17` |
 | [assign-in-condition](#assign-in-condition) | assign_in_condition | assignment in an `if`, `while` or `switch` condition | `AP#18` |
 | [misspelled-word](#misspelled-word) | spelling | misspelled word | `AP#19` |
+| [memset-zero-size](#memset-zero-size) | bug | `memset` with size 0 | |
+| [string-braced-size](#string-braced-size) | bug | `std::string s{n}` | |
+| [assign-to-self](#assign-to-self) | bug | `x = x;` | |
+| [self-include](#self-include) | bug | a header that includes itself | |
+| [address-null-check](#address-null-check) | ub | `&x == nullptr` | |
+| [void-pointer-pointer-cast](#void-pointer-pointer-cast) | ub | cast to `void **` | |
+| [throw-pointer](#throw-pointer) | redflag | `throw new` | |
+| [dangling-range-for](#dangling-range-for) | bug | range-for over a member of a temporary | |
+| [include-source-file](#include-source-file) | redflag | `#include` of a `.cpp` file | |
+| [throw-non-exception](#throw-non-exception) | redflag | `throw "text"` or `throw 1` | |
+| [catch-by-value](#catch-by-value) | redflag | `catch (std::exception e)` | |
+| [uninitialized-variable](#uninitialized-variable) | ub | `int x;` in a source file | |
+| [short-macro-name](#short-macro-name) | redflag | macro with a name of 3 characters or less | |
+| [deprecated-uncaught-exception](#deprecated-uncaught-exception) | modernize | `std::uncaught_exception()` | |
+| [undef-macro](#undef-macro) | redflag | `#undef` | |
+| [reset-with-new](#reset-with-new) | modernize | `.reset(new ...)` | |
+| [triple-pointer](#triple-pointer) | readability | `T ***` | |
+| [empty-special-member](#empty-special-member) | modernize | `Foo::Foo() {}` | |
+| [duplicate-include](#duplicate-include) | readability | the same `#include` twice | |
+| [short-include-guard](#short-include-guard) | readability | include guard such as `MOVE_H` | |
+| [foreach-macro](#foreach-macro) | modernize | `foreach`, `Q_FOREACH`, `BOOST_FOREACH` | |
+| [endless-for](#endless-for) | readability | `for (;;)` | |
+| [redundant-semicolon](#redundant-semicolon) | readability | `;;` | |
+| [todo](#todo) | readability | `TODO` | |
 | [parse-error](#parse-error) | parse | file could not be read | `PARSE` |
 
 ### make-unique-header
@@ -123,7 +148,8 @@ or `const_cast`. Better still, change the types so no cast is needed.
 
 ### reserved-macro-name
 
-**`#define` of a reserved name.** Reported for `#define _Name`.
+**`#define` of a reserved name.** Reported for `#define _Name` and for a name with a double underscore
+(`#define MY__NAME`).
 
 Names that start with an underscore followed by a capital letter (and all names with a double underscore) are reserved
 for the compiler and the standard library; defining one is undefined behavior and can clash with system headers.
@@ -207,6 +233,191 @@ header or source. Needs [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`).
 Misspelled names make code hard to search, and a misspelling in an interface spreads to all its users. **Solve:**
 correct the spelling; for a name in an interface, rename it everywhere (the IDE's rename refactoring helps). The list of
 words is `wrong_word_list` in `oc_cpp_issues.py`.
+
+### memset-zero-size
+
+**`memset` with size 0.** Reported for a `memset` call whose last argument is `0`.
+
+`memset(p, sizeof(p), 0)` sets nothing: the last two arguments (value and size) are easy to swap. **Solve:** write
+`memset(p, 0, sizeof(p))`, or better, value-initialize the object (`Foo foo{};`) or use `std::fill`.
+
+### string-braced-size
+
+**`std::string s{n}`.** Reported for a `std::string` or `std::wstring` initialized with a number in braces.
+
+Braces select the initializer list constructor: `std::string buffer{10}` is a string of one character with value 10,
+not a buffer of 10 characters. **Solve:** use parentheses, `std::string buffer(10, '\0')`.
+
+### assign-to-self
+
+**Assignment of a variable to itself.** Reported for `x = x;`.
+
+This does nothing, and usually one side was meant to be another name, for example a member and a parameter with the
+same name (`int x = x;` even reads an uninitialized value). **Solve:** assign the intended variable, for example
+`this->x = x`, or rename the parameter.
+
+### self-include
+
+**A header that includes itself.** Reported for an `#include` of a file with the same name as the header.
+
+With an include guard it does nothing, without one it recurses until the compiler gives up; either way it is a
+mistake, often a copy-paste of the include list of the source file. **Solve:** remove the include.
+
+### address-null-check
+
+**The address of an object compared to `nullptr`.** Reported for `&ref == nullptr` (or `!=`).
+
+The address of an object or a reference is never `nullptr`; a reference bound to `*nullptr` is already undefined
+behavior. The compiler may remove the check entirely. **Solve:** check the pointer before it is dereferenced into a
+reference, or pass a pointer when "no object" is a valid value.
+
+### void-pointer-pointer-cast
+
+**Cast to `void **`.** Reported for `(void **)` and `reinterpret_cast<void **>`.
+
+`T**` does not convert to `void**`; the cast compiles, but writing a `void*` through the result accesses a `T*`
+object as a `void*` object, which breaks strict aliasing (undefined behavior). This is common with COM style
+`QueryInterface(..., (void **)&p)` calls. **Solve:** use a `void *` variable and `static_cast` it to `T*` afterwards,
+or an API helper such as `IID_PPV_ARGS`.
+
+### throw-pointer
+
+**`throw new`.** Reported for `throw new ...`.
+
+A thrown pointer must be deleted by whoever catches it, and `catch (const std::exception &)` does not catch it at all.
+**Solve:** throw by value and catch by reference: `throw std::runtime_error("...")`.
+
+### dangling-range-for
+
+**Range-based for over a member of a temporary.** Reported for `for (auto &x : list.transform().view())`.
+
+Before C++23 only the result of the last call lives as long as the loop; the temporary returned by `transform()` is
+destroyed before the first iteration, so a `view()` into it dangles. **Solve:** store the temporary in a variable
+first: `auto transformed = list.transform(); for (auto &x : transformed.view())`. The rule is a text search, it
+cannot see whether the first call returns a reference (then the loop is fine).
+
+### include-source-file
+
+**`#include` of a source file.** Reported for `#include "foo.cpp"`.
+
+When the included source is also compiled by itself, its functions are defined twice (an ODR violation, a linker
+error or undefined behavior), and it hides the real dependency. **Solve:** include the header and link the source;
+for a unity build let the build system (CMake `UNITY_BUILD`) do it.
+
+### throw-non-exception
+
+**Throwing something that is not an exception.** Reported for `throw "this is wrong";` or `throw 1;`.
+
+A `catch (const std::exception &)` does not catch it, so it ends the program or needs a `catch (...)` that cannot
+tell what went wrong. **Solve:** throw an exception class, such as `std::runtime_error("this is wrong")` or a class
+derived from `std::exception`.
+
+### catch-by-value
+
+**Catching an exception by value.** Reported for `catch (std::exception e)`.
+
+Catching by value copies the exception and slices a derived exception to the caught type, so `what()` and the type
+of the derived class are lost, and a `throw e;` rethrows the sliced copy. **Solve:** catch by const reference:
+`catch (const std::exception &e)`, and rethrow with `throw;`.
+
+### uninitialized-variable
+
+**Variable without an initial value.** Reported for `int x;` (also `bool`, `double`, `float`) in a source file.
+
+Reading it before it is assigned is undefined behavior, and on every path a later change can introduce that read.
+**Solve:** give it a value where it is declared: `int x = 0;`, or declare it where its value is known. Headers are
+not checked: there such a line is usually a member that the constructor initializes.
+
+### short-macro-name
+
+**Macro with a very short name.** Reported for `#define` of a name of 3 characters or less, such as `#define N 10`.
+
+A macro replaces the name everywhere after it, also in other headers, so a short name such as `N`, `PI` or `MAX`
+easily changes unrelated code. **Solve:** use a `constexpr` variable or an `enum`, or give the macro a long name with
+a project prefix.
+
+### deprecated-uncaught-exception
+
+**`std::uncaught_exception()`.** Reported for a call of `uncaught_exception()`.
+
+It is deprecated in C++17 and removed in C++20: it cannot tell a destructor that runs during stack unwinding apart
+from a destructor of an object created during that unwinding. **Solve:** use `std::uncaught_exceptions()`, which
+returns a count; compare it with the count stored in the constructor.
+
+### undef-macro
+
+**`#undef`.** Reported for every `#undef`.
+
+Undefining a macro changes the meaning of every header included after it, depending on the include order, and is
+usually a workaround for a macro that should not exist (such as `min` and `max` from `<windows.h>`). **Solve:**
+remove the macro at its source (for `<windows.h>`: define `NOMINMAX`), or replace it with a function or constant.
+Keep `#undef` only for a macro that is defined and undefined locally in the same file.
+
+### reset-with-new
+
+**`.reset(new ...)`.** Reported for `ptr.reset(new Foo(...))`.
+
+A bare `new` mixes manual and automatic ownership, and `std::make_shared` allocates the object and its control block
+at once. **Solve:** `ptr = std::make_unique<Foo>(...)` or `ptr = std::make_shared<Foo>(...)` (or
+`boost::make_shared`).
+
+### triple-pointer
+
+**Pointer to a pointer to a pointer.** Reported for `char ***p`.
+
+Three levels of indirection are very hard to follow and usually mean ownership and arrays are managed by hand.
+**Solve:** use containers and references, for example `std::vector<std::vector<std::string>>` or
+`std::vector<std::string> &`.
+
+### empty-special-member
+
+**Empty constructor or destructor.** Reported for `Foo::Foo() {}` and `Foo::~Foo() {}`.
+
+A user-provided empty constructor or destructor makes the class non-trivial and, for the destructor, removes the
+implicit move operations. **Solve:** remove it, or declare it `= default` (in the header, or in the source file when
+the destructor must see a complete type, as with `std::unique_ptr` members).
+
+### duplicate-include
+
+**Duplicate `#include`.** Reported for the second `#include` of the same file in one file.
+
+It does nothing (the include guard skips it) and makes the include list harder to maintain. **Solve:** remove the
+second include.
+
+### short-include-guard
+
+**Include guard that is not unique.** Reported for an include guard of 8 characters or less, such as
+`#define MOVE_H`.
+
+When two headers in the build use the same guard, the second one is silently skipped, which gives confusing errors.
+**Solve:** use `#pragma once`, or a guard with the project and path in it: `MYPROJECT_ALGORITHM_MOVE_H`.
+
+### foreach-macro
+
+**`foreach` macro.** Reported for Qt's `foreach` / `Q_FOREACH` and `BOOST_FOREACH`.
+
+The language has a range-based for since C++11; Qt's `foreach` also copies the container and is deprecated.
+**Solve:** `for (const auto &item : list)`; to iterate a Qt container that is not `const`, use `std::as_const(list)`
+to avoid a detach.
+
+### endless-for
+
+**`for (;;)`.** Reported for an endless `for` loop.
+
+`while (true)` says the same thing in words. **Solve:** write `while (true)`.
+
+### redundant-semicolon
+
+**Redundant semicolon.** Reported for `;;` outside a `for`.
+
+The empty statement does nothing, but it can hide an editing mistake. **Solve:** remove the extra `;`.
+
+### todo
+
+**`TODO`.** Reported for the word `todo` (any case).
+
+A todo in the code is work that is not tracked anywhere and is easily forgotten. **Solve:** do it, or move it to the
+issue tracker and remove the comment (or refer to the issue in it).
 
 ### parse-error
 
