@@ -3,39 +3,42 @@
 The rules that OpenCanary reports itself: `oc_cpp_issues.py` checks every line of the headers and sources (and the
 Visual Studio projects) for common C++ problems. This page explains, per rule, why it is reported and how to solve it.
 In the report, the rule links to its section here, and so does the light bulb after it (see `rules/links.txt`);
-every section has an anchor: `rules.md#ap13` for `AP#13`.
+every section has an anchor: `rules.md#manual-delete` for `manual-delete`.
 
-The prefix tells the kind of rule: `MO` modernize, `AP` anti-pattern, `UD` project setting. The number is unique over
-all prefixes. The checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a
-comment or a string, for example). Exclude files with `.opencanaryignore`, or drop a rule with `rules/interest.txt`.
-The default priorities are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
+Rules are named like the clang warnings (lowercase words separated by `-`), but never with the name of a compiler
+warning: `rules/priorities.txt` matches on the rule name only, so `c-style-pointer-cast` can get another priority than
+clang's `old-style-cast`. (`rules/links.txt` gives the solution link to every issue with source `opencanary`.) Until
+November 2026 the rules were numbered (`AP#13` is now `manual-delete`); the table below also lists the old names. The
+checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a comment or a string,
+for example). Exclude files with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The default priorities
+are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
 
-| Rule | Category | In short |
-|------|----------|----------|
-| [MO#1](#mo1) | modernize | `#include` of a `make_unique` header |
-| [MO#2](#mo2) | modernize | `make_unique` that is not `std::make_unique` |
-| [AP#3](#ap3) | casting | `reinterpret_cast` |
-| [AP#4](#ap4) | redflag | `volatile` |
-| [UD#4](#ud4) | redflag | project does not treat warnings as errors |
-| [MO#5](#mo5) | modernize | `NULL` |
-| [UD#5](#ud5) | redflag | project warning level is not 4 |
-| [AP#6](#ap6) | readability | Dutch words in code or comments |
-| [AP#7](#ap7) | readability | `#if 0` / `#if 1` |
-| [AP#8](#ap8) | modernize | C-style pointer cast |
-| [AP#9](#ap9) | ub | `#define` of a reserved name (starting with `_`) |
-| [AP#10](#ap10) | modernize | `min` or `max` macro |
-| [AP#11](#ap11) | redflag | `extern` |
-| [AP#12](#ap12) | redflag | `register` (disabled) |
-| [AP#13](#ap13) | redflag | `delete` |
-| [AP#14](#ap14) | redflag | `extern volatile` |
-| [AP#15](#ap15) | ub | casting away the constness of a string literal |
-| [AP#16](#ap16) | readability | `const_cast` |
-| [AP#17](#ap17) | redflag | `using namespace` in a header |
-| [AP#18](#ap18) | assign_in_condition | assignment in an `if`, `while` or `switch` condition |
-| [AP#19](#ap19) | spelling | misspelled word |
-| [PARSE](#parse) | parse | file could not be read |
+| Rule | Category | In short | Was |
+|------|----------|----------|-----|
+| [make-unique-header](#make-unique-header) | modernize | `#include` of a `make_unique` header | `MO#1` |
+| [unqualified-make-unique](#unqualified-make-unique) | modernize | `make_unique` that is not `std::make_unique` | `MO#2` |
+| [reinterpret-cast](#reinterpret-cast) | casting | `reinterpret_cast` | `AP#3` |
+| [volatile-variable](#volatile-variable) | redflag | `volatile` | `AP#4` |
+| [warnings-not-errors](#warnings-not-errors) | redflag | project does not treat warnings as errors | `UD#4` |
+| [null-macro](#null-macro) | modernize | `NULL` | `MO#5` |
+| [warning-level-not-4](#warning-level-not-4) | redflag | project warning level is not 4 | `UD#5` |
+| [non-english-word](#non-english-word) | readability | Dutch words in code or comments | `AP#6` |
+| [constant-if-directive](#constant-if-directive) | readability | `#if 0` / `#if 1` | `AP#7` |
+| [c-style-pointer-cast](#c-style-pointer-cast) | modernize | C-style pointer cast | `AP#8` |
+| [reserved-macro-name](#reserved-macro-name) | ub | `#define` of a reserved name (starting with `_`) | `AP#9` |
+| [min-max-macro](#min-max-macro) | modernize | `min` or `max` macro | `AP#10` |
+| [extern](#extern) | redflag | `extern` | `AP#11` |
+| [register-keyword](#register-keyword) | redflag | `register` (disabled) | `AP#12` |
+| [manual-delete](#manual-delete) | redflag | `delete` | `AP#13` |
+| [extern-volatile](#extern-volatile) | redflag | `extern volatile` | `AP#14` |
+| [string-literal-cast](#string-literal-cast) | ub | casting away the constness of a string literal | `AP#15` |
+| [const-cast](#const-cast) | readability | `const_cast` | `AP#16` |
+| [using-namespace-in-header](#using-namespace-in-header) | redflag | `using namespace` in a header | `AP#17` |
+| [assign-in-condition](#assign-in-condition) | assign_in_condition | assignment in an `if`, `while` or `switch` condition | `AP#18` |
+| [misspelled-word](#misspelled-word) | spelling | misspelled word | `AP#19` |
+| [parse-error](#parse-error) | parse | file could not be read | `PARSE` |
 
-### MO#1
+### make-unique-header
 
 **`#include` of a `make_unique` header.** Reported for a line that contains `/make_unique`, such as
 `#include "util/make_unique.h"`.
@@ -44,14 +47,14 @@ Since C++14 `std::make_unique` is part of the standard library, so a project spe
 needed. **Solve:** include `<memory>` instead, use `std::make_unique`, and remove the own implementation once nothing
 uses it.
 
-### MO#2
+### unqualified-make-unique
 
 **`make_unique` that is not `std::make_unique`.** Reported for a line that uses `make_unique` without `std::`.
 
 A project specific or unqualified `make_unique` hides which implementation is used and can be found by argument
 dependent lookup. **Solve:** write `std::make_unique<T>(...)` and include `<memory>`.
 
-### AP#3
+### reinterpret-cast
 
 **`reinterpret_cast`.** Reported for a line that contains `reinterpret_cast<`.
 
@@ -61,7 +64,7 @@ unrelated type is undefined behavior (strict aliasing), and the result depends o
 - for a class hierarchy use `static_cast` (or `dynamic_cast` when the type is not known);
 - for an API that needs it (sockets, OS handles), keep the cast in one small, documented function.
 
-### AP#4
+### volatile-variable
 
 **`volatile`.** Reported for a line that declares something `volatile`.
 
@@ -69,7 +72,7 @@ unrelated type is undefined behavior (strict aliasing), and the result depends o
 not order it between threads. It is meant for memory mapped hardware registers. **Solve:** for data shared between
 threads use `std::atomic<T>` or a `std::mutex`; keep `volatile` only for hardware access.
 
-### UD#4
+### warnings-not-errors
 
 **The project does not treat warnings as errors.** Reported for a Visual Studio project (`*.vcxproj`) configuration
 without `<TreatWarningAsError>true</TreatWarningAsError>`.
@@ -77,14 +80,14 @@ without `<TreatWarningAsError>true</TreatWarningAsError>`.
 Without it, new warnings pile up unnoticed. **Solve:** set *C/C++ > General > Treat Warnings As Errors* to *Yes (/WX)*
 for every configuration, after solving (or explicitly disabling) the current warnings.
 
-### MO#5
+### null-macro
 
 **`NULL`.** Reported for a line with `NULL` surrounded by whitespace.
 
 `NULL` is an integer constant: it takes part in overload resolution and template deduction as an `int`, not as a
 pointer. **Solve:** use `nullptr`. `clang-tidy` can do this automatically (`modernize-use-nullptr`).
 
-### UD#5
+### warning-level-not-4
 
 **The project warning level is not 4.** Reported for a Visual Studio project configuration whose `<WarningLevel>`
 does not end with `4`.
@@ -92,7 +95,7 @@ does not end with `4`.
 Level 4 reports many problems that the default level 3 hides. **Solve:** set *C/C++ > General > Warning Level* to
 *Level4 (/W4)* for every configuration.
 
-### AP#6
+### non-english-word
 
 **Dutch words in code or comments.** Reported for a line with words such as `deze`, `niet`, `naam`, `als`, `voet` or a
 word ending in `ectie`, ignoring case.
@@ -101,7 +104,7 @@ Code is read by people who do not all speak Dutch, and mixed languages make name
 comment or name to English. Exclude generated or translated files (for example translation tables) in
 `.opencanaryignore`.
 
-### AP#7
+### constant-if-directive
 
 **`#if 0` / `#if 1`.** Reported for a line with `#if` followed by a number.
 
@@ -109,16 +112,16 @@ Code that is switched off with the preprocessor is not compiled, so it is not ke
 reader. Version control keeps the history. **Solve:** delete the disabled branch (`#if 0`), or remove the condition and
 keep the code (`#if 1`). For a real configuration option, use a named macro or a CMake option.
 
-### AP#8
+### c-style-pointer-cast
 
 **C-style pointer cast.** Reported for a cast such as `(Foo *)p`.
 
 A C-style cast silently does whatever is needed to compile: a `static_cast`, a `const_cast`, a `reinterpret_cast` or a
 combination, so a mistake is not reported. **Solve:** use the C++ cast that states the intent: `static_cast`,
-`dynamic_cast`, or (rarely, see [AP#3](#ap3) and [AP#16](#ap16)) `reinterpret_cast` or `const_cast`. Better still,
-change the types so no cast is needed.
+`dynamic_cast`, or (rarely, see [reinterpret-cast](#reinterpret-cast) and [const-cast](#const-cast)) `reinterpret_cast`
+or `const_cast`. Better still, change the types so no cast is needed.
 
-### AP#9
+### reserved-macro-name
 
 **`#define` of a reserved name.** Reported for `#define _Name`.
 
@@ -126,7 +129,7 @@ Names that start with an underscore followed by a capital letter (and all names 
 for the compiler and the standard library; defining one is undefined behavior and can clash with system headers.
 **Solve:** rename the macro, for example `_MY_HEADER_H` to `MY_HEADER_H`, or use `#pragma once` for include guards.
 
-### AP#10
+### min-max-macro
 
 **`min` or `max` macro.** Reported for a `#define` of `min` or `max` with a conditional expression.
 
@@ -134,7 +137,7 @@ A macro evaluates its arguments more than once (`min(i++, j)`), has no type chec
 `std::max` in every file that includes it. **Solve:** use `std::min` / `std::max` from `<algorithm>`. For `<windows.h>`,
 define `NOMINMAX` before including it.
 
-### AP#11
+### extern
 
 **`extern`.** Reported for a line with `extern` (not `extern "C"`).
 
@@ -142,12 +145,12 @@ An `extern` variable is a global that any file can change, which hides dependenc
 between files undefined. **Solve:** pass the value as a parameter or make it a member; for a constant use `constexpr` or
 `inline constexpr` in a header; for a single shared instance use a function that returns a reference to a local static.
 
-### AP#12
+### register-keyword
 
 **`register` (disabled).** This check is disabled: it gave too many false positives and compilers already report
 `register`, which is removed in C++17. **Solve:** remove the `register` keyword.
 
-### AP#13
+### manual-delete
 
 **`delete`.** Reported for `delete name;`.
 
@@ -155,15 +158,15 @@ Manual `delete` is easy to forget on an early return or an exception (a leak) or
 **Solve:** let an owner release the object: `std::unique_ptr` (create it with `std::make_unique`), a container such as
 `std::vector`, or the parent object in a framework that owns its children (for example a `QObject` parent).
 
-### AP#14
+### extern-volatile
 
 **`extern volatile`.** Reported for a line with `extern volatile`.
 
-A global, mutable variable that is also `volatile` combines the problems of [AP#11](#ap11) and [AP#4](#ap4), and is
-almost always an attempt at sharing data between threads or with an interrupt. **Solve:** use `std::atomic<T>` owned by
-one module, with functions to read and change it.
+A global, mutable variable that is also `volatile` combines the problems of [extern](#extern) and
+[volatile-variable](#volatile-variable), and is almost always an attempt at sharing data between threads or with an
+interrupt. **Solve:** use `std::atomic<T>` owned by one module, with functions to read and change it.
 
-### AP#15
+### string-literal-cast
 
 **Casting away the constness of a string literal.** Reported for `(char *)"..."`.
 
@@ -171,7 +174,7 @@ A string literal is constant; writing to it through the cast is undefined behavi
 use `const char *` or `std::string_view`. When an old API needs a `char *` it does not change, keep the cast in one
 place; when it does change the text, copy it into a `std::string` or a `char` array first.
 
-### AP#16
+### const-cast
 
 **`const_cast`.** Reported for a line that contains `const_cast<`.
 
@@ -180,7 +183,7 @@ Removing `const` breaks the promise the type makes, and changing an object that 
 overload. Use `mutable` for members that are only a cache. Keep a `const_cast` only for an old API that does not change
 the object, with a comment.
 
-### AP#17
+### using-namespace-in-header
 
 **`using namespace` in a header.** Reported for a header line that starts with `using namespace`.
 
@@ -188,7 +191,7 @@ Every file that includes the header gets the whole namespace, which can cause na
 resolution in code that never asked for it. **Solve:** write the qualified names (`std::string`) in headers, or use a
 `using` declaration for one name inside a function or class. `using namespace` is fine inside a `.cpp` file.
 
-### AP#18
+### assign-in-condition
 
 **Assignment in a condition.** Reported for `if`, `while` or `switch` with ` = ` inside the parentheses.
 
@@ -196,7 +199,7 @@ resolution in code that never asked for it. **Solve:** write the qualified names
 difference. **Solve:** compare with `==` if that was meant. Otherwise move the assignment before the condition, or use
 the C++17 init-statement: `if (auto it = map.find(key); it != map.end())`.
 
-### AP#19
+### misspelled-word
 
 **Misspelled word.** Reported for a common misspelling, such as `recieve`, `seperate` or `wich`, as a whole word in a
 header or source. Needs [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`).
@@ -205,7 +208,7 @@ Misspelled names make code hard to search, and a misspelling in an interface spr
 correct the spelling; for a name in an interface, rename it everywhere (the IDE's rename refactoring helps). The list of
 words is `wrong_word_list` in `oc_cpp_issues.py`.
 
-### PARSE
+### parse-error
 
 **The file could not be read.** Reported when a project, header or source could not be parsed, for example because it
 is not UTF-8.

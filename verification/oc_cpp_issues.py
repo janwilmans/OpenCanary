@@ -51,7 +51,7 @@ def rip_grep(rootpath):
         return subprocess.run(command, cwd=rootpath, check=False, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                               stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace").stdout
     except FileNotFoundError:
-        eprint("ripgrep (rg) not found, spelling check (AP#19) skipped")
+        eprint("ripgrep (rg) not found, spelling check (misspelled-word) skipped")
         return ""
 
 
@@ -165,79 +165,79 @@ def check_line(filename, line_number, line):
         raise
 
 
-# Rule numbering is continuous over the prefix, in the sense that #1 occurs only once so MO#1, MO#2, AP#3
+# rule names are lowercase words separated by "-" like the clang warnings, but must not be the name of a compiler warning:
+# rules/priorities.txt matches on the rule name only, see documentation/rules.md
 def check_line_impl(filename, line_number, line):
     if "/make_unique" in line:
-        report_issue(filename, line_number, "MO#1", "modernize", "For C++14 and later use #include <memory>")
+        report_issue(filename, line_number, "make-unique-header", "modernize", "For C++14 and later use #include <memory>")
     else:
         if "make_unique" in line and not "std::make_unique" in line:
-            report_issue(filename, line_number, "MO#2", "modernize", "For C++14 and later use std::make_unique")
+            report_issue(filename, line_number, "unqualified-make-unique", "modernize", "For C++14 and later use std::make_unique")
 
     if "reinterpret_cast<" in line:
-        report_issue(filename, line_number, "AP#3", "casting", "Anti-pattern: do not reinterpret_cast")
+        report_issue(filename, line_number, "reinterpret-cast", "casting", "Anti-pattern: do not reinterpret_cast")
 
     if re.search(r"[^a-z]volatile[^a-z].*;", line):
-        report_issue(filename, line_number, "AP#4", "redflag", "Anti-pattern: do not use volatile")
+        report_issue(filename, line_number, "volatile-variable", "redflag", "Anti-pattern: do not use volatile")
     if re.search(r"\sNULL\s", line):
-        report_issue(filename, line_number, "MO#5", "modernize", "Anti-pattern: do not use NULL, use 0 or nullptr instead")
+        report_issue(filename, line_number, "null-macro", "modernize", "Anti-pattern: do not use NULL, use 0 or nullptr instead")
 
     match_group = re.search(r"(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", line, re.IGNORECASE)
     if match_group:
-        report_issue(filename, line_number, "AP#6", "readability", f"Anti-pattern: do not use non-english words ('{clean_group(match_group)}') in code or comments")
+        report_issue(filename, line_number, "non-english-word", "readability", f"Anti-pattern: do not use non-english words ('{clean_group(match_group)}') in code or comments")
     match_group = re.search(r"(#if\s+\d)", line)
     if match_group:
-        report_issue(filename, line_number, "AP#7", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
+        report_issue(filename, line_number, "constant-if-directive", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
     if re.search(r"\(\w+\s*\*\s*\)", line):
-        report_issue(filename, line_number, "AP#8", "modernize", "Anti-pattern: dont use c-style casts")
+        report_issue(filename, line_number, "c-style-pointer-cast", "modernize", "Anti-pattern: dont use c-style casts")
     match_group = re.search(r"#define\s+(_\w+)", line)
     if match_group:
-        report_issue(filename, line_number, "AP#9", "ub", f"prevent UB: names starting with underscore, followed by a capital ({clean_group(match_group)}) are reserved ")
+        report_issue(filename, line_number, "reserved-macro-name", "ub", f"prevent UB: names starting with underscore, followed by a capital ({clean_group(match_group)}) are reserved ")
     match_group = re.search(r"#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
     if match_group:
-        report_issue(filename, line_number, "AP#10", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
+        report_issue(filename, line_number, "min-max-macro", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
     if re.search(r"($|[^\w])extern\s+[^\"]", line):
-        report_issue(filename, line_number, "AP#11", "redflag", "Anti-pattern: do not use extern")
+        report_issue(filename, line_number, "extern", "redflag", "Anti-pattern: do not use extern")
 
     #    if re.search("($|[^\w])register\s", line):
-    #        report_issue(filename, str(lineNumber), "AP#12", "redflag", "Anti-pattern: do not use register") # disabled because of too many false positives, and also compilers already catch it
+    #        report_issue(filename, str(lineNumber), "register-keyword", "redflag", "Anti-pattern: do not use register") # disabled because of too many false positives, and also compilers already catch it
 
     if re.search(r"($|[^\w])delete\s\w{1,25};", line):
-        report_issue(filename, line_number, "AP#13", "redflag", "Anti-pattern: do not use delete")
+        report_issue(filename, line_number, "manual-delete", "redflag", "Anti-pattern: do not use delete")
     if "extern volatile" in line:
-        report_issue(filename, line_number, "AP#14", r"redflag", "Anti-pattern: extern volatile ?!")
+        report_issue(filename, line_number, "extern-volatile", r"redflag", "Anti-pattern: extern volatile ?!")
     if re.search(r"\(char\s*\*\)\s*\"", line):
-        report_issue(filename, line_number, "AP#15", "ub", "prevent UB: do not cast away constness of string literals")
+        report_issue(filename, line_number, "string-literal-cast", "ub", "prevent UB: do not cast away constness of string literals")
     if re.search(r"const_cast<", line):
-        report_issue(filename, line_number, "AP#16", "readability", "Anti-pattern: do not cast away constness")
+        report_issue(filename, line_number, "const-cast", "readability", "Anti-pattern: do not cast away constness")
 
-    #  AP#17 see checkCppHeader_AP17()
+    #  using-namespace-in-header: see check_cpp_header()
 
     if re.search(r"(while|if|switch)\s*\(.*\s=\s.*\)", line):
-        report_issue(filename, line_number, "AP#18", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
+        report_issue(filename, line_number, "assign-in-condition", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
 
     # if "catch\s+\(...\)" in line:
     # if "catch\s+(...).*\n*.*\{[\n.]*throw[\n.]*\}" in line:
-    #    report_issue(filename, str(lineNumber), "AP#", "redflag", "Anti-pattern: catch(...) should always rethrow")    # too many false positives
+    #    report_issue(filename, str(lineNumber), "catch-all-without-rethrow", "redflag", "Anti-pattern: catch(...) should always rethrow")    # too many false positives
 
     # would be nice for new code, but is too generic (and should be allowed in Qt code)
     # if "new" in line and not "#define new" in line:
-    #    report_issue(filename, str(lineNumber), "MO#", "Prefer std::make_unique over bare new/delete")
-
-    # Current highest number at:  #19
+    #    report_issue(filename, str(lineNumber), "bare-new", "Prefer std::make_unique over bare new/delete")
 
 
-def check_cpp_header_AP17(filename):
+
+def check_cpp_header(filename):
     line_number = 0
     for line in read_lines(filename):
         line_number = line_number + 1
         check_line(filename, line_number, line)
         if re.search("^using namespace", line):
-            report_issue(filename, str(line_number), "AP#17", "redflag", "Using namespace found in header file")
+            report_issue(filename, str(line_number), "using-namespace-in-header", "redflag", "Using namespace found in header file")
 
 
-def check_spelling_AP19(rootpath, files):
+def check_spelling(rootpath, files):
     for filename, line_number, word in get_spelling_violations(rip_grep(rootpath), rootpath, files):
-        report_issue(filename, line_number, "AP#19", "spelling", f"Misspelled word '{word}' found")
+        report_issue(filename, line_number, "misspelled-word", "spelling", f"Misspelled word '{word}' found")
 
 
 def check_project(projectname):
@@ -255,7 +255,7 @@ def check_project(projectname):
                 # print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
                 if warning_as_error_node.text.lower() == "true":
                     continue
-        report_issue(projectname, "0", "UD#4", "redflag", "TreatWarningAsError is not set to true")
+        report_issue(projectname, "0", "warnings-not-errors", "redflag", "TreatWarningAsError is not set to true")
 
     for item_definition_group_node in project_root.iter(ns + 'ItemDefinitionGroup'):
         # print (itemDefinitionGroupNode.tag + " " + itemDefinitionGroupNode.get("Condition"))
@@ -266,7 +266,7 @@ def check_project(projectname):
                 # print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
                 if warning_level.text.endswith("4"):
                     continue
-        report_issue(projectname, "0", "UD#5", "redflag", "Warning level is not set to 4")
+        report_issue(projectname, "0", "warning-level-not-4", "redflag", "Warning level is not set to 4")
 
 
 def get_projects_recursively(path):
@@ -318,17 +318,17 @@ def main():
             # info = traceback.format_exc()
             # eprint(info)                   # uncomment to debug parsing issues
             # maybe related: https://stackoverflow.com/questions/31390213/how-to-parse-an-xml-file-with-encoding-declaration-in-python
-            report_issue(project, "0", "PARSE", "parse", "Could not parse project file")
+            report_issue(project, "0", "parse-error", "parse", "Could not parse project file")
 
     headers, cpps = util.get_cpp_files_from_directory(rootpath)
     for filename in headers:
         try:
-            check_cpp_header_AP17(filename)
+            check_cpp_header(filename)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
             eprint("OC Error parsing header:", filename, "\n", e, "\n\n")
-            report_issue(filename, "", "PARSE", "parse", "Could not parse header file")
+            report_issue(filename, "", "parse-error", "parse", "Could not parse header file")
 
     for filename in cpps:
         try:
@@ -337,9 +337,9 @@ def main():
             raise
         except Exception as e:
             eprint("OC Error parsing source:", filename, "\n", e, "\n\n")
-            report_issue(filename, "", "PARSE", "parse", "Could not parse source file")
+            report_issue(filename, "", "parse-error", "parse", "Could not parse source file")
 
-    check_spelling_AP19(rootpath, headers + cpps)
+    check_spelling(rootpath, headers + cpps)
 
     sys.stdout.flush()
     eprint(str(len(projects)) + " msvc project(s) checked")

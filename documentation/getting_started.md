@@ -27,7 +27,7 @@ Some scripts use other tools; without them only that part is skipped or unavaila
 
 | Tool | Needed by | Without it |
 |------|-----------|------------|
-| `rg` ([ripgrep](https://github.com/BurntSushi/ripgrep)) | `oc_cpp_issues.py`, the spelling check (`AP#19`) | the spelling check is skipped, with a message on stderr |
+| `rg` ([ripgrep](https://github.com/BurntSushi/ripgrep)) | `oc_cpp_issues.py`, the spelling check (`misspelled-word`) | the spelling check is skipped, with a message on stderr |
 | `tomli` (python package) | `opencanary.py run` on Python older than 3.11 | `opencanary.py run` stops; the individual scripts still work |
 | `cppcheck` | `cppcheck.py` | no cppcheck issues |
 | `clang-format` | `run_clang_format.py` (`CLANG_FORMAT` selects the binary, default `clang-format-11`) | the script cannot check formatting |

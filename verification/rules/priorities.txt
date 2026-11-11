@@ -54,7 +54,7 @@
 40  =shorten-64-to-32
 40  =format-signedness
 40  =undef  # undefined macro silently evaluates to 0
-40  =old-style-cast  # same as AP#8
+40  =old-style-cast  # same as c-style-pointer-cast
 45  =implicit-int-conversion
 45  =float-equal
 50  =sign-conversion
@@ -76,7 +76,7 @@
 80  =unreachable-code-return
 85  =unreachable-code-break
 85  =unused-macros
-85  =zero-as-null-pointer-constant  # same as MO#5
+85  =zero-as-null-pointer-constant  # same as null-macro
 85  =switch-default
 85  =covered-switch-default
 90  =unsafe-buffer-usage-in-container
@@ -133,25 +133,25 @@
 80  ~overflow
 
 # open canary issues
-70  =MO#1  # /make_unique
-70  =MO#2  # make_unique
-35  =AP#3  # reinterpret_cast
-15  =AP#4  # volatile
-85  =MO#5  # nullptr
-65  =AP#6  # non-english words
-80  =AP#7  # ifdef
-40  =AP#8  # c-style-cast
-75  =AP#9  # reserved words
-70  =AP#10 # min/max
-60  =AP#11 # extern keyword
-99  =AP#12  # register keyword
-45  =AP#13  # delete
-15  =AP#14  # c-style-cast
-60  =AP#17  # using namespace in a header
-30  =AP#15  # casting literals
-30  =AP#16  # const_cast
-50  =AP#18  # assign inside condition
-90  =AP#19  # spelling
+70  =make-unique-header  # /make_unique
+70  =unqualified-make-unique  # make_unique
+35  =reinterpret-cast  # reinterpret_cast
+15  =volatile-variable  # volatile
+85  =null-macro  # nullptr
+65  =non-english-word  # non-english words
+80  =constant-if-directive  # #if 0, #if 1
+40  =c-style-pointer-cast  # c-style-cast
+75  =reserved-macro-name  # reserved words
+70  =min-max-macro # min/max
+60  =extern # extern keyword
+99  =register-keyword  # register keyword
+45  =manual-delete  # delete
+15  =extern-volatile  # extern volatile
+60  =using-namespace-in-header  # using namespace in a header
+30  =string-literal-cast  # casting literals
+30  =const-cast  # const_cast
+50  =assign-in-condition  # assign inside condition
+90  =misspelled-word  # spelling
 
 # categories
 category:ub =aggressive-loop-optimizations

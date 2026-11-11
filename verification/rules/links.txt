@@ -10,7 +10,7 @@
 #   <source>  the source of the issue (gcc, clang, msvc, opencanary, ...), url encoded
 #   <rule>    the rule, url encoded
 #   <anchor>  the anchor of a markdown heading with the rule on GitHub and GitLab: lowercase, only letters, digits,
-#             '-' and '_', so AP#13 becomes ap13 and sign-compare stays sign-compare
+#             '-' and '_', so C4100 becomes c4100 and sign-compare stays sign-compare
 #   [[wiki-issue-prefix]] and other [[keywords]] are filled in by apply_environment.py (WIKI_URL_PREFIX in env.txt)
 # a rule without a matching link: line keeps the link of the parser, or gets https://duckduckgo.com/?q=!ducky+<source>+<rule>
 # a rule without a matching solution: line has no solution icon

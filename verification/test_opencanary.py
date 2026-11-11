@@ -176,8 +176,8 @@ class TestSummary(unittest.TestCase):
 
     def test_rows_grouped_per_rule(self):
         long_description = " ".join(["word"] * 30)
-        data = (self.row("45", "AP#13", "gui", "CsGui", "redflag", "later") * 2
-                + self.row("45", "AP#13", "core", "CsCore", "redflag", "do not use delete &lt;p&gt;") * 3
+        data = (self.row("45", "manual-delete", "gui", "CsGui", "redflag", "later") * 2
+                + self.row("45", "manual-delete", "core", "CsCore", "redflag", "do not use delete &lt;p&gt;") * 3
                 + self.row("9", "b<ad", "", "", "", long_description) + self.row("7", "b<ad", "", "", "")
                 + self.row("10", "C4456", "net", "x", "warning") * 2)
         summary = run_script("create_summary.py", stdin=data)
@@ -189,7 +189,7 @@ class TestSummary(unittest.TestCase):
             ["Prio", "Rule", "Total", "Description", "Team", "Component", "Category", "Issues"],
             ["7, 9", "b<ad", "2", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
             ["10", "C4456", "2", "d", "net", "x", "warning", "2"],
-            ["45", "AP#13", "5", "later", "gui", "CsGui", "redflag", "2"],
+            ["45", "manual-delete", "5", "later", "gui", "CsGui", "redflag", "2"],
             ["core", "CsCore", "redflag", "3"],
             ["", "Total", "9", "", "", "", "", "9"],
         ])
@@ -402,10 +402,11 @@ class TestRulesDocumentation(unittest.TestCase):
         import apply_links
         import util
         with open(os.path.join(HERE, "oc_cpp_issues.py"), encoding="utf-8") as f:
-            rules = set(re.findall(r'"((?:AP|MO|UD)#\d+|PARSE)"', f.read()))
+            # the rule of every report_issue() call that is not commented out
+            rules = set(re.findall(r'^\s*report_issue\([^,]+, [^,]+, "([^"]+)"', f.read(), re.M))
         with open(os.path.join(HERE, "..", "documentation", "rules.md"), encoding="utf-8") as f:
             headings = set(re.findall(r"^### (\S+)$", f.read(), re.M))
-        self.assertTrue({"AP#13", "AP#19", "MO#1", "UD#5", "PARSE"} <= rules, rules)
+        self.assertTrue({"manual-delete", "misspelled-word", "make-unique-header", "warning-level-not-4", "parse-error"} <= rules, rules)
         self.assertEqual(rules - headings, set())
         links = util.load_rules(util.default_rules_file("links.txt"))
         for rule in rules:
@@ -414,7 +415,7 @@ class TestRulesDocumentation(unittest.TestCase):
                              "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + util.heading_anchor(rule))
         self.assertIsNone(util.first_match(links, "sign-compare", "solution", "gcc"))
         # a compiler warning with the name of an opencanary rule does not get its solution
-        self.assertIsNone(util.first_match(links, "AP#13", "solution", "clang"))
+        self.assertIsNone(util.first_match(links, "manual-delete", "solution", "clang"))
 
 
 class TestCustomize(unittest.TestCase):
@@ -506,10 +507,10 @@ class TestCppIssues(unittest.TestCase):
             with open(os.path.join(d, "a.cc"), "w", encoding="utf-8") as f:
                 f.write("#define _Reserved 1\n")
             rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d]))]
-            ap9 = [row for row in rows if row[5] == "AP#9"]
-            self.assertEqual(len(ap9), 1, rows)
-            self.assertIn("(_Reserved)", ap9[0][7])
-            self.assertIn("[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#ap9}", ap9[0][8])
+            reserved = [row for row in rows if row[5] == "reserved-macro-name"]
+            self.assertEqual(len(reserved), 1, rows)
+            self.assertIn("(_Reserved)", reserved[0][7])
+            self.assertIn("[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#reserved-macro-name}", reserved[0][8])
 
     @unittest.skipUnless(__import__("shutil").which("rg"), "needs ripgrep (rg)")
     def test_spelling_check_ignores_stdin(self):
@@ -518,7 +519,7 @@ class TestCppIssues(unittest.TestCase):
             with open(os.path.join(d, "a.cc"), "w", encoding="utf-8") as f:
                 f.write("// recieve\n")
             rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d], stdin="wich\n"))]
-            self.assertEqual([(row[5], row[3].rsplit(":", 1)[1]) for row in rows if row[5] == "AP#19"], [("AP#19", "1")], rows)
+            self.assertEqual([(row[5], row[3].rsplit(":", 1)[1]) for row in rows if row[5] == "misspelled-word"], [("misspelled-word", "1")], rows)
 
     def test_spelling_matches_are_limited_to_the_checked_files(self):
         import oc_cpp_issues

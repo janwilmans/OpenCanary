@@ -41,7 +41,7 @@ priority|team|component|fileref|source|rule|category|description|links
 | 2 | component | Component the file belongs to. | parsers (empty, `compiler` for command line warnings) | `tr_customize.py` |
 | 3 | fileref | `file[:line[:column]]` | parsers | `tr_customize.py` (path clean-up) |
 | 4 | source | Tool or build that reported it, free text. | parsers | |
-| 5 | rule | The tool's name for the check, e.g. `C4701`, `sign-compare`, `AP#13`. | parsers | |
+| 5 | rule | The tool's name for the check, e.g. `C4701`, `sign-compare`, `manual-delete`. | parsers | |
 | 6 | category | Broad group, e.g. `warning`, `redflag`, `ub`. | parsers | `apply_team_priorities.py` |
 | 7 | description | The message, HTML-escaped (`&`, `<`, `>`, `"`, `'`). | parsers | `apply_low_hanging_fruit.py` (`[LOW] ` prefix) |
 | 8 | links | `[n]{url}` repeated; `n` is the field the link belongs to. `[solution]{url}` is a page with a solution suggestion for the rule, the report shows it as a small icon after the rule. | parsers | `tr_customize.py` (`[3]`) |
@@ -257,32 +257,32 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 
 | Rule | Reported when the line | Category | Description, in short |
 |------|------------------------|----------|-----------------------|
-| `MO#1` | contains `/make_unique` | modernize | For C++14 and later use #include &lt;memory&gt; (no prefix) |
-| `MO#2` | contains `make_unique` but not `std::make_unique` (and not `MO#1`) | modernize | For C++14 and later use std::make_unique (no prefix) |
-| `AP#3` | contains `reinterpret_cast<` | casting | do not reinterpret_cast |
-| `AP#4` | matches `[^a-z]volatile[^a-z].*;` | redflag | do not use volatile |
-| `MO#5` | matches `\sNULL\s` | modernize | do not use NULL, use 0 or nullptr instead |
-| `AP#6` | matches the Dutch words `deze`, `niet`, `naam`, `als`, `...ectie`, `voet` (ignoring case) | readability | do not use non-english words |
-| `AP#7` | matches `#if\s+<digit>` | readability | do not keep historical code in ifdefs |
-| `AP#8` | matches `(<word> *)`, a C-style pointer cast | modernize | dont use c-style casts |
-| `AP#9` | matches `#define _<name>` | ub | names starting with an underscore are reserved |
-| `AP#10` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
-| `AP#11` | matches `extern` followed by something other than `"` | redflag | do not use extern |
-| `AP#13` | matches `delete <name>;` | redflag | do not use delete |
-| `AP#14` | contains `extern volatile` | redflag | extern volatile ?! |
-| `AP#15` | matches `(char *)"`, casting away the constness of a string literal | ub | do not cast away constness of string literals |
-| `AP#16` | contains `const_cast<` | readability | do not cast away constness |
-| `AP#17` | starts with `using namespace` (headers only) | redflag | Using namespace found in header file (no prefix) |
-| `AP#18` | matches `(while\|if\|switch) (... = ...)`, an assignment in a condition | assign_in_condition | do not assign inside conditions |
-| `AP#19` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
+| `make-unique-header` | contains `/make_unique` | modernize | For C++14 and later use #include &lt;memory&gt; (no prefix) |
+| `unqualified-make-unique` | contains `make_unique` but not `std::make_unique` (and not `make-unique-header`) | modernize | For C++14 and later use std::make_unique (no prefix) |
+| `reinterpret-cast` | contains `reinterpret_cast<` | casting | do not reinterpret_cast |
+| `volatile-variable` | matches `[^a-z]volatile[^a-z].*;` | redflag | do not use volatile |
+| `null-macro` | matches `\sNULL\s` | modernize | do not use NULL, use 0 or nullptr instead |
+| `non-english-word` | matches the Dutch words `deze`, `niet`, `naam`, `als`, `...ectie`, `voet` (ignoring case) | readability | do not use non-english words |
+| `constant-if-directive` | matches `#if\s+<digit>` | readability | do not keep historical code in ifdefs |
+| `c-style-pointer-cast` | matches `(<word> *)`, a C-style pointer cast | modernize | dont use c-style casts |
+| `reserved-macro-name` | matches `#define _<name>` | ub | names starting with an underscore are reserved |
+| `min-max-macro` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
+| `extern` | matches `extern` followed by something other than `"` | redflag | do not use extern |
+| `manual-delete` | matches `delete <name>;` | redflag | do not use delete |
+| `extern-volatile` | contains `extern volatile` | redflag | extern volatile ?! |
+| `string-literal-cast` | matches `(char *)"`, casting away the constness of a string literal | ub | do not cast away constness of string literals |
+| `const-cast` | contains `const_cast<` | readability | do not cast away constness |
+| `using-namespace-in-header` | starts with `using namespace` (headers only) | redflag | Using namespace found in header file (no prefix) |
+| `assign-in-condition` | matches `(while\|if\|switch) (... = ...)`, an assignment in a condition | assign_in_condition | do not assign inside conditions |
+| `misspelled-word` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
 
 Every Visual Studio project (a file whose name ends with `proj`) is checked per `ItemDefinitionGroup`:
 
 | Rule | Reported when | Category |
 |------|---------------|----------|
-| `UD#4` | `ClCompile/TreatWarningAsError` is missing or not `true` | redflag |
-| `UD#5` | `ClCompile/WarningLevel` is missing or does not end with `4` | redflag |
-| `PARSE` | the project, header or source could not be read (for example not UTF-8) | parse |
+| `warnings-not-errors` | `ClCompile/TreatWarningAsError` is missing or not `true` | redflag |
+| `warning-level-not-4` | `ClCompile/WarningLevel` is missing or does not end with `4` | redflag |
+| `parse-error` | the project, header or source could not be read (for example not UTF-8) | parse |
 
 Fields: **priority** `99` (to be set by `apply_team_priorities.py`, the default `rules/priorities.txt` lists all these
 rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (`:0` for project checks),
@@ -291,9 +291,9 @@ rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (
 [rules.md](rules.md). Because the path is
 absolute, use `reference_depth` (`tr_customize.py --reference-depth`) to make the links match the repository.
 
-The spelling check (`AP#19`) runs `rg` (ripgrep) once in `<path>` and reports only matches in the headers and sources
-that the other checks read, so `.opencanaryignore` applies to it too. Without ripgrep on the `PATH` it is skipped with a
-message on stderr. The default `rules/priorities.txt` gives it priority 90.
+The spelling check (`misspelled-word`) runs `rg` (ripgrep) once in `<path>` and reports only matches in the headers and
+sources that the other checks read, so `.opencanaryignore` applies to it too. Without ripgrep on the `PATH` it is
+skipped with a message on stderr. The default `rules/priorities.txt` gives it priority 90.
 
 ### cppcheck.py
 
@@ -403,7 +403,7 @@ For every issue with a rule, matched against the **rule** field:
   light bulb after the rule, a link to a page with a solution suggestion. Without a match there is none.
 
 In the url `<source>` and `<rule>` are replaced by the url encoded source and rule, `<anchor>` by the anchor GitHub and
-GitLab give a markdown heading with the rule: lowercase, only letters, digits, `-` and `_` (`### AP#13` gets `#ap13`,
+GitLab give a markdown heading with the rule: lowercase, only letters, digits, `-` and `_` (`### C4100` gets `#c4100`,
 `### sign-compare` gets `#sign-compare`).
 `[[keywords]]` such as `[[wiki-issue-prefix]]` are left for `apply_environment.py`. For example:
 
