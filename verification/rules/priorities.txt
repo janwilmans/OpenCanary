@@ -17,6 +17,12 @@
 
 # MSVC warnings
 5   =C4701    # ub, potentially uninitialized local variable
+# off by default, enable them with /w14263 /w14264 /w14265: a function that hides a virtual function instead of
+# overriding it, or a missing virtual destructor, is very likely a bug
+10  =C4263    # member function does not override any base class virtual member function
+10  =C4264    # no override available for virtual member function from base, function is hidden
+10  =C4265    # class has virtual functions, but its destructor is not virtual
+20  =C4005    # macro redefinition, the definition that wins depends on the include order
 
 # MSVC warnings that used to be prioritized in parse_msvc.py (C4505 and C4611 were listed twice, the first one won; C4701 is defined above)
 70  ~C4100    # unreferenced formal parameter
