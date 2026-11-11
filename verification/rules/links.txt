@@ -11,7 +11,7 @@
 #   <rule>    the rule, url encoded
 #   <anchor>  the anchor of a markdown heading with the rule on GitHub and GitLab: lowercase, only letters, digits,
 #             '-' and '_', so C4100 becomes c4100 and sign-compare stays sign-compare
-#   [[wiki-issue-prefix]] and other [[keywords]] are filled in by apply_environment.py (WIKI_URL_PREFIX in env.txt)
+#   [[keywords]] such as [[permalink-prefix]] are filled in by apply_environment.py
 # a rule without a matching link: line keeps the link of the parser, or gets https://duckduckgo.com/?q=!ducky+<source>+<rule>
 # a rule without a matching solution: line has no solution icon
 # use quotes around a matcher that contains spaces, '#' after a space starts a comment
@@ -21,4 +21,4 @@ solution:https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.
 
 # examples:
 # link:https://clang.llvm.org/docs/DiagnosticsReference.html#w<rule>  ?^[a-z][a-z0-9-]*$
-# solution:[[wiki-issue-prefix]]<rule>  ?^C4[0-9]+$
+# solution:https://wiki.example.com/OpenCanary_Issue_<rule>  ?^C4[0-9]+$

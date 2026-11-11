@@ -130,9 +130,9 @@ class TestReport(unittest.TestCase):
                                                 {"3": "[[permalink-prefix]]/a.cc#L1", "5": "https://x/rule"}]])
 
     def test_solution_link_is_not_a_column(self):
-        report = run_script("create_report.py", stdin=self.row("5", link="[5]{https://x/rule}[solution]{[[wiki-issue-prefix]]rule}"))
+        report = run_script("create_report.py", stdin=self.row("5", link="[5]{https://x/rule}[solution]{[[permalink-prefix]]/rule}"))
         self.assertTrue(is_valid_xml(report))
-        self.assertEqual(report_rows(report)[0][-1], {"5": "https://x/rule", "solution": "[[wiki-issue-prefix]]rule"})
+        self.assertEqual(report_rows(report)[0][-1], {"5": "https://x/rule", "solution": "[[permalink-prefix]]/rule"})
         self.assertIn("How to solve", report)
 
     def test_theme_button(self):
@@ -429,12 +429,12 @@ class TestLinks(unittest.TestCase):
     def test_configured_links_and_placeholders(self):
         rules = ("link:https://docs/<source>/<rule>  ?^C4\n"
                  "solution:https://example/rules.md#<anchor>  ?^AP#\n"
-                 "solution:[[wiki-issue-prefix]]<rule>  ~C4\n")
+                 "solution:[[permalink-prefix]]/<rule>  ~C4\n")
         out = self.links(rules, self.row("msvc", "C4100", "[5]{https://parser}"), self.row("opencanary", "AP#13"))
         import util
         self.assertEqual([util.heading_anchor(rule) for rule in ["AP#13", "C4100", "sign-compare", "format-truncation=", "a_b c"]],
                          ["ap13", "c4100", "sign-compare", "format-truncation", "a_b-c"])
-        self.assertEqual(out, ["[5]{https://docs/msvc/C4100}[solution]{[[wiki-issue-prefix]]C4100}",
+        self.assertEqual(out, ["[5]{https://docs/msvc/C4100}[solution]{[[permalink-prefix]]/C4100}",
                                "[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}[solution]{https://example/rules.md#ap13}"])
 
 
@@ -500,14 +500,18 @@ class TestCustomize(unittest.TestCase):
 
 class TestRunner(unittest.TestCase):
 
-    def test_wiki_url_prefix_from_environment_file(self):
+    def test_wiki_url_from_environment_file(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:
             env = os.path.join(d, "env.txt")
-            with open(env, "w", encoding="utf-8") as f:
-                f.write("WIKI_URL_PREFIX=https://wiki.example.com/?t=OC\n")
-            out = run_script("apply_environment.py", [env], "[[wiki-url]] [[wiki-issue-prefix]]\n")
-            self.assertEqual(out.strip(), "https://wiki.example.com/?t=OC_Issues https://wiki.example.com/?t=OC_Issue_")
+            line = '<a data-optional="" href="[[wiki-url]]">Wiki</a>\n'
+            for contents, expected in [("WIKI_URL=https://wiki.example.com/OC\n", "https://wiki.example.com/OC"),
+                                       ("WIKI_URL_PREFIX=https://wiki.example.com/?t=OC\n", "https://wiki.example.com/?t=OC_Issues"),
+                                       ("CI_JOB_URL=x\n", None)]:
+                with open(env, "w", encoding="utf-8") as f:
+                    f.write(contents)
+                out = run_script("apply_environment.py", [env], line)
+                self.assertEqual(out, line.replace("[[wiki-url]]", expected) if expected else "")
 
     @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
     def test_run_from_config(self):

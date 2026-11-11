@@ -8,7 +8,7 @@
     in the url <source> and <rule> are replaced by the (url encoded) source and rule of the issue, <anchor> by the
     anchor GitHub and GitLab give a markdown heading with the rule: lowercase, only letters, digits, '-' and '_'
     (C4100 becomes c4100, sign-compare stays sign-compare);
-    [[keywords]], such as [[wiki-issue-prefix]], are filled in later by apply_environment.py
+    [[keywords]], such as [[permalink-prefix]], are filled in later by apply_environment.py
 
     Usage: <input> | apply_links.py [--rules FILE]
 """

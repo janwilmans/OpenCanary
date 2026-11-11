@@ -44,7 +44,7 @@ FUNNEL_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke
 BLOCK_SIZE = 4000  # issues per compressed block
 
 # the [[keywords]] apply_environment.py fills in, the page script fills them into the issues as well
-ENVIRONMENT_KEYS = ["permalink-prefix", "wiki-issue-prefix", "wiki-url", "job-url", "branch-id", "user-name", "commit-message"]
+ENVIRONMENT_KEYS = ["permalink-prefix", "wiki-url", "job-url", "branch-id", "user-name", "commit-message"]
 
 
 def get_tier(priority):

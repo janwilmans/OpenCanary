@@ -48,22 +48,14 @@ def show_usage():
     eprint("   " + __doc__)
 
 
-# _Issue_XXX_NN will be concatenated for issues specific pages
-# _Issues will be concatenated for the overview page
-# configure with WIKI_URL_PREFIX=... in the environment file
-DEFAULT_WIKI_URL_PREFIX = "https://wiki.company.nl/wiki/index.php?title=OpenCanary"
-
-
-def get_wiki_url_prefix():
-    return util.get_from_envfile_or("WIKI_URL_PREFIX", DEFAULT_WIKI_URL_PREFIX)
-
-
-def get_wiki_issue_prefix():
-    return get_wiki_url_prefix() + "_Issue_"
-
-
-def get_wiki_main_url():
-    return get_wiki_url_prefix() + "_Issues"
+def get_wiki_url():
+    """WIKI_URL=... in the environment file; the older WIKI_URL_PREFIX=... still works and gets '_Issues' appended.
+    Empty without either, which hides the wiki button of the report"""
+    if "WIKI_URL" in util.envfile:
+        return util.envfile["WIKI_URL"]
+    if "WIKI_URL_PREFIX" in util.envfile:
+        return util.envfile["WIKI_URL_PREFIX"] + "_Issues"
+    return ""
 
 
 # returns projects GIT url _without_ trailing /
@@ -85,8 +77,7 @@ def transform(line):
     """replaces the [[keys]]; a line with data-optional="" (one element per line) is removed entirely when one of its
     [[keys]] has no value, so html without scripts, such as an e-mail, does not show an empty or 'not found' item"""
     values = {
-        "[[wiki-issue-prefix]]": get_wiki_issue_prefix,
-        "[[wiki-url]]": get_wiki_main_url,
+        "[[wiki-url]]": get_wiki_url,
         "[[job-url]]": get_job_url,
         "[[branch-id]]": get_branch_id,
         "[[user-name]]": get_user_name,

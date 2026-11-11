@@ -422,11 +422,11 @@ For every issue with a rule, matched against the **rule** field:
 In the url `<source>` and `<rule>` are replaced by the url encoded source and rule, `<anchor>` by the anchor GitHub and
 GitLab give a markdown heading with the rule: lowercase, only letters, digits, `-` and `_` (`### C4100` gets `#c4100`,
 `### sign-compare` gets `#sign-compare`).
-`[[keywords]]` such as `[[wiki-issue-prefix]]` are left for `apply_environment.py`. For example:
+`[[keywords]]` such as `[[permalink-prefix]]` are left for `apply_environment.py`. For example:
 
 ```text
 link:https://clang.llvm.org/docs/DiagnosticsReference.html#w<rule>  ?^[a-z][a-z0-9-]*$
-solution:[[wiki-issue-prefix]]<rule>  ?^C4[0-9]+$
+solution:https://wiki.example.com/OpenCanary_Issue_<rule>  ?^C4[0-9]+$
 ```
 
 Issues without a rule are passed unchanged.
@@ -511,7 +511,7 @@ e-mail attachment. It is well-formed XML.
   This needs a current Chrome, Edge, Firefox or Safari.
 - `[[keywords]]` in the page (header and links) are left for `apply_environment.py`. Because that script cannot see
   inside the compressed data, the page carries the keyword values in a hidden element and fills them into the issues
-  while unpacking: `[[permalink-prefix]]`, `[[wiki-issue-prefix]]`, `[[wiki-url]]`, `[[job-url]]`, `[[branch-id]]`,
+  while unpacking: `[[permalink-prefix]]`, `[[wiki-url]]`, `[[job-url]]`, `[[branch-id]]`,
   `[[user-name]]`, `[[commit-message]]`.
 - Header items (branch, author, last commit, CI job and wiki buttons) without a value, or still containing `[[`, are
   hidden.
@@ -582,10 +582,10 @@ Replaces the placeholders in every input line (any text, normally the report):
 | `[[branch-id]]` | `CI_COMMIT_REF_NAME` (the branch or tag), else `CI_BUILD_REF_NAME` (its name before GitLab 9.0), else `CI_COMMIT_SHA (commit_id)` |
 | `[[user-name]]` | `GITLAB_USER_NAME`; `Scheduled build` when the `CI_PIPELINE_SOURCE` environment variable of the process contains `schedule` |
 | `[[commit-message]]` | `CI_COMMIT_TITLE` |
-| `[[wiki-url]]` | `WIKI_URL_PREFIX` + `_Issues` |
-| `[[wiki-issue-prefix]]` | `WIKI_URL_PREFIX` + `_Issue_` |
+| `[[wiki-url]]` | `WIKI_URL`, else `WIKI_URL_PREFIX` + `_Issues` (the older setting), else empty, which hides the wiki button |
 
-`WIKI_URL_PREFIX` defaults to `https://wiki.company.nl/wiki/index.php?title=OpenCanary`. A missing key for job URL,
+A link per rule, such as a wiki page per warning, is set in `rules/links.txt` instead (see
+[apply_links.py](#apply_linkspy)). A missing key for job URL,
 user name, commit message or permalink is written as `[[<KEY> not found by get_from_envfile()]]`, which makes the
 report hide that header item. A line that contains `data-optional=""` is removed entirely when one of its
 placeholders gets an empty or missing value, so pages without scripts (the summary) do not show such an item either;

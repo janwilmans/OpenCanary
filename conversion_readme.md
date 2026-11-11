@@ -33,7 +33,8 @@ file, so the scripts can be updated without merge conflicts:
 
 - the if-chain in `apply_team_priorities.py`: `rules/priorities.txt`, or your own file with `--rules FILE`
 - the threshold in `apply_low_hanging_fruit.py`: `--threshold N` (default 20, unchanged)
-- `wiki_url_prefix` in `apply_environment.py`: `WIKI_URL_PREFIX=...` in the environment file
+- `wiki_url_prefix` in `apply_environment.py`: `WIKI_URL=...` (the url of the wiki button) in the environment file;
+  a wiki page per rule is a `solution:` line in `rules/links.txt`
 - the cppcheck path in `cppcheck.py`: the `CPPCHECK` environment variable (default: `cppcheck` on the PATH)
 - the binary in `run_clang_format.py`: the `CLANG_FORMAT` environment variable
 
