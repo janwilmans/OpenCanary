@@ -11,6 +11,7 @@ first setup, read [getting_started.md](getting_started.md) first.
   [apply_team_priorities.py](#apply_team_prioritiespy), [apply_low_hanging_fruit.py](#apply_low_hanging_fruitpy),
   [sortby.py](#sortbypy)
 - Output: [create_report.py](#create_reportpy), [create_summary.py](#create_summarypy),
+  [create_metrics.py](#create_metricspy),
   [apply_environment.py](#apply_environmentpy), [tr_regression.py](#tr_regressionpy)
 - [Other tools](#other-tools)
 - [Known limitations](#known-limitations)
@@ -118,7 +119,7 @@ opencanary.py -h | --help                show the usage
 | `cppcheck` | `cppcheck.py` | | `summary` | `create_summary.py` |
 | `interest` | `tr_interest.py` | | `environment` | `apply_environment.py` |
 | `customize` | `tr_customize.py` | | `regression` | `tr_regression.py` |
-| `prioritize` | `apply_team_priorities.py` | | | |
+| `prioritize` | `apply_team_priorities.py` | | `metrics` | `create_metrics.py` |
 
 `opencanary.py <command>` passes the remaining arguments to the script and returns its exit code. When a command that
 reads stdin is started from a terminal without redirected input it does not wait, it prints how to redirect and exits
@@ -148,6 +149,7 @@ All relative paths are relative to the directory of the configuration file.
 | | `environment` | none | environment file; when set the report is passed through `apply_environment.py` |
 | | `summary` | none | when set, the e-mail summary is written to this file |
 | | `report_url` | none | `--report-url` of `create_summary.py`, a link from the summary to the full report |
+| | `metrics` | none | when set, the number of issues in the OpenMetrics format is written to this file |
 
 A configuration without `[[input]]` stops with `no [[input]] defined in the configuration`. Reading the configuration
 needs Python 3.11+ or the `tomli` package.
@@ -166,6 +168,7 @@ needs Python 3.11+ or the `tomli` package.
 8. `create_report.py`, then `apply_environment.py <environment>` when configured; written to the `report` file.
 9. When `summary` is configured: `create_summary.py [--report-url <report_url>]` on the issues, then `apply_environment.py <environment>` when
    configured; written to the `summary` file.
+10. When `metrics` is configured: `create_metrics.py` on the issues, written to the `metrics` file.
 
 Each step prints its stderr messages. If a step exits with a non-zero code, `run` stops with
 `opencanary: stage '<script>' failed with exit code N`. `run` does not run `tr_regression.py`; run it as a separate
@@ -586,6 +589,32 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
 - An empty team, component or category is shown as `(none)`.
 - The last row is the total number of issues. The header rows of both tables and the total row have the same light
   blue background. With no input only the text line is written.
+
+### create_metrics.py
+
+```
+create_metrics.py < issues.txt > metrics.txt
+```
+
+| Option | Description |
+|--------|-------------|
+| `-h`, `--help` | Show the usage. |
+
+Writes the number of issues in the [OpenMetrics](https://openmetrics.io) text format, so a CI or monitoring system can
+follow it over time: one gauge, `opencanary_issues`, with a sample per combination of source, rule, category, team,
+component and priority. The description is not a label, because that would give a time series per message.
+
+```text
+# TYPE opencanary_issues gauge
+# HELP opencanary_issues Number of issues reported by OpenCanary.
+opencanary_issues{source="gcc",rule="sign-compare",category="warning",team="core",component="net",priority="50"} 3
+# EOF
+```
+
+The samples are sorted by their labels. HTML escapes in the fields are decoded; `\`, `"` and newlines in a label value
+are escaped as OpenMetrics requires. Lines with fewer than seven fields are skipped. Without issues the output has
+only the `# TYPE`, `# HELP` and `# EOF` lines. In GitLab the file can also be a *metrics report*
+(`artifacts: reports: metrics: metrics.txt`).
 
 ### apply_environment.py
 

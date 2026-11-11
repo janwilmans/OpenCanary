@@ -6,7 +6,7 @@
     opencanary.py <command> [args...]       run one stage, input/output is stdin/stdout like the scripts themselves
 
     commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, interest, customize, links, prioritize, low-hanging,
-              sort, report, summary, environment, regression
+              sort, report, summary, metrics, environment, regression
 """
 
 import argparse
@@ -29,6 +29,7 @@ COMMANDS = {
     "sort": "sortby.py",
     "report": "create_report.py",
     "summary": "create_summary.py",
+    "metrics": "create_metrics.py",
     "environment": "apply_environment.py",
     "regression": "tr_regression.py",
 }
@@ -71,6 +72,7 @@ issues = "issues.txt"       # the prioritized work list
 report = "report.html"      # the html report, [[keywords]] are filled using the environment file
 # summary = "summary.html"  # issues per category and team, as e-mail body (Outlook friendly)
 # report_url = "[[job-url]]/artifacts/file/report.html"  # link from the summary to the full report
+# metrics = "metrics.txt"   # number of issues per rule, team, ... in the OpenMetrics format, for monitoring over time
 # environment = "env.txt"   # key=value file (CI_JOB_URL, CI_PROJECT_URL, CI_COMMIT_SHA, ...), see apply_environment.py
 '''
 
@@ -157,6 +159,12 @@ def run_pipeline(config, base):
         with open(summary_file, "wb") as f:
             f.write(summary)
         print(f"opencanary: summary written to {summary_file}", file=sys.stderr)
+
+    if "metrics" in output:
+        metrics_file = path(output["metrics"])
+        with open(metrics_file, "wb") as f:
+            f.write(run_stage(script("metrics"), data))
+        print(f"opencanary: metrics written to {metrics_file}", file=sys.stderr)
 
 
 def main():

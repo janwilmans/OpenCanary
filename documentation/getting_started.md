@@ -215,6 +215,9 @@ opencanary:
 
 Write only the variables you need to `env.txt`: the CI environment also contains tokens.
 
+**Metrics**: add `metrics = "metrics.txt"` to `[output]` for the number of issues per rule, team and priority in the
+[OpenMetrics](https://openmetrics.io) format, to follow them over time in a monitoring system such as Prometheus.
+
 **E-mail summary**: add `summary = "summary.html"` to `[output]`, then send it with the report attached. `send_email.py`
 is a starting point: set the mail server at the top of the script and the recipients in `send_report()` first:
 

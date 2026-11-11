@@ -532,7 +532,7 @@ class TestRunner(unittest.TestCase):
             shutil.copy(os.path.join(TESTDATA, "env.txt"), os.path.join(d, "env.txt"))
             with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
                 f.write('[[input]]\nformat = "gcc"\npath = "gcc.log"\n[output]\nenvironment = "env.txt"\nsummary = "summary.html"\n'
-                        'report_url = "[[job-url]]/artifacts/file/report.html"\n')
+                        'report_url = "[[job-url]]/artifacts/file/report.html"\nmetrics = "metrics.txt"\n')
             out = run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
             self.assertEqual(out, "")
             with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
@@ -550,10 +550,33 @@ class TestRunner(unittest.TestCase):
             self.assertIn('<a href="https://ci.example.com/group/proj/-/jobs/42/artifacts/file/report.html"', summary)
             self.assertIn("https://duckduckgo.com/?q=!ducky+gcc+sign-compare", str(report_rows(report)))
             self.assertNotIn("[[", summary)
+            with open(os.path.join(d, "metrics.txt"), encoding="utf-8") as f:
+                metrics = lines(f.read())
+            self.assertEqual(len([line for line in metrics if line.startswith("opencanary_issues{")]), 6)
+            self.assertEqual(metrics[-1], "# EOF")
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))
         self.assertEqual([line.split("|")[0] for line in lines(out)], ["1", "9"])
+
+
+class TestMetrics(unittest.TestCase):
+
+    def test_issues_are_counted_per_label_set(self):
+        rows = ("45|core|net|a.cc:1|gcc|sign-compare|warning|d|\n" * 2
+                + "99|||b.cc:1|opencanary|todo|readability|d|\n"
+                + "7|a&amp;b|c\\x|b.cc:1|msvc|C4100|warning|d|\n")
+        self.assertEqual(lines(run_script("create_metrics.py", stdin=rows)), [
+            "# TYPE opencanary_issues gauge",
+            "# HELP opencanary_issues Number of issues reported by OpenCanary.",
+            'opencanary_issues{source="gcc",rule="sign-compare",category="warning",team="core",component="net",priority="45"} 2',
+            'opencanary_issues{source="msvc",rule="C4100",category="warning",team="a&b",component="c\\\\x",priority="7"} 1',
+            'opencanary_issues{source="opencanary",rule="todo",category="readability",team="",component="",priority="99"} 1',
+            "# EOF"])
+
+    def test_no_issues(self):
+        self.assertEqual(lines(run_script("create_metrics.py")),
+                         ["# TYPE opencanary_issues gauge", "# HELP opencanary_issues Number of issues reported by OpenCanary.", "# EOF"])
 
 
 class TestCppIssues(unittest.TestCase):

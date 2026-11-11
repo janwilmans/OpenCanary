@@ -110,6 +110,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename
 - `create_report.py`, transforms the 'structured CSV' to an HTML report, see [Reports](#reports).
 - `create_summary.py`, optional, the top 10 issues and the number of issues per rule, team, component and category as an e-mail friendly HTML page, see [Reports](#reports).
+- `create_metrics.py`, optional, the number of issues per rule, team, component, category and priority in the OpenMetrics format, for monitoring over time.
 - `apply_environment.py`, replaces [[keyword]] placeholders using a `key=value` environment file (`CI_JOB_URL`, `CI_PROJECT_URL`, `CI_COMMIT_SHA`, ..., optional `WIKI_URL_PREFIX`, `PERMALINK_PREFIX` to link to a local checkout instead of `CI_PROJECT_URL/blob/CI_COMMIT_SHA`).
 - `tr_regression.py`, example of the regression gate: any line that passes fails the build.
 
