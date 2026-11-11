@@ -82,6 +82,7 @@ The defaults are in `verification/rules/`, larger examples in `verification/exam
   | `=text` | equals `text` exactly |
   | `~text` | contains `text` |
   | `?regex` | contains a match of the Python regular expression `regex` (case-sensitive, prefix `(?i)` to ignore case) |
+  | `@text` | is from source `text` (`gcc`, `clang`, `msvc`, `opencanary`, ...); only in `rules/links.txt`, elsewhere a rule with it never matches |
 
 - A rule matches when **all** its matchers match. Rules are tried from top to bottom and the **first** matching rule
   wins.

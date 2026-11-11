@@ -36,12 +36,12 @@ def transform(rules, parts):
         return parts
     links = util.links_to_dict(parts[Column.LINK])
     rule_column = str(Column.RULE.value)
-    link = util.first_match(rules, rule, "link")
+    link = util.first_match(rules, rule, "link", source)
     if link is not None:
         links[rule_column] = fill(link, source, rule)
     elif rule_column not in links:
         links[rule_column] = util.get_rule_url(source, rule)
-    solution = util.first_match(rules, rule, "solution")
+    solution = util.first_match(rules, rule, "solution", source)
     if solution is not None:
         links[util.SOLUTION_LINK] = fill(solution, source, rule)
     parts[Column.LINK] = util.dict_to_links(links)

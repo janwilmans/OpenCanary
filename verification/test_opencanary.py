@@ -321,6 +321,13 @@ class TestRules(unittest.TestCase):
         self.assertEqual(util.first_match(rules, "a two words x"), "20")
         self.assertIsNone(util.first_match(rules, "a two words"))
 
+    def test_source_matcher(self):
+        import util
+        rules = util.parse_rules(["5 ~x @gcc", "6 ~x"])
+        self.assertEqual(util.first_match(rules, "x", source="gcc"), "5")
+        self.assertEqual(util.first_match(rules, "x", source="clang"), "6")
+        self.assertEqual(util.first_match(rules, "x"), "6")
+
     def test_keyed_rules_are_separate(self):
         import util
         rules = util.parse_rules(["category:ub ~bounds", "5 ~bounds"])
@@ -403,9 +410,11 @@ class TestRulesDocumentation(unittest.TestCase):
         links = util.load_rules(util.default_rules_file("links.txt"))
         for rule in rules:
             # <anchor> must be the anchor GitHub gives the '### <rule>' heading
-            self.assertEqual(apply_links.fill(util.first_match(links, rule, "solution"), "opencanary", rule),
+            self.assertEqual(apply_links.fill(util.first_match(links, rule, "solution", "opencanary"), "opencanary", rule),
                              "https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#" + util.heading_anchor(rule))
-        self.assertIsNone(util.first_match(links, "sign-compare", "solution"))
+        self.assertIsNone(util.first_match(links, "sign-compare", "solution", "gcc"))
+        # a compiler warning with the name of an opencanary rule does not get its solution
+        self.assertIsNone(util.first_match(links, "AP#13", "solution", "clang"))
 
 
 class TestCustomize(unittest.TestCase):

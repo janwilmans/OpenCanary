@@ -5,6 +5,7 @@
 #   =text   rule equals text
 #   ~text   rule contains text
 #   ?regex  rule matches the regular expression
+#   @text   the source of the issue (gcc, clang, msvc, opencanary, ...) equals text
 # in the url:
 #   <source>  the source of the issue (gcc, clang, msvc, opencanary, ...), url encoded
 #   <rule>    the rule, url encoded
@@ -16,8 +17,7 @@
 # use quotes around a matcher that contains spaces, '#' after a space starts a comment
 
 # the rules of oc_cpp_issues.py: the solution is their section in documentation/rules.md
-solution:https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>  ?^(AP|MO|UD)#[0-9]+$
-solution:https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>  =PARSE
+solution:https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#<anchor>  @opencanary
 
 # examples:
 # link:https://clang.llvm.org/docs/DiagnosticsReference.html#w<rule>  ?^[a-z][a-z0-9-]*$
