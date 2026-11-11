@@ -328,6 +328,17 @@ class TestRules(unittest.TestCase):
         self.assertEqual(util.first_match(rules, "x", source="clang"), "6")
         self.assertEqual(util.first_match(rules, "x"), "6")
 
+    def test_condition_matcher(self):
+        import util
+        rules = util.parse_rules(["5 ~x !yes", "6 ~y !yes", "7 ~"])
+        calls = []
+        conditions = {"yes": lambda: calls.append(1) or True}
+        self.assertEqual(util.first_match(rules, "x", conditions=conditions), "5")
+        self.assertEqual(util.first_match(rules, "z", conditions=conditions), "7")
+        self.assertEqual(len(calls), 1)   # only evaluated when the matchers before it matched
+        self.assertEqual(util.first_match(rules, "x"), "7")
+        self.assertEqual(util.first_match(rules, "x", conditions={"no": lambda: True}), "7")
+
     def test_keyed_rules_are_separate(self):
         import util
         rules = util.parse_rules(["category:ub ~bounds", "5 ~bounds"])
@@ -361,6 +372,38 @@ class TestInterest(unittest.TestCase):
         data = "|3rdparty|C4706\n|CsCore|C4706\n|CsCore|C4018\n|x|C4018 a\\b\n"
         out = run_script("tr_interest.py", ["--rules", rules, "--msvc"], data)
         self.assertEqual(out, "|x|C4018 a/b\n")
+
+    @staticmethod
+    def issue(fileref, rule):
+        return "|".join(["99", "", "", fileref, "clang-tidy", rule, "warning", "d", ""]) + "\n"
+
+    def test_default_rules_drop_nolint(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "a.cc").replace("\\", "/")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("int value = 42; // NOLINT\n"
+                        "int value = 42; // NOLINT(cppcoreguidelines-avoid-magic-numbers)\n"
+                        "int value = 42; // NOLINT(cppcoreguidelines-*, clang-diagnostic-sign-compare)\n"
+                        "int value = 42; // NOLINTNEXTLINE\n"
+                        "int value = 42;\n")
+            magic = "cppcoreguidelines-avoid-magic-numbers"
+            dropped = [self.issue(f"{path}:1:13", magic), self.issue(f"{path}:1", "sign-compare"),
+                       self.issue(f"{path}:2:13", magic), self.issue(f"{path}:3", magic),
+                       self.issue(f"{path}:3", "sign-compare")]
+            kept = [self.issue(f"{path}:2", "sign-compare"), self.issue(f"{path}:3", "conversion"),
+                    self.issue(f"{path}:4", magic), self.issue(f"{path}:5", magic), self.issue(f"{path}:9", magic),
+                    self.issue(f"{path}", magic), self.issue(os.path.join(d, "missing.cc") + ":1", magic), "raw log line\n"]
+            self.assertEqual(run_script("tr_interest.py", stdin="".join(dropped + kept)), "".join(kept))
+
+    def test_unknown_condition_is_reported(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "i.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("drop !nolnt\n")
+            with self.assertRaisesRegex(AssertionError, "unknown condition '!nolnt'"):
+                run_script("tr_interest.py", ["--rules", path], "x\n")
 
 
 class TestLinks(unittest.TestCase):

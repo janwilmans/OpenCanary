@@ -83,6 +83,7 @@ The defaults are in `verification/rules/`, larger examples in `verification/exam
   | `~text` | contains `text` |
   | `?regex` | contains a match of the Python regular expression `regex` (case-sensitive, prefix `(?i)` to ignore case) |
   | `@text` | is from source `text` (`gcc`, `clang`, `msvc`, `opencanary`, ...); only in `rules/links.txt`, elsewhere a rule with it never matches |
+  | `!nolint` | is an issue whose source line has a `NOLINT` comment that covers its rule; only in `rules/interest.txt`, see [tr_interest.py](#tr_interestpy) |
 
 - A rule matches when **all** its matchers match. Rules are tried from top to bottom and the **first** matching rule
   wins.
@@ -342,6 +343,22 @@ tr_interest.py [--rules FILE] [--msvc] < issues
 For every input line: with `--msvc` replace `\` by `/`; find the first rule (without a `key:` value) whose matchers all
 match the whole line; when its value is `drop` the line is removed, otherwise it is written unchanged. Lines are not
 parsed, so this also works on raw log lines.
+
+The matcher `!nolint` (in the default `rules/interest.txt`: `drop !nolint`) does look at the issue: it reads the line
+of the fileref (`file:line[:column]`) from the source file and matches when that line has a clang-tidy style
+`NOLINT` comment that covers the rule:
+
+| Source line | Covers |
+|-------------|--------|
+| `int value = 42; // NOLINT` | every rule |
+| `int value = 42; // NOLINT(cppcoreguidelines-avoid-magic-numbers)` | only that rule |
+| `x = (int *)p; // NOLINT(c-style-pointer-cast, cppcoreguidelines-*)` | the listed rules, `*` and `?` are globs |
+| `if (a < b) // NOLINT(clang-diagnostic-sign-compare)` | `sign-compare`: clang-tidy's name for a compiler warning also covers it |
+
+`NOLINTNEXTLINE`, `NOLINTBEGIN` and `NOLINTEND` are not supported. The file is read as it is when `tr_interest.py`
+runs, so run it on the same checkout the issues were reported on. A relative path is relative to the current
+directory; an issue whose file or line cannot be read is not matched (and so not dropped). Every file is read at
+most once. An unknown `!name` in the rules file stops the script with `unknown condition`.
 
 The default rules drop lines containing `_autogen`, `|use of old-style|` and `external/`.
 

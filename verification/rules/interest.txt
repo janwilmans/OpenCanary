@@ -3,9 +3,14 @@
 #   =text    line equals text
 #   ~text    line contains text
 #   ?regex   regular expression (re.search), prefix with (?i) to ignore case
+#   !nolint  the source line of the issue has a NOLINT comment that covers its rule (the file is read, see below)
 # use quotes around a matcher that contains spaces, '#' at the start of a line or after a space starts a comment
 # see examples/ for larger rule sets, for MSVC use --msvc so the paths are normalized to / first
 
 drop ~_autogen
 drop "~|use of old-style|"
 drop ~external/
+
+# issues on a source line with '// NOLINT' (every rule) or '// NOLINT(rule, other-*)' (only the listed rules, globs);
+# a compiler warning is also covered by clang-tidy's name for it, as in NOLINT(clang-diagnostic-sign-compare)
+drop !nolint

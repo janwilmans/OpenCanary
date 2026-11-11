@@ -154,17 +154,21 @@ def read_envfile(filename):
 
 # ---- rule files -----------------------------------------------------------------------------------------------------
 # A rule file is a plain text list of "<value> <matcher> [<matcher>...]" lines, evaluated top to bottom, the first rule
-# whose matchers all match wins. Matchers: =text (equals), ~text (contains), ?regex (re.search), and @text (the source equals text, only where the
-# caller passes a source, see first_match). Use quotes for text with spaces, # starts a comment. A value of the form key:value (eg. component:CsCore) lets one file hold several kinds of rules.
+# whose matchers all match wins. Matchers: =text (equals), ~text (contains), ?regex (re.search), @text (the source
+# equals text) and !name (a condition the caller computes, such as !nolint); the last two only match where the caller
+# passes a source or conditions, see first_match. Use quotes for text with spaces, # starts a comment. A value of the
+# form key:value (eg. component:CsCore) lets one file hold several kinds of rules.
 
 class Rule:
     def __init__(self, value, matchers):
         self.value = value
         self.matchers = matchers
 
-    def matches(self, text, source=None):
+    def matches(self, text, source=None, conditions=None):
         for matcher in self.matchers:
             if matcher[0] == "@" and source != matcher[1:]:
+                return False
+            if matcher[0] == "!" and not (conditions and matcher[1:] in conditions and conditions[matcher[1:]]()):
                 return False
             if matcher[0] == "=" and text != matcher[1:]:
                 return False
@@ -182,8 +186,8 @@ def parse_rules(lines):
         if line == "" or line.startswith("#"):
             continue
         parts = shlex.split(line)
-        if len(parts) < 2 or any(m[0] not in "=~?@" for m in parts[1:]):
-            raise ValueError(f"rule line {number} is invalid: {line!r}, expected '<value> =text|~text|?regex|@source ...'")
+        if len(parts) < 2 or any(m[0] not in "=~?@!" for m in parts[1:]):
+            raise ValueError(f"rule line {number} is invalid: {line!r}, expected '<value> =text|~text|?regex|@source|!condition ...'")
         rules.append(Rule(parts[0], parts[1:]))
     return rules
 
@@ -192,13 +196,14 @@ def load_rules(filename):
     return parse_rules(read_lines_from_file(filename))
 
 
-def first_match(rules, text, key=None, source=None):
+def first_match(rules, text, key=None, source=None, conditions=None):
     """returns the value of the first matching rule, or None. With key, only rules with value 'key:...' are
     considered and the 'key:' prefix is removed from the result. An @source matcher matches the given source;
-    without one (source None) a rule with an @source matcher never matches."""
+    without one (source None) a rule with an @source matcher never matches. A !name matcher matches when
+    conditions[name]() is true (called only when the matchers before it matched); without it, it never matches."""
     prefix = "" if key is None else key + ":"
     for rule in rules:
-        if rule.value.startswith(prefix) and (key is not None or ":" not in rule.value) and rule.matches(text, source):
+        if rule.value.startswith(prefix) and (key is not None or ":" not in rule.value) and rule.matches(text, source, conditions):
             return rule.value[len(prefix):]
     return None
 
