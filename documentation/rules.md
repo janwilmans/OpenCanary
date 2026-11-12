@@ -9,60 +9,59 @@ Rules are named like the clang warnings (lowercase words separated by `-`), but 
 warning: `rules/priorities.txt` matches on the rule name only, so `c-style-pointer-cast` can get another priority than
 clang's `old-style-cast`; for the same reason a name does not contain a part that `priorities.txt` matches for compiler
 warnings with `~`, such as `comment`. (`rules/links.txt` gives the solution link to every issue with source
-`opencanary`.) Until November 2026 the rules were numbered (`AP#13` is now `manual-delete`); the table below also lists
-the old names. The checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a
+`opencanary`.) The checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a
 comment or a string, for example). Exclude files with `.opencanaryignore`, drop a rule with `rules/interest.txt`, or
 give what is only found in comments the category `comments` with `--mark-comments` (`mark_comments` in
 `opencanary.toml`) and drop those with `drop "~|comments|"` in `rules/interest.txt`. The
 default priorities are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
 
-| Rule | Category | In short | Was |
-|------|----------|----------|-----|
-| [make-unique-header](#make-unique-header) | modernize | `#include` of a `make_unique` header | `MO#1` |
-| [unqualified-make-unique](#unqualified-make-unique) | modernize | `make_unique` that is not `std::make_unique` | `MO#2` |
-| [reinterpret-cast](#reinterpret-cast) | casting | `reinterpret_cast` | `AP#3` |
-| [volatile-variable](#volatile-variable) | redflag | `volatile` | `AP#4` |
-| [warnings-not-errors](#warnings-not-errors) | redflag | project does not treat warnings as errors | `UD#4` |
-| [null-macro](#null-macro) | modernize | `NULL` | `MO#5` |
-| [warning-level-not-4](#warning-level-not-4) | redflag | project warning level is not 4 | `UD#5` |
-| [non-english-word](#non-english-word) | readability | Dutch words in code or comments | `AP#6` |
-| [constant-if-directive](#constant-if-directive) | readability | `#if 0` / `#if 1` | `AP#7` |
-| [c-style-pointer-cast](#c-style-pointer-cast) | modernize | C-style pointer cast | `AP#8` |
-| [reserved-macro-name](#reserved-macro-name) | ub | `#define` of a reserved name (starting with `_` or with `__`) | `AP#9` |
-| [min-max-macro](#min-max-macro) | modernize | `min` or `max` macro | `AP#10` |
-| [extern](#extern) | redflag | `extern` | `AP#11` |
-| [manual-delete](#manual-delete) | redflag | `delete` | `AP#13` |
-| [extern-volatile](#extern-volatile) | redflag | `extern volatile` | `AP#14` |
-| [string-literal-cast](#string-literal-cast) | ub | casting away the constness of a string literal | `AP#15` |
-| [const-cast](#const-cast) | readability | `const_cast` | `AP#16` |
-| [using-namespace-in-header](#using-namespace-in-header) | redflag | `using namespace` in a header | `AP#17` |
-| [assign-in-condition](#assign-in-condition) | assign_in_condition | assignment in an `if`, `while` or `switch` condition | `AP#18` |
-| [misspelled-word](#misspelled-word) | spelling | misspelled word | `AP#19` |
-| [memset-zero-size](#memset-zero-size) | bug | `memset` with size 0 | |
-| [string-braced-size](#string-braced-size) | bug | `std::string s{n}` | |
-| [assign-to-self](#assign-to-self) | bug | `x = x;` | |
-| [self-include](#self-include) | bug | a header that includes itself | |
-| [address-null-check](#address-null-check) | ub | `&x == nullptr` | |
-| [void-pointer-pointer-cast](#void-pointer-pointer-cast) | ub | cast to `void **` | |
-| [throw-pointer](#throw-pointer) | redflag | `throw new` | |
-| [dangling-range-for](#dangling-range-for) | bug | range-for over a member of a temporary | |
-| [include-source-file](#include-source-file) | redflag | `#include` of a `.cpp` file | |
-| [throw-non-exception](#throw-non-exception) | redflag | `throw "text"` or `throw 1` | |
-| [catch-by-value](#catch-by-value) | redflag | `catch (std::exception e)` | |
-| [uninitialized-variable](#uninitialized-variable) | ub | `int x;` in a source file | |
-| [short-macro-name](#short-macro-name) | redflag | macro with a name of 3 characters or less | |
-| [deprecated-uncaught-exception](#deprecated-uncaught-exception) | modernize | `std::uncaught_exception()` | |
-| [undef-macro](#undef-macro) | redflag | `#undef` | |
-| [reset-with-new](#reset-with-new) | modernize | `.reset(new ...)` | |
-| [triple-pointer](#triple-pointer) | readability | `T ***` | |
-| [empty-special-member](#empty-special-member) | modernize | `Foo::Foo() {}` | |
-| [duplicate-include](#duplicate-include) | readability | the same `#include` twice | |
-| [short-include-guard](#short-include-guard) | readability | include guard such as `MOVE_H` | |
-| [foreach-macro](#foreach-macro) | modernize | `foreach`, `Q_FOREACH`, `BOOST_FOREACH` | |
-| [endless-for](#endless-for) | readability | `for (;;)` | |
-| [redundant-semicolon](#redundant-semicolon) | readability | `;;` | |
-| [todo](#todo) | readability | `TODO` | |
-| [parse-error](#parse-error) | parse | file could not be read | `PARSE` |
+| Rule | Category | In short |
+|------|----------|----------|
+| [make-unique-header](#make-unique-header) | modernize | `#include` of a `make_unique` header |
+| [unqualified-make-unique](#unqualified-make-unique) | modernize | `make_unique` that is not `std::make_unique` |
+| [reinterpret-cast](#reinterpret-cast) | casting | `reinterpret_cast` |
+| [volatile-variable](#volatile-variable) | redflag | `volatile` |
+| [warnings-not-errors](#warnings-not-errors) | redflag | project does not treat warnings as errors |
+| [null-macro](#null-macro) | modernize | `NULL` |
+| [warning-level-not-4](#warning-level-not-4) | redflag | project warning level is not 4 |
+| [non-english-word](#non-english-word) | readability | Dutch words in code or comments |
+| [constant-if-directive](#constant-if-directive) | readability | `#if 0` / `#if 1` |
+| [c-style-pointer-cast](#c-style-pointer-cast) | modernize | C-style pointer cast |
+| [reserved-macro-name](#reserved-macro-name) | ub | `#define` of a reserved name (starting with `_` or with `__`) |
+| [min-max-macro](#min-max-macro) | modernize | `min` or `max` macro |
+| [extern](#extern) | redflag | `extern` |
+| [manual-delete](#manual-delete) | redflag | `delete` |
+| [extern-volatile](#extern-volatile) | redflag | `extern volatile` |
+| [string-literal-cast](#string-literal-cast) | ub | casting away the constness of a string literal |
+| [const-cast](#const-cast) | readability | `const_cast` |
+| [using-namespace-in-header](#using-namespace-in-header) | redflag | `using namespace` in a header |
+| [assign-in-condition](#assign-in-condition) | assign_in_condition | assignment in an `if`, `while` or `switch` condition |
+| [misspelled-word](#misspelled-word) | spelling | misspelled word |
+| [memset-zero-size](#memset-zero-size) | bug | `memset` with size 0 |
+| [string-braced-size](#string-braced-size) | bug | `std::string s{n}` |
+| [assign-to-self](#assign-to-self) | bug | `x = x;` |
+| [self-include](#self-include) | bug | a header that includes itself |
+| [address-null-check](#address-null-check) | ub | `&x == nullptr` |
+| [void-pointer-pointer-cast](#void-pointer-pointer-cast) | ub | cast to `void **` |
+| [throw-pointer](#throw-pointer) | redflag | `throw new` |
+| [dangling-range-for](#dangling-range-for) | bug | range-for over a member of a temporary |
+| [include-source-file](#include-source-file) | redflag | `#include` of a `.cpp` file |
+| [throw-non-exception](#throw-non-exception) | redflag | `throw "text"` or `throw 1` |
+| [catch-by-value](#catch-by-value) | redflag | `catch (std::exception e)` |
+| [uninitialized-variable](#uninitialized-variable) | ub | `int x;` in a source file |
+| [short-macro-name](#short-macro-name) | redflag | macro with a name of 3 characters or less |
+| [deprecated-uncaught-exception](#deprecated-uncaught-exception) | modernize | `std::uncaught_exception()` |
+| [undef-macro](#undef-macro) | redflag | `#undef` |
+| [reset-with-new](#reset-with-new) | modernize | `.reset(new ...)` |
+| [triple-pointer](#triple-pointer) | readability | `T ***` |
+| [empty-special-member](#empty-special-member) | modernize | `Foo::Foo() {}` |
+| [duplicate-include](#duplicate-include) | readability | the same `#include` twice |
+| [short-include-guard](#short-include-guard) | readability | include guard such as `MOVE_H` |
+| [foreach-macro](#foreach-macro) | modernize | `foreach`, `Q_FOREACH`, `BOOST_FOREACH` |
+| [endless-for](#endless-for) | readability | `for (;;)` |
+| [redundant-semicolon](#redundant-semicolon) | readability | `;;` |
+| [todo](#todo) | readability | `TODO` |
+| [parse-error](#parse-error) | parse | file could not be read |
 
 ### make-unique-header
 

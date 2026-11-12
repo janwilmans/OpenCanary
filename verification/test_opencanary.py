@@ -95,7 +95,7 @@ class TestParseGcc(unittest.TestCase):
         result = run_script("parse_gcc.py", ["clang"], read_testdata("gcc_warnings.txt"))
         self.assertIn("[5]{https://duckduckgo.com/?q=!ducky+clang+sign-compare}", result)
         import util
-        self.assertEqual(util.get_rule_url("cpp check", "AP#13"), "https://duckduckgo.com/?q=!ducky+cpp+check+AP%2313")
+        self.assertEqual(util.get_rule_url("cpp check", "X#13"), "https://duckduckgo.com/?q=!ducky+cpp+check+X%2313")
 
     def test_parse_gcc_full_integration(self):
         stages = [("parse_gcc.py", ["gcc"])] + DEFAULT_STAGES + ["create_report.py", ("apply_environment.py", [os.path.join(TESTDATA, "env.txt")])]
@@ -422,20 +422,20 @@ class TestLinks(unittest.TestCase):
         return "|".join(["99", "", "", "a.cc:1", source, rule, "w", "d", links]) + "\n"
 
     def test_default_rule_link(self):
-        out = self.links("", self.row("gcc", "sign-compare", "[3]{f}[5]{https://parser}"), self.row("opencanary", "AP#13", "[3]{f}"),
+        out = self.links("", self.row("gcc", "sign-compare", "[3]{f}[5]{https://parser}"), self.row("opencanary", "X#13", "[3]{f}"),
                          self.row("gcc", ""))
-        self.assertEqual(out, ["[3]{f}[5]{https://parser}", "[3]{f}[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}", ""])
+        self.assertEqual(out, ["[3]{f}[5]{https://parser}", "[3]{f}[5]{https://duckduckgo.com/?q=!ducky+opencanary+X%2313}", ""])
 
     def test_configured_links_and_placeholders(self):
         rules = ("link:https://docs/<source>/<rule>  ?^C4\n"
-                 "solution:https://example/rules.md#<anchor>  ?^AP#\n"
+                 "solution:https://example/rules.md#<anchor>  ?^X#\n"
                  "solution:[[permalink-prefix]]/<rule>  ~C4\n")
-        out = self.links(rules, self.row("msvc", "C4100", "[5]{https://parser}"), self.row("opencanary", "AP#13"))
+        out = self.links(rules, self.row("msvc", "C4100", "[5]{https://parser}"), self.row("opencanary", "X#13"))
         import util
-        self.assertEqual([util.heading_anchor(rule) for rule in ["AP#13", "C4100", "sign-compare", "format-truncation=", "a_b c"]],
-                         ["ap13", "c4100", "sign-compare", "format-truncation", "a_b-c"])
+        self.assertEqual([util.heading_anchor(rule) for rule in ["X#13", "C4100", "sign-compare", "format-truncation=", "a_b c"]],
+                         ["x13", "c4100", "sign-compare", "format-truncation", "a_b-c"])
         self.assertEqual(out, ["[5]{https://docs/msvc/C4100}[solution]{[[permalink-prefix]]/C4100}",
-                               "[5]{https://duckduckgo.com/?q=!ducky+opencanary+AP%2313}[solution]{https://example/rules.md#ap13}"])
+                               "[5]{https://duckduckgo.com/?q=!ducky+opencanary+X%2313}[solution]{https://example/rules.md#x13}"])
 
 
 class TestRulesDocumentation(unittest.TestCase):
