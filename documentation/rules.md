@@ -35,7 +35,7 @@ default priorities are in `rules/priorities.txt`, the exact patterns in [details
 | [string-literal-cast](#string-literal-cast) | ub | casting away the constness of a string literal |
 | [const-cast](#const-cast) | readability | `const_cast` |
 | [using-namespace-in-header](#using-namespace-in-header) | redflag | `using namespace` in a header |
-| [assign-in-condition](#assign-in-condition) | assign_in_condition | assignment in an `if`, `while` or `switch` condition |
+| [assign-in-condition](#assign-in-condition) | bug | assignment in an `if`, `while` or `switch` condition |
 | [misspelled-word](#misspelled-word) | spelling | misspelled word |
 | [memset-zero-size](#memset-zero-size) | bug | `memset` with size 0 |
 | [string-braced-size](#string-braced-size) | bug | `std::string s{n}` |
@@ -158,7 +158,7 @@ for the compiler and the standard library; defining one is undefined behavior an
 
 ### min-max-macro
 
-**`min` or `max` macro.** Reported for a `#define` of `min` or `max` with a conditional expression.
+**`min` or `max` macro.** Reported for a function-like macro named `min` or `max` (also `MIN` and `MAX`).
 
 A macro evaluates its arguments more than once (`min(i++, j)`), has no type checking and breaks `std::min` and
 `std::max` in every file that includes it. **Solve:** use `std::min` / `std::max` from `<algorithm>`. For `<windows.h>`,
@@ -216,7 +216,9 @@ resolution in code that never asked for it. **Solve:** write the qualified names
 
 ### assign-in-condition
 
-**Assignment in a condition.** Reported for `if`, `while` or `switch` with ` = ` inside the parentheses.
+**Assignment in a condition.** Reported for `if`, `while` or `switch` whose condition is an assignment, such as
+`if (x = y)`. Not for a declaration (`if (auto p = find(k))`), an init-statement (`if (auto p = find(k); p)`) or an
+assignment in extra parentheses (`if ((x = next()))`), the usual way to say that the assignment is intended.
 
 `if (a = b)` is a classic typo for `if (a == b)`, and when the assignment is intended the reader cannot tell the
 difference. **Solve:** compare with `==` if that was meant. Otherwise move the assignment before the condition, or use

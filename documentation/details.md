@@ -281,14 +281,14 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `constant-if-directive` | matches `#if <digit>` (also `# if 0` and `#if (0)`) | readability | do not keep historical code in ifdefs |
 | `c-style-pointer-cast` | matches `(<type> *)` followed by an expression, a C-style pointer cast; the type may be qualified (`Foo::Bar`, `const char`, `unsigned char`); not `sizeof(T *)`, a parameter list such as `f(Foo *)` or `(void **)` (see `void-pointer-pointer-cast`) | modernize | dont use c-style casts |
 | `reserved-macro-name` | matches `#define _<name>` or `#define <name with __>` | ub | names starting with an underscore or containing a double underscore are reserved |
-| `min-max-macro` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
+| `min-max-macro` | defines a function-like macro named `min` or `max` (ignoring case) | modernize | do not define a min macro, use std::min and std::max |
 | `extern` | contains the word `extern`, but not `extern "C"` or `extern template` | redflag | do not use extern |
 | `manual-delete` | matches `delete <expression>;` or `delete[] <expression>;`, but not `= delete;` or `operator delete` | redflag | do not use delete |
 | `extern-volatile` | contains `extern volatile` (reported instead of `extern` and `volatile-variable`) | redflag | extern volatile ?! |
 | `string-literal-cast` | matches `(char *)"`, casting away the constness of a string literal | ub | do not cast away constness of string literals |
 | `const-cast` | contains `const_cast<` | readability | do not cast away constness |
 | `using-namespace-in-header` | starts with `using namespace`, after optional whitespace (headers only) | redflag | Using namespace found in header file (no prefix) |
-| `assign-in-condition` | matches `(while\|if\|switch) (... = ...)`, an assignment in a condition | assign_in_condition | do not assign inside conditions |
+| `assign-in-condition` | matches `if (<lvalue> = ...)` (also `while` and `switch`); not a declaration (`if (auto x = f())`), an init-statement (`if (auto x = f(); x)`) or extra parentheses (`if ((x = f()))`) | bug | do not assign inside conditions |
 | `misspelled-word` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
 | `memset-zero-size` | matches `memset(..., 0);` | bug | see [rules.md](rules.md#memset-zero-size) |
 | `string-braced-size` | matches `std::string <name>{<number>}` (or `std::wstring`) | bug | see [rules.md](rules.md#string-braced-size) |

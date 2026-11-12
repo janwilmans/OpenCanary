@@ -638,6 +638,19 @@ class TestCppIssues(unittest.TestCase):
                           "x = (a * b);", "void (*fp)(int);", "Q_DECLARE_METATYPE(Foo *)", "f((void **)&p);",
                           "connect(s, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &W::f);"])
 
+    def test_min_max_macro(self):
+        self.assert_rule("min-max-macro", ["#define min(a, b) ((a) < (b) ? (a) : (b))", "#define MAX(a,b) ((a)>(b)?(a):(b))",
+                                           "# define max(a, b) x"],
+                         ["#define MAX_LEN (big ? 10 : 20)", "#define CLAMP(x) std::min(std::max(x, 0), 9)", "#define MAXIMUM(a) a"])
+
+    def test_assign_in_condition(self):
+        self.assert_rule("assign-in-condition", ["if (x = y)", "while (n = next(it))", "switch (k = key())", "if (*p = c)",
+                                                 "if (m_state = Idle)", "if (a.b = f(c))", "while (p->next = q)"],
+                         ["if (auto x = f(); x != 0)", "if (const int i = index(); i != -1)", "if ((x = f()))",
+                          "if (auto x = f())", "if (const auto n = count())", "if (Foo * p = find(k))", "while (Node * n = next())",
+                          "if ((fp = fopen(name, \"r\")) == nullptr)", "while ((c = getchar()) != EOF)", "if (a == b)",
+                          "while (x <= y)", "if (a != b)"])
+
     def test_extern_volatile_is_reported_once(self):
         self.assertEqual(self.line_rules("extern volatile int g;"), ["extern-volatile"])
         self.assertEqual(self.line_rules("extern int g;"), ["extern"])

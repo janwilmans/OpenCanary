@@ -260,13 +260,16 @@ LINE_RULES = [
       r"\s*([\w&(*\"!~]|-(?!>))"),
      "Anti-pattern: dont use c-style casts"),
     ("reserved-macro-name", "ub", r"#define\s+(_\w+|\w*__\w*)", "prevent UB: names starting with an underscore or containing a double underscore ({match}) are reserved"),
-    ("min-max-macro", "modernize", r"(?i)#define.*((min|max).*\(.*?.*:.*$)", "Anti-pattern: do not define {match}, use std::min and std::max"),
+    ("min-max-macro", "modernize", r"(?i)#\s*define\s+(min|max)\s*\(", "Anti-pattern: do not define a {match} macro, use std::min and std::max"),
     ("extern", "redflag", r"\bextern\s+(?!\"|template\b|volatile\b)", "Anti-pattern: do not use extern"),
     ("manual-delete", "redflag", r"^(?!.*(=\s*delete\b|\boperator\s+delete\b)).*\bdelete\b\s*(\[\s*\])?\s*[\w(*:][^;]*;", "Anti-pattern: do not use delete"),
     ("extern-volatile", "redflag", r"\bextern\s+volatile\b", "Anti-pattern: extern volatile ?!"),
     ("string-literal-cast", "ub", r"\(char\s*\*\)\s*\"", "prevent UB: do not cast away constness of string literals"),
     ("const-cast", "readability", r"const_cast<", "Anti-pattern: do not cast away constness"),
-    ("assign-in-condition", "assign_in_condition", r"(while|if|switch)\s*\(.*\s=\s.*\)", "Anti-pattern: do not assign inside conditions"),
+    # the condition is <lvalue> = ...: not a declaration (if (auto x = f())), an init-statement (if (auto x = f(); x))
+    # or an assignment in extra parentheses (if ((x = f()))), the usual way to say that it is intended
+    ("assign-in-condition", "bug", r"\b(while|if|switch)\s*\(\s*[\w.\->\[\]*]+\s=\s([^;()]|\([^;()]*\))*\)",
+     "Anti-pattern: do not assign inside conditions"),
     ("throw-pointer", "redflag", r"\bthrow\s+new\b", "do not throw a pointer, throw by value and catch by reference"),
     ("throw-non-exception", "redflag", r"\bthrow\s+(\"|'|-?\d)", "throw an exception class, not a string or a number"),
     ("memset-zero-size", "bug", r"\bmemset\s*\(.*,\s*0\s*\)\s*;", "memset with size 0 does nothing, are the last two arguments swapped?"),
