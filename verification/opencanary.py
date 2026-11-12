@@ -38,6 +38,7 @@ COMMANDS = {
 NO_STDIN_COMMANDS = {"cpp-issues", "cppcheck"}
 
 STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative to this file.
+# use forward slashes in paths, also on Windows ("c:/project/src"): in TOML a backslash starts an escape sequence
 # run with: opencanary.py run
 
 # one [[input]] table for every log or location to analyse

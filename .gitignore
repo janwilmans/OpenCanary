@@ -4,3 +4,4 @@ __pycache__
 /verification/issues.txt
 /verification/report.html
 *.pyc
+data/
