@@ -312,19 +312,44 @@ def check_line_impl(filename, line_number, line, report, rules):
             report(filename, line_number, rule, category, description)
 
 
+def includes_itself(filename, included, quoted):
+    """True when the #include of 'included' in 'filename' is the file itself: "x.h" is first searched next to the
+    file, and a path with a directory (module/x.h) is the file when the path of the file ends with it; a bare <x.h>
+    is searched in the include directories only, a wrapper header with the name of the real one does that"""
+    path = util.normpath(os.path.normcase(os.path.abspath(filename)))
+    included = util.normpath(os.path.normcase(included))  # normcase turns / into \ on Windows
+    if quoted and util.normpath(os.path.normpath(os.path.join(os.path.dirname(path), included))) == path:
+        return True
+    return "/" in included and path.endswith("/" + included.lstrip("./"))
+
+
 def check_includes(filename, lines, report):
-    """self-include and duplicate-include: rules that need the other lines of the file"""
-    seen = set()
+    """self-include and duplicate-include: rules that need the other lines of the file; an #include is only a
+    duplicate of one in the same or an enclosing #if/#elif/#else branch, not of one in another branch"""
+    seen = {}  # included: the branches (tuples of branch numbers, outermost first) it is included in
+    branches, number = [], 0
+    is_header = os.path.splitext(filename)[1].lower() in (".h", ".hpp")
     for line_number, line in enumerate(lines, 1):
-        match = re.match(r"\s*#\s*include\s*[\"<]([^\">]+)[\">]", line)
+        directive = re.match(r"\s*#\s*(if|ifdef|ifndef|elif|else|endif)\b", line)
+        if directive:
+            number += 1
+            if directive[1].startswith("if"):
+                branches.append(number)
+            elif branches and directive[1] == "endif":
+                branches.pop()
+            elif branches:
+                branches[-1] = number
+            continue
+        match = re.match(r"\s*#\s*include\s*([\"<])([^\">]+)[\">]", line)
         if not match:
             continue
-        included = match[1].replace("\\", "/")
-        if os.path.basename(included) == os.path.basename(filename) and os.path.splitext(filename)[1].lower() in (".h", ".hpp"):
+        included = match[2].replace("\\", "/")
+        if is_header and includes_itself(filename, included, match[1] == '"'):
             report(filename, str(line_number), "self-include", "bug", f"the header includes itself ({included})")
-        if included in seen:
+        here = tuple(branches)
+        if any(here[:len(earlier)] == earlier for earlier in seen.get(included, [])):
             report(filename, str(line_number), "duplicate-include", "readability", f"{included} is already included")
-        seen.add(included)
+        seen.setdefault(included, []).append(here)
 
 
 def check_header_line(filename, line_number, line, report):

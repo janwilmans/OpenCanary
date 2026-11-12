@@ -293,7 +293,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `memset-zero-size` | matches `memset(..., 0);` | bug | see [rules.md](rules.md#memset-zero-size) |
 | `string-braced-size` | matches `std::string <name>{<number>}` (or `std::wstring`) | bug | see [rules.md](rules.md#string-braced-size) |
 | `assign-to-self` | matches `<name> = <same name>;` (not `this->x = x` or `a.x = x`) | bug | see [rules.md](rules.md#assign-to-self) |
-| `self-include` | a header (`.h`, `.hpp`) includes a file with its own name | bug | see [rules.md](rules.md#self-include) |
+| `self-include` | a header (`.h`, `.hpp`) includes itself: `"x.h"` next to it, or a path with a directory that its path ends with (not `<x.h>`) | bug | see [rules.md](rules.md#self-include) |
 | `address-null-check` | matches `&<name> == nullptr` or `nullptr == &<name>` (also `!=`) | ub | see [rules.md](rules.md#address-null-check) |
 | `void-pointer-pointer-cast` | matches `(void **)` or `reinterpret_cast<void **>` | ub | see [rules.md](rules.md#void-pointer-pointer-cast) |
 | `throw-pointer` | matches `throw new` | redflag | see [rules.md](rules.md#throw-pointer) |
@@ -308,7 +308,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `reset-with-new` | matches `.reset(new` | modernize | see [rules.md](rules.md#reset-with-new) |
 | `triple-pointer` | matches a name followed by `***` | readability | see [rules.md](rules.md#triple-pointer) |
 | `empty-special-member` | matches `<class>::<class>() {}` or `<class>::~<class>() {}` | modernize | see [rules.md](rules.md#empty-special-member) |
-| `duplicate-include` | includes a file that the same file already included | readability | see [rules.md](rules.md#duplicate-include) |
+| `duplicate-include` | includes a file that the same file already included, in the same or an enclosing `#if`/`#elif`/`#else` branch | readability | see [rules.md](rules.md#duplicate-include) |
 | `short-include-guard` | defines an include guard (`..._H`, `..._HPP`, `..._INCLUDED`) of 8 characters or less | readability | see [rules.md](rules.md#short-include-guard) |
 | `foreach-macro` | matches `foreach(`, `Q_FOREACH(` or `BOOST_FOREACH(` | modernize | see [rules.md](rules.md#foreach-macro) |
 | `endless-for` | matches `for (;;)` | readability | see [rules.md](rules.md#endless-for) |

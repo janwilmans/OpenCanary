@@ -257,7 +257,10 @@ same name (`int x = x;` even reads an uninitialized value). **Solve:** assign th
 
 ### self-include
 
-**A header that includes itself.** Reported for an `#include` of a file with the same name as the header.
+**A header that includes itself.** Reported for an `#include` that names the header itself: `#include "x.h"` in
+`x.h` (a quoted include is first searched next to the file), or a path that the path of the header ends with, such as
+`#include <module/x.h>` in `.../module/x.h`. Not for `#include <x.h>`: a wrapper header can include the real one
+from the include path.
 
 With an include guard it does nothing, without one it recurses until the compiler gives up; either way it is a
 mistake, often a copy-paste of the include list of the source file. **Solve:** remove the include.
@@ -378,7 +381,8 @@ the destructor must see a complete type, as with `std::unique_ptr` members).
 
 ### duplicate-include
 
-**Duplicate `#include`.** Reported for the second `#include` of the same file in one file.
+**Duplicate `#include`.** Reported for the second `#include` of the same file in one file, unless the first one is
+in another `#if`/`#elif`/`#else` branch.
 
 It does nothing (the include guard skips it) and makes the include list harder to maintain. **Solve:** remove the
 second include.

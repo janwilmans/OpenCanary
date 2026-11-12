@@ -638,6 +638,43 @@ class TestCppIssues(unittest.TestCase):
                           "x = (a * b);", "void (*fp)(int);", "Q_DECLARE_METATYPE(Foo *)", "f((void **)&p);",
                           "connect(s, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &W::f);"])
 
+    @staticmethod
+    def include_issues(filename, text):
+        """(line, rule) of the include rules for a file with this text, the file does not have to exist"""
+        import oc_cpp_issues
+        found = []
+        oc_cpp_issues.check_includes(filename, text.splitlines(keepends=True), lambda _f, line, rule, *_: found.append((int(line), rule)))
+        return found
+
+    def test_self_include(self):
+        header = os.path.abspath(os.path.join("project", "inifile", "configuration.h"))
+        for line in ['#include "configuration.h"', '#include "./configuration.h"', '#include "inifile/configuration.h"',
+                     "#include <inifile/configuration.h>"]:
+            self.assertEqual(self.include_issues(header, line + "\n"), [(1, "self-include")], line)
+        # another file with the same name, and a wrapper header that includes the real one from the include path
+        for line in ['#include "configuration/configuration.h"', "#include <configuration.h>", '#include "other.h"']:
+            self.assertEqual(self.include_issues(header, line + "\n"), [], line)
+        self.assertEqual(self.include_issues(header.replace(".h", ".cpp"), '#include "configuration.h"\n'), [])
+
+    def test_duplicate_include(self):
+        text = "\n".join(["#include <vector>",                       # 1
+                          "#include <vector>",                       # 2 duplicate
+                          "#if defined(__GNUC__)",                   # 3
+                          "#include <regex>",                        # 4
+                          "#include <vector>",                       # 5 duplicate, line 1 encloses this branch
+                          "#elif defined(_MSC_VER)",                 # 6
+                          "#include <regex>",                        # 7 another branch
+                          "#else",                                   # 8
+                          "#include <regex>",                        # 9 another branch
+                          "#  ifdef X",                              # 10
+                          "#include <regex>",                        # 11 duplicate, line 9 encloses this branch
+                          "#  endif",                                # 12
+                          "#endif",                                  # 13
+                          "#include <regex>",                        # 14 the earlier ones are in branches
+                          "#include <regex>"]) + "\n"                # 15 duplicate of line 14
+        self.assertEqual(self.include_issues(os.path.abspath("a.cpp"), text),
+                         [(2, "duplicate-include"), (5, "duplicate-include"), (11, "duplicate-include"), (15, "duplicate-include")])
+
     def test_min_max_macro(self):
         self.assert_rule("min-max-macro", ["#define min(a, b) ((a) < (b) ? (a) : (b))", "#define MAX(a,b) ((a)>(b)?(a):(b))",
                                            "# define max(a, b) x"],
