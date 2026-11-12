@@ -173,7 +173,8 @@ between files undefined. **Solve:** pass the value as a parameter or make it a m
 
 ### manual-delete
 
-**`delete`.** Reported for `delete name;`.
+**`delete`.** Reported for `delete p;` and `delete[] p;`, also for a member or an array element (`delete a.b;`,
+`delete m[i];`); not for a deleted function (`= delete;`) or an `operator delete`.
 
 Manual `delete` is easy to forget on an early return or an exception (a leak) or to do twice (undefined behavior).
 **Solve:** let an owner release the object: `std::unique_ptr` (create it with `std::make_unique`), a container such as
@@ -181,7 +182,7 @@ Manual `delete` is easy to forget on an early return or an exception (a leak) or
 
 ### extern-volatile
 
-**`extern volatile`.** Reported for a line with `extern volatile`.
+**`extern volatile`.** Reported for a line with `extern volatile`, instead of `extern` and `volatile-variable`.
 
 A global, mutable variable that is also `volatile` combines the problems of [extern](#extern) and
 [volatile-variable](#volatile-variable), and is almost always an attempt at sharing data between threads or with an

@@ -283,8 +283,8 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `reserved-macro-name` | matches `#define _<name>` or `#define <name with __>` | ub | names starting with an underscore or containing a double underscore are reserved |
 | `min-max-macro` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
 | `extern` | contains the word `extern`, but not `extern "C"` or `extern template` | redflag | do not use extern |
-| `manual-delete` | matches `delete <name>;` | redflag | do not use delete |
-| `extern-volatile` | contains `extern volatile` | redflag | extern volatile ?! |
+| `manual-delete` | matches `delete <expression>;` or `delete[] <expression>;`, but not `= delete;` or `operator delete` | redflag | do not use delete |
+| `extern-volatile` | contains `extern volatile` (reported instead of `extern` and `volatile-variable`) | redflag | extern volatile ?! |
 | `string-literal-cast` | matches `(char *)"`, casting away the constness of a string literal | ub | do not cast away constness of string literals |
 | `const-cast` | contains `const_cast<` | readability | do not cast away constness |
 | `using-namespace-in-header` | starts with `using namespace`, after optional whitespace (headers only) | redflag | Using namespace found in header file (no prefix) |

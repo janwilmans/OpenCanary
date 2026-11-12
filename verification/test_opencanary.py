@@ -621,6 +621,17 @@ class TestCppIssues(unittest.TestCase):
         self.assert_rule("using-namespace-in-header", ["using namespace std;", "    using namespace std;"],
                          ["using std::string;", "// using namespace std;"], header=True)
 
+    def test_manual_delete(self):
+        self.assert_rule("manual-delete", ["delete p;", "  delete m_widget;", "delete[] buffer;", "delete [] buffer;",
+                                           "delete this->m_p;", "delete a.b;", "delete (p);", "delete ::global;"],
+                         ["Foo(const Foo&) = delete;", "Foo& operator=(Foo&&) = delete;", "void operator delete(void* p);",
+                          "w->deleteLater();", "m_delete = true;"])
+
+    def test_extern_volatile_is_reported_once(self):
+        self.assertEqual(self.line_rules("extern volatile int g;"), ["extern-volatile"])
+        self.assertEqual(self.line_rules("extern int g;"), ["extern"])
+        self.assertEqual(self.line_rules("volatile int g;"), ["volatile-variable"])
+
     def test_make_unique(self):
         self.assert_rule("make-unique-header", ['#include "make_unique.h"', '#include "util/make_unique.hpp"'],
                          ["#include <memory>", "auto p = std::make_unique<int>();"])
