@@ -597,6 +597,36 @@ class TestMetrics(unittest.TestCase):
 
 class TestCppIssues(unittest.TestCase):
 
+    @staticmethod
+    def line_rules(line, header=False):
+        """the rules that report the single line in a source (or header)"""
+        import oc_cpp_issues
+        found = []
+        check = oc_cpp_issues.check_header_line if header else oc_cpp_issues.check_source_line
+        check("a.h" if header else "a.cpp", 1, line + "\n", lambda _filename, _line, rule, *_: found.append(rule))
+        return found
+
+    def assert_rule(self, rule, reported, not_reported, header=False):
+        for line in reported:
+            self.assertIn(rule, self.line_rules(line, header), line)
+        for line in not_reported:
+            self.assertNotIn(rule, self.line_rules(line, header), line)
+
+    def test_keywords_at_the_start_of_a_line(self):
+        self.assert_rule("extern", ["extern int g;", "  extern int g;", "x;extern int g;"],
+                         ['extern "C" {', 'extern "C" int f();', "extern template class std::vector<int>;", "int externals;"])
+        self.assert_rule("volatile-variable", ["volatile int flag;", "static volatile bool stop;"], ["int volatileCount;"])
+        self.assert_rule("null-macro", ["f(NULL);", "p = NULL;", "if (p == NULL)", "NULL;"], ["NULL_TERMINATED;", "x = MY_NULL;"])
+        self.assert_rule("constant-if-directive", ["#if 0", "# if 0", "#if (0)", "#if 1"], ["#if FOO", "#ifdef X1"])
+        self.assert_rule("using-namespace-in-header", ["using namespace std;", "    using namespace std;"],
+                         ["using std::string;", "// using namespace std;"], header=True)
+
+    def test_make_unique(self):
+        self.assert_rule("make-unique-header", ['#include "make_unique.h"', '#include "util/make_unique.hpp"'],
+                         ["#include <memory>", "auto p = std::make_unique<int>();"])
+        self.assert_rule("unqualified-make-unique", ["auto p = make_unique<int>();", "auto p = boost::make_unique<int>();"],
+                         ["auto p = std::make_unique<int>();", "auto id = make_unique_id();", '#include "make_unique.h"'])
+
     SOURCE = """#include "a.h"
 #include <vector>
 #include <vector>

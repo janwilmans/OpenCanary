@@ -65,8 +65,8 @@ default priorities are in `rules/priorities.txt`, the exact patterns in [details
 
 ### make-unique-header
 
-**`#include` of a `make_unique` header.** Reported for a line that contains `/make_unique`, such as
-`#include "util/make_unique.h"`.
+**`#include` of a `make_unique` header.** Reported for an `#include` of a file whose name starts with
+`make_unique`, such as `#include "util/make_unique.h"`.
 
 Since C++14 `std::make_unique` is part of the standard library, so a project specific implementation is no longer
 needed. **Solve:** include `<memory>` instead, use `std::make_unique`, and remove the own implementation once nothing
@@ -74,7 +74,7 @@ uses it.
 
 ### unqualified-make-unique
 
-**`make_unique` that is not `std::make_unique`.** Reported for a line that uses `make_unique` without `std::`.
+**`make_unique` that is not `std::make_unique`.** Reported for `make_unique<` without `std::` in front of it.
 
 A project specific or unqualified `make_unique` hides which implementation is used and can be found by argument
 dependent lookup. **Solve:** write `std::make_unique<T>(...)` and include `<memory>`.
@@ -107,7 +107,7 @@ for every configuration, after solving (or explicitly disabling) the current war
 
 ### null-macro
 
-**`NULL`.** Reported for a line with `NULL` surrounded by whitespace.
+**`NULL`.** Reported for a line with the word `NULL`.
 
 `NULL` is an integer constant: it takes part in overload resolution and template deduction as an `int`, not as a
 pointer. **Solve:** use `nullptr`. `clang-tidy` can do this automatically (`modernize-use-nullptr`).
@@ -131,7 +131,7 @@ comment or name to English. Exclude generated or translated files (for example t
 
 ### constant-if-directive
 
-**`#if 0` / `#if 1`.** Reported for a line with `#if` followed by a number.
+**`#if 0` / `#if 1`.** Reported for a line with `#if` followed by a number, such as `#if 0` or `#if (1)`.
 
 Code that is switched off with the preprocessor is not compiled, so it is not kept up to date and only confuses the
 reader. Version control keeps the history. **Solve:** delete the disabled branch (`#if 0`), or remove the condition and
@@ -165,7 +165,7 @@ define `NOMINMAX` before including it.
 
 ### extern
 
-**`extern`.** Reported for a line with `extern` (not `extern "C"`).
+**`extern`.** Reported for a line with `extern` (not `extern "C"` or `extern template`).
 
 An `extern` variable is a global that any file can change, which hides dependencies and makes the initialization order
 between files undefined. **Solve:** pass the value as a parameter or make it a member; for a constant use `constexpr` or
@@ -206,7 +206,7 @@ the object, with a comment.
 
 ### using-namespace-in-header
 
-**`using namespace` in a header.** Reported for a header line that starts with `using namespace`.
+**`using namespace` in a header.** Reported for a header line that starts with `using namespace`, also when it is indented.
 
 Every file that includes the header gets the whole namespace, which can cause name clashes and changes overload
 resolution in code that never asked for it. **Solve:** write the qualified names (`std::string`) in headers, or use a

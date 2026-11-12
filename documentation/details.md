@@ -272,22 +272,22 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 
 | Rule | Reported when the line | Category | Description, in short |
 |------|------------------------|----------|-----------------------|
-| `make-unique-header` | contains `/make_unique` | modernize | For C++14 and later use #include &lt;memory&gt; (no prefix) |
-| `unqualified-make-unique` | contains `make_unique` but not `std::make_unique` (and not `make-unique-header`) | modernize | For C++14 and later use std::make_unique (no prefix) |
+| `make-unique-header` | includes a file named `make_unique...` | modernize | For C++14 and later use #include &lt;memory&gt; (no prefix) |
+| `unqualified-make-unique` | matches `make_unique<` that is not `std::make_unique<` | modernize | For C++14 and later use std::make_unique (no prefix) |
 | `reinterpret-cast` | contains `reinterpret_cast<` | casting | do not reinterpret_cast |
-| `volatile-variable` | matches `[^a-z]volatile[^a-z].*;` | redflag | do not use volatile |
-| `null-macro` | matches `\sNULL\s` | modernize | do not use NULL, use 0 or nullptr instead |
+| `volatile-variable` | contains the word `volatile` and a `;` after it | redflag | do not use volatile |
+| `null-macro` | contains the word `NULL` | modernize | do not use NULL, use 0 or nullptr instead |
 | `non-english-word` | matches the Dutch words `deze`, `niet`, `naam`, `als`, `...ectie`, `voet` (ignoring case) | readability | do not use non-english words |
-| `constant-if-directive` | matches `#if\s+<digit>` | readability | do not keep historical code in ifdefs |
+| `constant-if-directive` | matches `#if <digit>` (also `# if 0` and `#if (0)`) | readability | do not keep historical code in ifdefs |
 | `c-style-pointer-cast` | matches `(<word> *)`, a C-style pointer cast | modernize | dont use c-style casts |
 | `reserved-macro-name` | matches `#define _<name>` or `#define <name with __>` | ub | names starting with an underscore or containing a double underscore are reserved |
 | `min-max-macro` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
-| `extern` | matches `extern` followed by something other than `"` | redflag | do not use extern |
+| `extern` | contains the word `extern`, but not `extern "C"` or `extern template` | redflag | do not use extern |
 | `manual-delete` | matches `delete <name>;` | redflag | do not use delete |
 | `extern-volatile` | contains `extern volatile` | redflag | extern volatile ?! |
 | `string-literal-cast` | matches `(char *)"`, casting away the constness of a string literal | ub | do not cast away constness of string literals |
 | `const-cast` | contains `const_cast<` | readability | do not cast away constness |
-| `using-namespace-in-header` | starts with `using namespace` (headers only) | redflag | Using namespace found in header file (no prefix) |
+| `using-namespace-in-header` | starts with `using namespace`, after optional whitespace (headers only) | redflag | Using namespace found in header file (no prefix) |
 | `assign-in-condition` | matches `(while\|if\|switch) (... = ...)`, an assignment in a condition | assign_in_condition | do not assign inside conditions |
 | `misspelled-word` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
 | `memset-zero-size` | matches `memset(..., 0);` | bug | see [rules.md](rules.md#memset-zero-size) |

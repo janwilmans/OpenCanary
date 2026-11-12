@@ -245,17 +245,17 @@ def check_line(filename, line_number, line, report, rules=None):
 # every rule is (rule, category, regex, description); {match} in the description is replaced by the first group of the
 # match; documentation/details.md lists the patterns and documentation/rules.md explains each rule
 LINE_RULES = [
-    ("make-unique-header", "modernize", r"/make_unique", "For C++14 and later use #include <memory>"),
-    ("unqualified-make-unique", "modernize", r"^(?!.*(/make_unique|std::make_unique)).*make_unique", "For C++14 and later use std::make_unique"),
+    ("make-unique-header", "modernize", r"#\s*include\s*[\"<][^\">]*\bmake_unique\b", "For C++14 and later use #include <memory>"),
+    ("unqualified-make-unique", "modernize", r"(?<!std::)\bmake_unique\s*<", "For C++14 and later use std::make_unique"),
     ("reinterpret-cast", "casting", r"reinterpret_cast<", "Anti-pattern: do not reinterpret_cast"),
-    ("volatile-variable", "redflag", r"[^a-z]volatile[^a-z].*;", "Anti-pattern: do not use volatile"),
-    ("null-macro", "modernize", r"\sNULL\s", "Anti-pattern: do not use NULL, use 0 or nullptr instead"),
+    ("volatile-variable", "redflag", r"\bvolatile\b.*;", "Anti-pattern: do not use volatile"),
+    ("null-macro", "modernize", r"\bNULL\b", "Anti-pattern: do not use NULL, use 0 or nullptr instead"),
     ("non-english-word", "readability", r"(?i)(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", "Anti-pattern: do not use non-english words ('{match}') in code or comments"),
-    ("constant-if-directive", "readability", r"(#if\s+\d)", "Anti-pattern: {match}, do not keep historical code in ifdefs"),
+    ("constant-if-directive", "readability", r"(#\s*if\s*\(?\s*\d)", "Anti-pattern: {match}, do not keep historical code in ifdefs"),
     ("c-style-pointer-cast", "modernize", r"\(\w+\s*\*\s*\)", "Anti-pattern: dont use c-style casts"),
     ("reserved-macro-name", "ub", r"#define\s+(_\w+|\w*__\w*)", "prevent UB: names starting with an underscore or containing a double underscore ({match}) are reserved"),
     ("min-max-macro", "modernize", r"(?i)#define.*((min|max).*\(.*?.*:.*$)", "Anti-pattern: do not define {match}, use std::min and std::max"),
-    ("extern", "redflag", r"($|[^\w])extern\s+[^\"]", "Anti-pattern: do not use extern"),
+    ("extern", "redflag", r"\bextern\s+(?!\"|template\b)", "Anti-pattern: do not use extern"),
     ("manual-delete", "redflag", r"($|[^\w])delete\s\w{1,25};", "Anti-pattern: do not use delete"),
     ("extern-volatile", "redflag", r"extern volatile", "Anti-pattern: extern volatile ?!"),
     ("string-literal-cast", "ub", r"\(char\s*\*\)\s*\"", "prevent UB: do not cast away constness of string literals"),
@@ -290,7 +290,7 @@ SOURCE_LINE_RULES = LINE_RULES + [
 ]
 
 HEADER_LINE_RULES = LINE_RULES + [
-    ("using-namespace-in-header", "redflag", r"^using namespace", "Using namespace found in header file"),
+    ("using-namespace-in-header", "redflag", r"^\s*using\s+namespace\b", "Using namespace found in header file"),
 ]
 
 
