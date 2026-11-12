@@ -11,7 +11,9 @@ clang's `old-style-cast`; for the same reason a name does not contain a part tha
 warnings with `~`, such as `comment`. (`rules/links.txt` gives the solution link to every issue with source
 `opencanary`.) Until November 2026 the rules were numbered (`AP#13` is now `manual-delete`); the table below also lists
 the old names. The checks are plain text searches, without a C++ parser, so they can report a line that is fine (in a
-comment or a string, for example). Exclude files with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The
+comment or a string, for example). Exclude files with `.opencanaryignore`, drop a rule with `rules/interest.txt`, or
+give what is only found in comments the category `comments` with `--mark-comments` (`mark_comments` in
+`opencanary.toml`) and drop those with `drop "~|comments|"` in `rules/interest.txt`. The
 default priorities are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
 
 | Rule | Category | In short | Was |

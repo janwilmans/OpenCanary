@@ -136,6 +136,7 @@ All relative paths are relative to the directory of the configuration file.
 | `[[input]]` (one or more) | `format` | required | `gcc`, `msvc` or `cpp-issues`; anything else stops the run |
 | | `path` | required | the log file (`gcc`, `msvc`) or the directory to scan (`cpp-issues`) |
 | | `source` | the format | value for the source field (passed to the parser) |
+| | `mark_comments` | `false` | `cpp-issues` only: `true` passes `--mark-comments`, issues found only in a comment get the category `comments` |
 | `[rules]` | `interest` | `verification/rules/interest.txt` | rules for `tr_interest.py` |
 | | `customize` | `verification/rules/customize.txt` | rules for `tr_customize.py` |
 | | `links` | `verification/rules/links.txt` | rules for `apply_links.py` |
@@ -157,7 +158,7 @@ needs Python 3.11+ or the `tomli` package.
 ### What `run` does
 
 1. For every `[[input]]`, in order, collect the issues:
-   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path` or `oc_cpp_issues.py <path>`.
+   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path` or `oc_cpp_issues.py [--mark-comments] <path>`.
    The results are concatenated.
 2. `tr_interest.py [--rules <interest>] [--msvc]`
 3. `tr_customize.py [--rules <customize>] [--display-depth=N] [--reference-depth=N] [--msvc]`
@@ -244,12 +245,22 @@ out:  99|||C:\project\lib\toolkit\slot.h:75|msvc|C4251|warning|&#x27;Slot::m_nam
 ### oc_cpp_issues.py
 
 ```
-oc_cpp_issues.py <path>
+oc_cpp_issues.py [--mark-comments] <path>
 ```
 
 | Argument | Description |
 |----------|-------------|
-| `<path>` | Required. Directory that is searched recursively. Exactly one argument. |
+| `<path>` | Required. Directory that is searched recursively. |
+| `--mark-comments` | Optional. An issue that is only found in a comment gets the category `comments`. |
+
+With `--mark-comments` every issue is still reported, but the lines with an issue are checked again with their `//` and
+`/* */` comments replaced by spaces (a `//` or `/*` inside a string or character literal does not start a comment).
+An issue that this second check does not find on the same line was matched inside a comment, and its category becomes
+`comments` instead of the category of its rule. So in `int* p = (int*)q; // NULL` the `c-style-pointer-cast` keeps
+`modernize` and the `null-macro` gets `comments`; so does an `#include` that is only a `duplicate-include` because of an
+`#include` inside a `/* */` block, and a `misspelled-word` that is not also in the code of its line. To leave them out of
+the report, add `drop "~|comments|"` to the interest rules (`rules/interest.txt`), or `drop "~|null-macro|comments|"`
+for one rule. A `category:<name>` line in `rules/priorities.txt` that matches the rule replaces `comments` again.
 
 Searches C++ sources and Visual Studio projects for common problems with plain text checks (no compiler involved).
 Files and directories listed in a `.opencanaryignore` file (`.gitignore` syntax) are skipped.

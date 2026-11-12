@@ -445,8 +445,8 @@ class TestRulesDocumentation(unittest.TestCase):
         import apply_links
         import util
         with open(os.path.join(HERE, "oc_cpp_issues.py"), encoding="utf-8") as f:
-            # the rule of every report_issue() call that is not commented out
-            rules = set(re.findall(r'^\s*report_issue\([^,]+, [^,]+, "([^"]+)"', f.read(), re.M))
+            # the rule of every report_issue() or report() call that is not commented out
+            rules = set(re.findall(r'^\s*report(?:_issue)?\([^,]+, [^,]+, "([^"]+)"', f.read(), re.M))
         import oc_cpp_issues
         rules |= {rule for rule, _category, _regex, _description in oc_cpp_issues.LINE_RULES}
         with open(os.path.join(HERE, "..", "documentation", "rules.md"), encoding="utf-8") as f:
@@ -554,6 +554,22 @@ class TestRunner(unittest.TestCase):
                 metrics = lines(f.read())
             self.assertEqual(len([line for line in metrics if line.startswith("opencanary_issues{")]), 6)
             self.assertEqual(metrics[-1], "# EOF")
+
+    @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
+    def test_run_cpp_issues_mark_comments(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "a.cpp"), "w", encoding="utf-8") as f:
+                f.write("int* p = 0; // (int*)q\n")
+            for setting, expected in [("", 0), ("mark_comments = true\n", 1)]:
+                with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
+                    f.write('[[input]]\nformat = "cpp-issues"\npath = "."\n' + setting)
+                run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
+                with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
+                    rows = [line.split("|") for line in lines(f.read())]
+                # the issue is always reported, only its category changes (apply_team_priorities.py keeps it)
+                self.assertEqual([row[5] for row in rows], ["c-style-pointer-cast"], rows)
+                self.assertEqual(sum(row[6] == "comments" for row in rows), expected, (setting, rows))
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))
@@ -681,6 +697,66 @@ int member;
                 f.write("// recieve\n")
             rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d], stdin="wich\n"))]
             self.assertEqual([(row[5], row[3].rsplit(":", 1)[1]) for row in rows if row[5] == "misspelled-word"], [("misspelled-word", "1")], rows)
+
+    COMMENTED = """// int* p = (int*)q; NULL
+int* p = (int*)q; // NULL todo
+/* reinterpret_cast<int*>(x);
+   delete p;
+*/ const_cast<int*>(y);
+const char* s = "// (int*) is not a comment";
+int n = 1'000; // (char*)x
+#include "b.h"
+/*
+#include "b.h" */
+#include "b.h"
+"""
+
+    def cpp_issues_of(self, text, args=()):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "a.cpp"), "w", encoding="utf-8") as f:
+                f.write(text)
+            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [*args, d]))]
+        # the description never changes, with --mark-comments the category does
+        self.assertFalse([row for row in rows if row[7].startswith("comment")], rows)
+        return sorted((int(row[3].rsplit(":", 1)[1]), row[5], row[6] == "comments")
+                      for row in rows if row[5] != "misspelled-word")
+
+    def test_mark_comments(self):
+        # (line, rule) of every issue, all of them are reported with and without --mark-comments
+        in_code = [(2, "c-style-pointer-cast"), (5, "const-cast"), (6, "c-style-pointer-cast"), (11, "duplicate-include")]
+        # line 10 is only a duplicate because of the include in the comment on line 9; line 11 duplicates line 8
+        in_comment = [(1, "c-style-pointer-cast"), (1, "null-macro"), (2, "null-macro"), (2, "todo"), (3, "reinterpret-cast"),
+                      (4, "manual-delete"), (7, "c-style-pointer-cast"), (10, "duplicate-include")]
+        self.assertEqual(self.cpp_issues_of(self.COMMENTED), sorted((*issue, False) for issue in in_code + in_comment))
+        self.assertEqual(self.cpp_issues_of(self.COMMENTED, ["--mark-comments"]),
+                         sorted([(*issue, False) for issue in in_code] + [(*issue, True) for issue in in_comment]))
+
+    def test_mark_comments_of_misspelled_words(self):
+        import contextlib
+        import io
+        import tempfile
+        import oc_cpp_issues
+        with tempfile.TemporaryDirectory() as d:
+            filename = os.path.join(d, "a.cc")
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write("int recieve; // recieve\n/* wich */ int wich;\nint x; // seperate\n")
+            rg_output = "a.cc:1:5:recieve\na.cc:1:16:recieve\na.cc:2:4:wich\na.cc:2:16:wich\na.cc:3:11:seperate\n"
+            original, oc_cpp_issues.rip_grep = oc_cpp_issues.rip_grep, lambda _rootpath: rg_output
+            try:
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    oc_cpp_issues.check_spelling(d, [filename], True)
+            finally:
+                oc_cpp_issues.rip_grep = original
+        # a word that is also in the code of its line is not marked
+        self.assertEqual([row.split("|")[6] for row in lines(out.getvalue())],
+                         ["spelling", "spelling", "spelling", "spelling", "comments"])
+
+    def test_without_comments_keeps_columns_and_line_endings(self):
+        import oc_cpp_issues
+        self.assertEqual(oc_cpp_issues.without_comments(["a /* b */ c // d\n", "'/' /* e\r\n", "f */ g\n"]),
+                         ["a         c     \n", "'/'     \r\n", "     g\n"])
 
     def test_spelling_matches_are_limited_to_the_checked_files(self):
         import oc_cpp_issues

@@ -4,18 +4,20 @@
 - treatwarningaserror should be true in all configurations
 - warninglevel should be 4 in all configurations
 - use std::make_unique iso custom implementations
+- with --mark-comments, an issue that is only found in a comment gets the category 'comments'
 - see https://github.com/janwilmans/OpenCanary/issues/4
 
 """
 
-import traceback
-import sys
+import argparse
 import os
 import re
-import xml.etree.ElementTree as ET
-import gitignore_parser
 import subprocess
+import sys
+import traceback
+import xml.etree.ElementTree as ET
 
+import gitignore_parser
 import util
 from util import Priority, eprint
 
@@ -92,18 +94,92 @@ def get_cpp_files_from_project(project_root, project_directory):
     return result
 
 
-def check_cpp_source(filename):
+def check_source_line(filename, line_number, line, report):
+    check_line(filename, line_number, line, report)
+    # only in sources: in headers these are mostly members, initialized by a constructor
+    if re.search(r"^\s*(int|bool|double|float)\s+\w+\s*;", line):
+        report(filename, str(line_number), "uninitialized-variable", "ub", "initialize variables where they are declared")
+
+
+COMMENTS_CATEGORY = "comments"  # the category of an issue that is only found in a comment, see --mark-comments
+
+
+def without_comments(lines):
+    """the lines with every comment replaced by spaces (line endings are kept), so checking these lines finds only
+    what is in the code; string and character literals are kept, a // or /* inside one does not start a comment"""
+    result = []
+    in_block = False
+    for line in lines:
+        # fast paths: most lines have no comment and no literal, or are completely inside a /* */ comment
+        if not in_block and "/" not in line and '"' not in line and "'" not in line:
+            result.append(line)
+            continue
+        if in_block and "*/" not in line:
+            result.append(re.sub(r"[^\r\n]", " ", line))
+            continue
+        code = []
+        quote = None  # unterminated literals end at the end of the line
+        i = 0
+        while i < len(line):
+            char, pair = line[i], line[i:i + 2]
+            if in_block:
+                if pair == "*/":
+                    in_block = False
+                    code.append("  ")
+                    i += 2
+                    continue
+                code.append(char if char in "\r\n" else " ")
+            elif quote:
+                code.append(char)
+                if char == "\\":
+                    code.append(line[i + 1:i + 2])
+                    i += 1
+                elif char == quote:
+                    quote = None
+            elif pair == "//":
+                code.append(re.sub(r"[^\r\n]", " ", line[i:]))
+                break
+            elif pair == "/*":
+                in_block = True
+                code.append("  ")
+                i += 2
+                continue
+            else:
+                # a ' between two letters or digits is a digit separator (1'000), not the start of a character literal
+                if char == '"' or (char == "'" and not (line[i - 1:i].isalnum() and line[i + 1:i + 2].isalnum())):
+                    quote = char
+                code.append(char)
+            i += 1
+        result.append("".join(code))
+    return result
+
+
+def check_cpp_file(filename, check_file_line, mark_comments):
+    """check every line with check_file_line(filename, line_number, line, report), and the includes, and report the
+    issues; with mark_comments, an issue that is not found again with the comments removed (it was only matched inside
+    a comment) gets the category COMMENTS_CATEGORY"""
     lines = read_lines(filename)
+    issues = []
+    collect = lambda *issue: issues.append(issue)
     for line_number, line in enumerate(lines, 1):
-        check_line(filename, line_number, line)
-        # only in sources: in headers these are mostly members, initialized by a constructor
-        if re.search(r"^\s*(int|bool|double|float)\s+\w+\s*;", line):
-            report_issue(filename, str(line_number), "uninitialized-variable", "ub", "initialize variables where they are declared")
-    check_includes(filename, lines)
+        check_file_line(filename, line_number, line, collect)
+    check_includes(filename, lines, collect)
+    if mark_comments and issues:
+        code = without_comments(lines)
+        in_code = set()
+        add = lambda _filename, line, rule, *_: in_code.add((line, rule))
+        # only the lines with an issue are checked again, the includes need the lines before them
+        for line_number in sorted({int(issue[1]) for issue in issues}):
+            check_file_line(filename, line_number, code[line_number - 1], add)
+        check_includes(filename, code, add)
+        issues = [issue if (issue[1], issue[2]) in in_code else (*issue[:3], COMMENTS_CATEGORY, issue[4]) for issue in issues]
+    for issue in issues:
+        report_issue(*issue)
 
 
 def read_lines(filename):
-    return open(filename, encoding='utf-8').readlines()  # , errors='ignore'
+    with open(filename, encoding='utf-8') as f:  # , errors='ignore'
+        return f.readlines()
 
 
 def get_priority():
@@ -150,20 +226,18 @@ def is_generated(filename):
     basename = os.path.basename(os.path.normpath(dirname)).lower()
     if basename == "gen":
         return True
-    if basename == "gen64":
-        return True
-    return False
+    return basename == "gen64"
 
 
 def clean_group(match_group):
     return match_group.group(1).replace("\n", "")
 
 
-def check_line(filename, line_number, line):
+def check_line(filename, line_number, line, report):
     try:
-        check_line_impl(filename, str(line_number), line)
+        check_line_impl(filename, str(line_number), line, report)
     except:
-        eprint("open canary parsing error: ", filename + ":" + line_number)
+        eprint("open canary parsing error: ", filename + ":" + str(line_number))
         eprint(line)
         raise
 
@@ -171,68 +245,52 @@ def check_line(filename, line_number, line):
 # rule names are lowercase words separated by "-" like the clang warnings, but must not be the name of a compiler warning:
 # rules/priorities.txt matches on the rule name only, and its ~ matchers for compiler warnings (such as ~comment) must not
 # match it either; test_every_rule_has_a_section_and_a_solution_link checks this, see documentation/rules.md
-def check_line_impl(filename, line_number, line):
+def check_line_impl(filename, line_number, line, report):
     if "/make_unique" in line:
-        report_issue(filename, line_number, "make-unique-header", "modernize", "For C++14 and later use #include <memory>")
+        report(filename, line_number, "make-unique-header", "modernize", "For C++14 and later use #include <memory>")
     else:
         if "make_unique" in line and not "std::make_unique" in line:
-            report_issue(filename, line_number, "unqualified-make-unique", "modernize", "For C++14 and later use std::make_unique")
+            report(filename, line_number, "unqualified-make-unique", "modernize", "For C++14 and later use std::make_unique")
 
     if "reinterpret_cast<" in line:
-        report_issue(filename, line_number, "reinterpret-cast", "casting", "Anti-pattern: do not reinterpret_cast")
+        report(filename, line_number, "reinterpret-cast", "casting", "Anti-pattern: do not reinterpret_cast")
 
     if re.search(r"[^a-z]volatile[^a-z].*;", line):
-        report_issue(filename, line_number, "volatile-variable", "redflag", "Anti-pattern: do not use volatile")
+        report(filename, line_number, "volatile-variable", "redflag", "Anti-pattern: do not use volatile")
     if re.search(r"\sNULL\s", line):
-        report_issue(filename, line_number, "null-macro", "modernize", "Anti-pattern: do not use NULL, use 0 or nullptr instead")
+        report(filename, line_number, "null-macro", "modernize", "Anti-pattern: do not use NULL, use 0 or nullptr instead")
 
     match_group = re.search(r"(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", line, re.IGNORECASE)
     if match_group:
-        report_issue(filename, line_number, "non-english-word", "readability", f"Anti-pattern: do not use non-english words ('{clean_group(match_group)}') in code or comments")
+        report(filename, line_number, "non-english-word", "readability", f"Anti-pattern: do not use non-english words ('{clean_group(match_group)}') in code or comments")
     match_group = re.search(r"(#if\s+\d)", line)
     if match_group:
-        report_issue(filename, line_number, "constant-if-directive", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
+        report(filename, line_number, "constant-if-directive", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
     if re.search(r"\(\w+\s*\*\s*\)", line):
-        report_issue(filename, line_number, "c-style-pointer-cast", "modernize", "Anti-pattern: dont use c-style casts")
+        report(filename, line_number, "c-style-pointer-cast", "modernize", "Anti-pattern: dont use c-style casts")
     match_group = re.search(r"#define\s+(_\w+|\w*__\w*)", line)
     if match_group:
-        report_issue(filename, line_number, "reserved-macro-name", "ub", f"prevent UB: names starting with an underscore or containing a double underscore ({clean_group(match_group)}) are reserved")
+        report(filename, line_number, "reserved-macro-name", "ub", f"prevent UB: names starting with an underscore or containing a double underscore ({clean_group(match_group)}) are reserved")
     match_group = re.search(r"#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
     if match_group:
-        report_issue(filename, line_number, "min-max-macro", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
+        report(filename, line_number, "min-max-macro", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
     if re.search(r"($|[^\w])extern\s+[^\"]", line):
-        report_issue(filename, line_number, "extern", "redflag", "Anti-pattern: do not use extern")
-
-    #    if re.search("($|[^\w])register\s", line):
-    #        report_issue(filename, str(lineNumber), "register-keyword", "redflag", "Anti-pattern: do not use register") # disabled because of too many false positives, and also compilers already catch it
+        report(filename, line_number, "extern", "redflag", "Anti-pattern: do not use extern")
 
     if re.search(r"($|[^\w])delete\s\w{1,25};", line):
-        report_issue(filename, line_number, "manual-delete", "redflag", "Anti-pattern: do not use delete")
+        report(filename, line_number, "manual-delete", "redflag", "Anti-pattern: do not use delete")
     if "extern volatile" in line:
-        report_issue(filename, line_number, "extern-volatile", r"redflag", "Anti-pattern: extern volatile ?!")
+        report(filename, line_number, "extern-volatile", r"redflag", "Anti-pattern: extern volatile ?!")
     if re.search(r"\(char\s*\*\)\s*\"", line):
-        report_issue(filename, line_number, "string-literal-cast", "ub", "prevent UB: do not cast away constness of string literals")
+        report(filename, line_number, "string-literal-cast", "ub", "prevent UB: do not cast away constness of string literals")
     if re.search(r"const_cast<", line):
-        report_issue(filename, line_number, "const-cast", "readability", "Anti-pattern: do not cast away constness")
-
-    #  using-namespace-in-header: see check_cpp_header()
+        report(filename, line_number, "const-cast", "readability", "Anti-pattern: do not cast away constness")
 
     if re.search(r"(while|if|switch)\s*\(.*\s=\s.*\)", line):
-        report_issue(filename, line_number, "assign-in-condition", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
+        report(filename, line_number, "assign-in-condition", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
 
-    check_line_issues_4_and_9(filename, line_number, line)
+    check_line_issues_4_and_9(filename, line_number, line, report)
 
-    # if "catch\s+\(...\)" in line:
-    # if "catch\s+(...).*\n*.*\{[\n.]*throw[\n.]*\}" in line:
-    #    report_issue(filename, str(lineNumber), "catch-all-without-rethrow", "redflag", "Anti-pattern: catch(...) should always rethrow")    # too many false positives
-
-    # would be nice for new code, but is too generic (and should be allowed in Qt code)
-    # if "new" in line and not "#define new" in line:
-    #    report_issue(filename, str(lineNumber), "bare-new", "Prefer std::make_unique over bare new/delete")
-
-
-
-# rules suggested in https://github.com/janwilmans/OpenCanary/issues/4 and /9: (rule, category, regex, description)
 LINE_RULES = [
     ("throw-pointer", "redflag", r"\bthrow\s+new\b", "do not throw a pointer, throw by value and catch by reference"),
     ("throw-non-exception", "redflag", r"\bthrow\s+(\"|'|-?\d)", "throw an exception class, not a string or a number"),
@@ -263,18 +321,18 @@ LINE_RULES = [
 ]
 
 
-def check_line_issues_4_and_9(filename, line_number, line):
+def check_line_issues_4_and_9(filename, line_number, line, report):
     for rule, category, regex, description in LINE_RULES:
         if re.search(regex, line):
-            report_issue(filename, line_number, rule, category, description)
+            report(filename, line_number, rule, category, description)
     if re.search(r";\s*;", line) and not re.search(r"\bfor\s*\(", line):
-        report_issue(filename, line_number, "redundant-semicolon", "readability", "redundant semicolon")
+        report(filename, line_number, "redundant-semicolon", "readability", "redundant semicolon")
     match = re.match(r"\s*#\s*define\s+(\w+)\s*$", line)
     if match and len(match[1]) <= 8 and re.search(r"_(H|HPP|HXX|INCLUDED)_?$", match[1]):
-        report_issue(filename, line_number, "short-include-guard", "readability", f"include guard {match[1]} is not unique enough")
+        report(filename, line_number, "short-include-guard", "readability", f"include guard {match[1]} is not unique enough")
 
 
-def check_includes(filename, lines):
+def check_includes(filename, lines, report):
     """self-include and duplicate-include: rules that need the other lines of the file"""
     seen = set()
     for line_number, line in enumerate(lines, 1):
@@ -283,24 +341,29 @@ def check_includes(filename, lines):
             continue
         included = match[1].replace("\\", "/")
         if os.path.basename(included) == os.path.basename(filename) and os.path.splitext(filename)[1].lower() in (".h", ".hpp"):
-            report_issue(filename, str(line_number), "self-include", "bug", f"the header includes itself ({included})")
+            report(filename, str(line_number), "self-include", "bug", f"the header includes itself ({included})")
         if included in seen:
-            report_issue(filename, str(line_number), "duplicate-include", "readability", f"{included} is already included")
+            report(filename, str(line_number), "duplicate-include", "readability", f"{included} is already included")
         seen.add(included)
 
 
-def check_cpp_header(filename):
-    lines = read_lines(filename)
-    for line_number, line in enumerate(lines, 1):
-        check_line(filename, line_number, line)
-        if re.search("^using namespace", line):
-            report_issue(filename, str(line_number), "using-namespace-in-header", "redflag", "Using namespace found in header file")
-    check_includes(filename, lines)
+def check_header_line(filename, line_number, line, report):
+    check_line(filename, line_number, line, report)
+    if re.search("^using namespace", line):
+        report(filename, str(line_number), "using-namespace-in-header", "redflag", "Using namespace found in header file")
 
 
-def check_spelling(rootpath, files):
+def check_spelling(rootpath, files, mark_comments):
+    code = {}  # filename: its lines without comments, only read for files with a misspelled word
     for filename, line_number, word in get_spelling_violations(rip_grep(rootpath), rootpath, files):
-        report_issue(filename, line_number, "misspelled-word", "spelling", f"Misspelled word '{word}' found")
+        category = "spelling"
+        if mark_comments:
+            if filename not in code:
+                code[filename] = without_comments(read_lines(filename))
+            line = code[filename][int(line_number) - 1] if int(line_number) <= len(code[filename]) else ""
+            if not re.search(r"\b" + re.escape(word) + r"\b", line):
+                category = COMMENTS_CATEGORY
+        report_issue(filename, line_number, "misspelled-word", category, f"Misspelled word '{word}' found")
 
 
 def check_project(projectname):
@@ -314,7 +377,7 @@ def check_project(projectname):
         cl_compile_node = item_definition_group_node.find(ns + 'ClCompile')
         if not cl_compile_node is None:
             warning_as_error_node = cl_compile_node.find(ns + 'TreatWarningAsError')
-            if not warning_as_error_node is None:
+            if not warning_as_error_node is None:  # noqa: SIM102
                 # print (warningAsErrorNode.tag + " " + warningAsErrorNode.text)
                 if warning_as_error_node.text.lower() == "true":
                     continue
@@ -343,15 +406,6 @@ def get_projects_recursively(path):
     return result
 
 
-def show_usage():
-    if len(sys.argv) > 1:
-        eprint("  I got:", sys.argv)
-        eprint("")
-    eprint(r"Usage: " + os.path.basename(__file__) + " <path>")
-    eprint(r"  <path>: location to search for c++ sources recursively")
-    eprint("")
-
-
 def read_ignore_file(ignorefile, basepath):
     if not os.path.exists(ignorefile):
         return
@@ -362,12 +416,13 @@ def read_ignore_file(ignorefile, basepath):
 
 
 def main():
-    if not len(sys.argv) == 2:
-        eprint("error: invalid argument(s)\n")
-        show_usage()
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Checks C++ sources and Visual Studio projects for common problems.")
+    parser.add_argument("path", help="location to search for c++ sources recursively")
+    parser.add_argument("--mark-comments", action="store_true",
+                        help=f"an issue that is only found in a comment gets the category '{COMMENTS_CATEGORY}'")
+    args = parser.parse_args()
 
-    rootpath = os.path.abspath(sys.argv[1])
+    rootpath = os.path.abspath(args.path)
 
     eprint("checking folder", rootpath, "(recursively)")
     projects = get_projects_recursively(rootpath)
@@ -386,7 +441,7 @@ def main():
     headers, cpps = util.get_cpp_files_from_directory(rootpath)
     for filename in headers:
         try:
-            check_cpp_header(filename)
+            check_cpp_file(filename, check_header_line, args.mark_comments)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
@@ -395,14 +450,14 @@ def main():
 
     for filename in cpps:
         try:
-            check_cpp_source(filename)
+            check_cpp_file(filename, check_source_line, args.mark_comments)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
             eprint("OC Error parsing source:", filename, "\n", e, "\n\n")
             report_issue(filename, "", "parse-error", "parse", "Could not parse source file")
 
-    check_spelling(rootpath, headers + cpps)
+    check_spelling(rootpath, headers + cpps, args.mark_comments)
 
     sys.stdout.flush()
     eprint(str(len(projects)) + " msvc project(s) checked")
