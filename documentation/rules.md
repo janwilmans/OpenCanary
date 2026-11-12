@@ -139,7 +139,8 @@ keep the code (`#if 1`). For a real configuration option, use a named macro or a
 
 ### c-style-pointer-cast
 
-**C-style pointer cast.** Reported for a cast such as `(Foo *)p`.
+**C-style pointer cast.** Reported for a cast such as `(Foo *)p` or `(const unsigned char *)p`, not for a parameter
+list such as `void f(Foo *)` or a Qt `SLOT(f(Foo *))` signature.
 
 A C-style cast silently does whatever is needed to compile: a `static_cast`, a `const_cast`, a `reinterpret_cast` or a
 combination, so a mistake is not reported. **Solve:** use the C++ cast that states the intent: `static_cast`,

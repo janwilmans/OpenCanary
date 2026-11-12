@@ -627,6 +627,17 @@ class TestCppIssues(unittest.TestCase):
                          ["Foo(const Foo&) = delete;", "Foo& operator=(Foo&&) = delete;", "void operator delete(void* p);",
                           "w->deleteLater();", "m_delete = true;"])
 
+    def test_c_style_pointer_cast(self):
+        self.assert_rule("c-style-pointer-cast",
+                         ["int * p = (int *)imgPtr;", "auto p = (const char*)q;", "auto p = (unsigned char *)q;", "auto p = (Foo::Bar*)q;",
+                          "f((char**)argv);", "auto p = (void*)&x;", "auto p = (int*)(q + 1);", "auto p = (std::vector<int>*)q;",
+                          "auto p = (const char * const)q;", 'auto s = (char *)"text";', "if (addr != (Desc *)-1)"],
+                         ["void MainWindow::timerEvent(QTimerEvent *)", "void f(Foo *) const;", "void f(Foo *) override;",
+                          "connect(a, SIGNAL(clicked(QListWidgetItem *)), this, SLOT(open(QListWidgetItem *)));",
+                          "n = sizeof(int *) * 2;", "n = sizeof (int*) + 1;", "std::function<void(Foo *)> f;",
+                          "x = (a * b);", "void (*fp)(int);", "Q_DECLARE_METATYPE(Foo *)", "f((void **)&p);",
+                          "connect(s, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, &W::f);"])
+
     def test_extern_volatile_is_reported_once(self):
         self.assertEqual(self.line_rules("extern volatile int g;"), ["extern-volatile"])
         self.assertEqual(self.line_rules("extern int g;"), ["extern"])

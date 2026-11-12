@@ -279,7 +279,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `null-macro` | contains the word `NULL` | modernize | do not use NULL, use 0 or nullptr instead |
 | `non-english-word` | matches the Dutch words `deze`, `niet`, `naam`, `als`, `...ectie`, `voet` (ignoring case) | readability | do not use non-english words |
 | `constant-if-directive` | matches `#if <digit>` (also `# if 0` and `#if (0)`) | readability | do not keep historical code in ifdefs |
-| `c-style-pointer-cast` | matches `(<word> *)`, a C-style pointer cast | modernize | dont use c-style casts |
+| `c-style-pointer-cast` | matches `(<type> *)` followed by an expression, a C-style pointer cast; the type may be qualified (`Foo::Bar`, `const char`, `unsigned char`); not `sizeof(T *)`, a parameter list such as `f(Foo *)` or `(void **)` (see `void-pointer-pointer-cast`) | modernize | dont use c-style casts |
 | `reserved-macro-name` | matches `#define _<name>` or `#define <name with __>` | ub | names starting with an underscore or containing a double underscore are reserved |
 | `min-max-macro` | defines a `min` or `max` macro (`#define.*(min\|max).*\(.*:`, ignoring case) | modernize | use std::min and std::max |
 | `extern` | contains the word `extern`, but not `extern "C"` or `extern template` | redflag | do not use extern |

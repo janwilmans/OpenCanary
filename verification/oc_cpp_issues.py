@@ -252,7 +252,13 @@ LINE_RULES = [
     ("null-macro", "modernize", r"\bNULL\b", "Anti-pattern: do not use NULL, use 0 or nullptr instead"),
     ("non-english-word", "readability", r"(?i)(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", "Anti-pattern: do not use non-english words ('{match}') in code or comments"),
     ("constant-if-directive", "readability", r"(#\s*if\s*\(?\s*\d)", "Anti-pattern: {match}, do not keep historical code in ifdefs"),
-    ("c-style-pointer-cast", "modernize", r"\(\w+\s*\*\s*\)", "Anti-pattern: dont use c-style casts"),
+    # (type *) followed by the expression that is cast: not a parameter list, a SLOT() signature or sizeof(T *);
+    # (void **) is void-pointer-pointer-cast
+    ("c-style-pointer-cast", "modernize",
+     (r"(?<!sizeof)(?<!sizeof )(?<!alignof)(?<!alignof )\((?!\s*void\s*\*\s*\*\s*\))\s*((const|volatile|unsigned|signed|struct|class|enum)\s+)*"
+      r"[A-Za-z_]\w*(::[A-Za-z_]\w*)*(\s*<[^()]*>)?\s*(const\s*)?(\*\s*(const\s*)?)+\)(?!\s*(const|override|final|noexcept|volatile|throw)\b)"
+      r"\s*([\w&(*\"!~]|-(?!>))"),
+     "Anti-pattern: dont use c-style casts"),
     ("reserved-macro-name", "ub", r"#define\s+(_\w+|\w*__\w*)", "prevent UB: names starting with an underscore or containing a double underscore ({match}) are reserved"),
     ("min-max-macro", "modernize", r"(?i)#define.*((min|max).*\(.*?.*:.*$)", "Anti-pattern: do not define {match}, use std::min and std::max"),
     ("extern", "redflag", r"\bextern\s+(?!\"|template\b|volatile\b)", "Anti-pattern: do not use extern"),
