@@ -448,7 +448,7 @@ class TestRulesDocumentation(unittest.TestCase):
             # the rule of every report_issue() or report() call that is not commented out
             rules = set(re.findall(r'^\s*report(?:_issue)?\([^,]+, [^,]+, "([^"]+)"', f.read(), re.M))
         import oc_cpp_issues
-        rules |= {rule for rule, _category, _regex, _description in oc_cpp_issues.LINE_RULES}
+        rules |= {rule for rule, _category, _regex, _description in oc_cpp_issues.SOURCE_LINE_RULES + oc_cpp_issues.HEADER_LINE_RULES}
         with open(os.path.join(HERE, "..", "documentation", "rules.md"), encoding="utf-8") as f:
             headings = set(re.findall(r"^### (\S+)$", f.read(), re.M))
         self.assertTrue({"manual-delete", "misspelled-word", "make-unique-header", "warning-level-not-4", "parse-error",

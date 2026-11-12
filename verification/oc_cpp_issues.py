@@ -95,10 +95,7 @@ def get_cpp_files_from_project(project_root, project_directory):
 
 
 def check_source_line(filename, line_number, line, report):
-    check_line(filename, line_number, line, report)
-    # only in sources: in headers these are mostly members, initialized by a constructor
-    if re.search(r"^\s*(int|bool|double|float)\s+\w+\s*;", line):
-        report(filename, str(line_number), "uninitialized-variable", "ub", "initialize variables where they are declared")
+    check_line(filename, line_number, line, report, SOURCE_LINE_RULES)
 
 
 COMMENTS_CATEGORY = "comments"  # the category of an issue that is only found in a comment, see --mark-comments
@@ -233,9 +230,9 @@ def clean_group(match_group):
     return match_group.group(1).replace("\n", "")
 
 
-def check_line(filename, line_number, line, report):
+def check_line(filename, line_number, line, report, rules=None):
     try:
-        check_line_impl(filename, str(line_number), line, report)
+        check_line_impl(filename, str(line_number), line, report, LINE_RULES if rules is None else rules)
     except:
         eprint("open canary parsing error: ", filename + ":" + str(line_number))
         eprint(line)
@@ -245,91 +242,65 @@ def check_line(filename, line_number, line, report):
 # rule names are lowercase words separated by "-" like the clang warnings, but must not be the name of a compiler warning:
 # rules/priorities.txt matches on the rule name only, and its ~ matchers for compiler warnings (such as ~comment) must not
 # match it either; test_every_rule_has_a_section_and_a_solution_link checks this, see documentation/rules.md
-def check_line_impl(filename, line_number, line, report):
-    if "/make_unique" in line:
-        report(filename, line_number, "make-unique-header", "modernize", "For C++14 and later use #include <memory>")
-    else:
-        if "make_unique" in line and not "std::make_unique" in line:
-            report(filename, line_number, "unqualified-make-unique", "modernize", "For C++14 and later use std::make_unique")
-
-    if "reinterpret_cast<" in line:
-        report(filename, line_number, "reinterpret-cast", "casting", "Anti-pattern: do not reinterpret_cast")
-
-    if re.search(r"[^a-z]volatile[^a-z].*;", line):
-        report(filename, line_number, "volatile-variable", "redflag", "Anti-pattern: do not use volatile")
-    if re.search(r"\sNULL\s", line):
-        report(filename, line_number, "null-macro", "modernize", "Anti-pattern: do not use NULL, use 0 or nullptr instead")
-
-    match_group = re.search(r"(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", line, re.IGNORECASE)
-    if match_group:
-        report(filename, line_number, "non-english-word", "readability", f"Anti-pattern: do not use non-english words ('{clean_group(match_group)}') in code or comments")
-    match_group = re.search(r"(#if\s+\d)", line)
-    if match_group:
-        report(filename, line_number, "constant-if-directive", "readability", f"Anti-pattern: {clean_group(match_group)}, do not keep historical code in ifdefs")
-    if re.search(r"\(\w+\s*\*\s*\)", line):
-        report(filename, line_number, "c-style-pointer-cast", "modernize", "Anti-pattern: dont use c-style casts")
-    match_group = re.search(r"#define\s+(_\w+|\w*__\w*)", line)
-    if match_group:
-        report(filename, line_number, "reserved-macro-name", "ub", f"prevent UB: names starting with an underscore or containing a double underscore ({clean_group(match_group)}) are reserved")
-    match_group = re.search(r"#define.*((min|max).*\(.*?.*:.*$)", line, re.IGNORECASE)
-    if match_group:
-        report(filename, line_number, "min-max-macro", "modernize", f"Anti-pattern: do not define {clean_group(match_group)}, use std::min and std::max")
-    if re.search(r"($|[^\w])extern\s+[^\"]", line):
-        report(filename, line_number, "extern", "redflag", "Anti-pattern: do not use extern")
-
-    if re.search(r"($|[^\w])delete\s\w{1,25};", line):
-        report(filename, line_number, "manual-delete", "redflag", "Anti-pattern: do not use delete")
-    if "extern volatile" in line:
-        report(filename, line_number, "extern-volatile", r"redflag", "Anti-pattern: extern volatile ?!")
-    if re.search(r"\(char\s*\*\)\s*\"", line):
-        report(filename, line_number, "string-literal-cast", "ub", "prevent UB: do not cast away constness of string literals")
-    if re.search(r"const_cast<", line):
-        report(filename, line_number, "const-cast", "readability", "Anti-pattern: do not cast away constness")
-
-    if re.search(r"(while|if|switch)\s*\(.*\s=\s.*\)", line):
-        report(filename, line_number, "assign-in-condition", "assign_in_condition", "Anti-pattern: do not assign inside conditions")
-
-    check_line_issues_4_and_9(filename, line_number, line, report)
-
+# every rule is (rule, category, regex, description); {match} in the description is replaced by the first group of the
+# match; documentation/details.md lists the patterns and documentation/rules.md explains each rule
 LINE_RULES = [
+    ("make-unique-header", "modernize", r"/make_unique", "For C++14 and later use #include <memory>"),
+    ("unqualified-make-unique", "modernize", r"^(?!.*(/make_unique|std::make_unique)).*make_unique", "For C++14 and later use std::make_unique"),
+    ("reinterpret-cast", "casting", r"reinterpret_cast<", "Anti-pattern: do not reinterpret_cast"),
+    ("volatile-variable", "redflag", r"[^a-z]volatile[^a-z].*;", "Anti-pattern: do not use volatile"),
+    ("null-macro", "modernize", r"\sNULL\s", "Anti-pattern: do not use NULL, use 0 or nullptr instead"),
+    ("non-english-word", "readability", r"(?i)(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", "Anti-pattern: do not use non-english words ('{match}') in code or comments"),
+    ("constant-if-directive", "readability", r"(#if\s+\d)", "Anti-pattern: {match}, do not keep historical code in ifdefs"),
+    ("c-style-pointer-cast", "modernize", r"\(\w+\s*\*\s*\)", "Anti-pattern: dont use c-style casts"),
+    ("reserved-macro-name", "ub", r"#define\s+(_\w+|\w*__\w*)", "prevent UB: names starting with an underscore or containing a double underscore ({match}) are reserved"),
+    ("min-max-macro", "modernize", r"(?i)#define.*((min|max).*\(.*?.*:.*$)", "Anti-pattern: do not define {match}, use std::min and std::max"),
+    ("extern", "redflag", r"($|[^\w])extern\s+[^\"]", "Anti-pattern: do not use extern"),
+    ("manual-delete", "redflag", r"($|[^\w])delete\s\w{1,25};", "Anti-pattern: do not use delete"),
+    ("extern-volatile", "redflag", r"extern volatile", "Anti-pattern: extern volatile ?!"),
+    ("string-literal-cast", "ub", r"\(char\s*\*\)\s*\"", "prevent UB: do not cast away constness of string literals"),
+    ("const-cast", "readability", r"const_cast<", "Anti-pattern: do not cast away constness"),
+    ("assign-in-condition", "assign_in_condition", r"(while|if|switch)\s*\(.*\s=\s.*\)", "Anti-pattern: do not assign inside conditions"),
     ("throw-pointer", "redflag", r"\bthrow\s+new\b", "do not throw a pointer, throw by value and catch by reference"),
     ("throw-non-exception", "redflag", r"\bthrow\s+(\"|'|-?\d)", "throw an exception class, not a string or a number"),
     ("memset-zero-size", "bug", r"\bmemset\s*\(.*,\s*0\s*\)\s*;", "memset with size 0 does nothing, are the last two arguments swapped?"),
-    ("void-pointer-pointer-cast", "ub", r"\(\s*void\s*\*\s*\*\s*\)|reinterpret_cast\s*<\s*void\s*\*\s*\*\s*>",
-     "prevent UB: writing through a T** cast to void** breaks strict aliasing"),
-    ("string-braced-size", "bug", r"\bstd::w?string\s+\w+\s*\{\s*\d+\s*\}",
-     "std::string s{n} is a string of one character n, use std::string s(n, 0) for n characters"),
+    ("void-pointer-pointer-cast", "ub", r"\(\s*void\s*\*\s*\*\s*\)|reinterpret_cast\s*<\s*void\s*\*\s*\*\s*>", "prevent UB: writing through a T** cast to void** breaks strict aliasing"),
+    ("string-braced-size", "bug", r"\bstd::w?string\s+\w+\s*\{\s*\d+\s*\}", "std::string s{n} is a string of one character n, use std::string s(n, 0) for n characters"),
     ("undef-macro", "redflag", r"^\s*#\s*undef\b", "#undef changes a macro for everything that is included after it"),
     ("assign-to-self", "bug", r"(?<![\w.>:*&])(\w+)\s*=\s*\1\s*;", "assignment of a variable to itself"),
-    ("include-source-file", "redflag", r"#\s*include\s*[\"<][^\">]*\.(cpp|cc|cxx)[\">]",
-     "do not include a source file, it is compiled twice (odr violation)"),
+    ("include-source-file", "redflag", r"#\s*include\s*[\"<][^\">]*\.(cpp|cc|cxx)[\">]", "do not include a source file, it is compiled twice (odr violation)"),
     ("short-macro-name", "redflag", r"#\s*define\s+\w{1,3}\b", "a macro with a name of 3 characters or less clashes easily"),
     ("catch-by-value", "redflag", r"\bcatch\s*\(\s*[^&*.)\s][^&*.)]*\)", "catch exceptions by (const) reference, catching by value slices"),
     ("reset-with-new", "modernize", r"\.reset\s*\(\s*new\b", "use std::make_unique or std::make_shared instead of reset(new ...)"),
-    ("deprecated-uncaught-exception", "modernize", r"\buncaught_exception\s*\(",
-     "std::uncaught_exception is deprecated in C++17 and removed in C++20, use std::uncaught_exceptions"),
+    ("deprecated-uncaught-exception", "modernize", r"\buncaught_exception\s*\(", "std::uncaught_exception is deprecated in C++17 and removed in C++20, use std::uncaught_exceptions"),
     ("triple-pointer", "readability", r"\w\s*\*\s*\*\s*\*(?=\s*[\w)>,])", "a pointer to a pointer to a pointer is hard to understand"),
-    ("empty-special-member", "modernize", r"\b(\w+)::~?\1\s*\(\s*\)\s*\{\s*\}",
-     "an empty constructor or destructor, remove it or use = default"),
+    ("empty-special-member", "modernize", r"\b(\w+)::~?\1\s*\(\s*\)\s*\{\s*\}", "an empty constructor or destructor, remove it or use = default"),
     ("todo", "readability", r"(?i)\btodo\b", "a todo is left in the code"),
-    ("address-null-check", "ub", r"(?<![&\w)\]])&\s*\w+\s*[!=]=\s*nullptr|\bnullptr\s*[!=]=\s*&\s*\w",
-     "prevent UB: the address of a reference or object is never nullptr, the compiler may remove the check"),
+    ("address-null-check", "ub", r"(?<![&\w)\]])&\s*\w+\s*[!=]=\s*nullptr|\bnullptr\s*[!=]=\s*&\s*\w", "prevent UB: the address of a reference or object is never nullptr, the compiler may remove the check"),
     ("endless-for", "readability", r"\bfor\s*\(\s*;\s*;\s*\)", "use while (true) for an endless loop, it is clearer"),
     ("foreach-macro", "modernize", r"\b(foreach|Q_FOREACH|BOOST_FOREACH)\s*\(", "use a range-based for loop instead of a foreach macro"),
-    ("dangling-range-for", "bug", r"\bfor\s*\(.*:\s*[\w:.>-]*\w\([^()]*\)\s*(\.|->)\s*\w+\([^()]*\)\s*\)",
-     "a range-based for over a member of a temporary can dangle (before C++23)"),
+    ("dangling-range-for", "bug", r"\bfor\s*\(.*:\s*[\w:.>-]*\w\([^()]*\)\s*(\.|->)\s*\w+\([^()]*\)\s*\)", "a range-based for over a member of a temporary can dangle (before C++23)"),
+    ("redundant-semicolon", "readability", r"^(?!.*\bfor\s*\().*;\s*;", "redundant semicolon"),
+    ("short-include-guard", "readability", r"^\s*#\s*define\s+(?=\w{1,8}\s*$)(\w*_(H|HPP|HXX|INCLUDED)_?)\s*$", "include guard {match} is not unique enough"),
+]
+
+# only in sources: in headers these are mostly members, initialized by a constructor
+SOURCE_LINE_RULES = LINE_RULES + [
+    ("uninitialized-variable", "ub", r"^\s*(int|bool|double|float)\s+\w+\s*;", "initialize variables where they are declared"),
+]
+
+HEADER_LINE_RULES = LINE_RULES + [
+    ("using-namespace-in-header", "redflag", r"^using namespace", "Using namespace found in header file"),
 ]
 
 
-def check_line_issues_4_and_9(filename, line_number, line, report):
-    for rule, category, regex, description in LINE_RULES:
-        if re.search(regex, line):
+def check_line_impl(filename, line_number, line, report, rules):
+    for rule, category, regex, description in rules:
+        match = re.search(regex, line)
+        if match:
+            if "{match}" in description:
+                description = description.replace("{match}", clean_group(match))
             report(filename, line_number, rule, category, description)
-    if re.search(r";\s*;", line) and not re.search(r"\bfor\s*\(", line):
-        report(filename, line_number, "redundant-semicolon", "readability", "redundant semicolon")
-    match = re.match(r"\s*#\s*define\s+(\w+)\s*$", line)
-    if match and len(match[1]) <= 8 and re.search(r"_(H|HPP|HXX|INCLUDED)_?$", match[1]):
-        report(filename, line_number, "short-include-guard", "readability", f"include guard {match[1]} is not unique enough")
 
 
 def check_includes(filename, lines, report):
@@ -348,9 +319,7 @@ def check_includes(filename, lines, report):
 
 
 def check_header_line(filename, line_number, line, report):
-    check_line(filename, line_number, line, report)
-    if re.search("^using namespace", line):
-        report(filename, str(line_number), "using-namespace-in-header", "redflag", "Using namespace found in header file")
+    check_line(filename, line_number, line, report, HEADER_LINE_RULES)
 
 
 def check_spelling(rootpath, files, mark_comments):
