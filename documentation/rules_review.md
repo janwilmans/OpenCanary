@@ -93,3 +93,20 @@ None of these are reported by GCC, clang or MSVC (unless noted). Roughly in orde
    removes most false positives.
 3. Remove or lower the priority of the rules that compilers already report.
 4. Add new rules, starting with `unnamed-lock`, `suppressed-warning` and `empty-catch`.
+
+## Status
+
+Done:
+- All confirmed bugs above are fixed, each with a test.
+- Every line rule is in one table (structural improvement 2), and the rules no longer look inside string literals;
+  `todo` only looks at comments (point 1, for literals; issues in comments are still reported, `--mark-comments`
+  gives them the category `comments`).
+- The category of `assign-in-condition` is `bug` (point 3, partly).
+- `unnamed-lock`, `suppressed-warning` and `empty-catch` are added.
+
+Open:
+- Remove or lower the priority of the rules that compilers already report; this depends on the warnings that are
+  enabled in the builds that OpenCanary collects.
+- Make the description prefixes consistent (point 3) and speed up the line checks (point 4).
+- The other proposed rules, from `assert-side-effect` on.
+- A raw string literal (`R"(...)"`) that spans lines is not recognized as a literal.
