@@ -12,7 +12,6 @@
 import argparse
 import os
 import re
-import subprocess
 import sys
 import traceback
 import xml.etree.ElementTree as ET
@@ -42,34 +41,24 @@ wrong_word_list = [
 ]
 
 
-def rip_grep(rootpath):
-    """the output of one ripgrep run for all words of wrong_word_list in rootpath, empty when ripgrep is not installed"""
-    command = ["rg", "-o", "-n", "-w", "--column", "--color=never", "--no-heading", "--with-filename"]
-    for word in wrong_word_list:
-        command += ["-e", word]
-    # without a path (and with a stdin that is not a terminal, as in CI) ripgrep searches stdin instead of the directory
-    command += ["--", "."]
-    try:
-        return subprocess.run(command, cwd=rootpath, check=False, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                              stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace").stdout
-    except FileNotFoundError:
-        eprint("ripgrep (rg) not found, spelling check (misspelled-word) skipped")
-        return ""
+WRONG_WORDS = frozenset(wrong_word_list)
+WORD = re.compile(r"\w+")  # a whole word: letters, digits and underscores, as grep -w and rg -w
 
 
-def get_spelling_violations(rg_output, rootpath, files):
-    """(filename, line_number, word) for every 'path:line:column:word' line of rg_output whose path, relative to
-    rootpath, is one of files (absolute paths), so the spelling check covers the same files as the other checks"""
-    checked = {os.path.normcase(file) for file in files}
-    result = []
-    for line in rg_output.splitlines():
-        parts = line.rsplit(":", 3)
-        if len(parts) != 4 or not parts[1].isdigit():
+def check_spelling(filename, lines, masks, mark_comments, report):
+    """misspelled-word for every word of wrong_word_list in the lines (code, literals and comments, case sensitive);
+    with mark_comments, a word that is not also in the code or a literal of its line gets the category COMMENTS_CATEGORY.
+    The whole file is checked first, a misspelling is rare and splitting the lines is slower"""
+    if WRONG_WORDS.isdisjoint(WORD.findall("".join(lines))):
+        return
+    for line_number, line in enumerate(lines, 1):
+        words = [word for word in WORD.findall(line) if word in WRONG_WORDS]
+        if not words:
             continue
-        filename = os.path.abspath(os.path.join(rootpath, parts[0]))
-        if os.path.normcase(filename) in checked:
-            result += [(filename, parts[1], parts[3])]
-    return result
+        code = set(WORD.findall(view([line], [masks[line_number - 1]], CODE + LITERAL)[0])) if mark_comments else set()
+        for word in words:
+            category = COMMENTS_CATEGORY if mark_comments and word not in code else "spelling"
+            report(filename, str(line_number), "misspelled-word", category, f"Misspelled word '{word}' found")
 
 
 def get_project_xml_root(projectname):
@@ -211,6 +200,7 @@ def find_issues(filename, lines, check_file_line, mark_comments):
         check_whole_file(filename, code, add)
         issues = [issue if issue[2] in comment_rules or (issue[1], issue[2]) in in_code else (*issue[:3], COMMENTS_CATEGORY, issue[4])
                   for issue in issues]
+    check_spelling(filename, lines, masks, mark_comments, collect)
     return issues
 
 
@@ -439,19 +429,6 @@ def check_header_line(filename, line_number, line, report):
     check_line(filename, line_number, line, report, HEADER_LINE_RULES)
 
 
-def check_spelling(rootpath, files, mark_comments):
-    code = {}  # filename: its lines without comments, only read for files with a misspelled word
-    for filename, line_number, word in get_spelling_violations(rip_grep(rootpath), rootpath, files):
-        category = "spelling"
-        if mark_comments:
-            if filename not in code:
-                code[filename] = without_comments(read_lines(filename))
-            line = code[filename][int(line_number) - 1] if int(line_number) <= len(code[filename]) else ""
-            if not re.search(r"\b" + re.escape(word) + r"\b", line):
-                category = COMMENTS_CATEGORY
-        report_issue(filename, line_number, "misspelled-word", category, f"Misspelled word '{word}' found")
-
-
 def check_project(projectname):
     project_root = get_project_xml_root(projectname)
 
@@ -543,7 +520,6 @@ def main():
             eprint("OC Error parsing source:", filename, "\n", e, "\n\n")
             report_issue(filename, "", "parse-error", "parse", "Could not parse source file")
 
-    check_spelling(rootpath, headers + cpps, args.mark_comments)
 
     sys.stdout.flush()
     eprint(str(len(projects)) + " msvc project(s) checked")

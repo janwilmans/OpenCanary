@@ -27,7 +27,6 @@ Some scripts use other tools; without them only that part is skipped or unavaila
 
 | Tool | Needed by | Without it |
 |------|-----------|------------|
-| `rg` ([ripgrep](https://github.com/BurntSushi/ripgrep)) | `oc_cpp_issues.py`, the spelling check (`misspelled-word`) | the spelling check is skipped, with a message on stderr |
 | `tomli` (python package) | `opencanary.py run` on Python older than 3.11 | `opencanary.py run` stops; the individual scripts still work |
 | `cppcheck` | `cppcheck.py` | no cppcheck issues |
 | `clang-format` | `run_clang_format.py` (`CLANG_FORMAT` selects the binary, default `clang-format-11`) | the script cannot check formatting |
@@ -37,7 +36,7 @@ Some scripts use other tools; without them only that part is skipped or unavaila
 On Debian or Ubuntu, install all of them with:
 
 ```
-sudo apt install python3 ripgrep python3-tomli cppcheck clang-format git python3-docopt
+sudo apt install python3 python3-tomli cppcheck clang-format git python3-docopt
 ```
 
 On other systems use the package manager (for example `winget`, `choco` or `brew`) or `pip install tomli docopt` for

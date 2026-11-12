@@ -230,7 +230,7 @@ the C++17 init-statement: `if (auto it = map.find(key); it != map.end())`.
 ### misspelled-word
 
 **Misspelled word.** Reported for a common misspelling, such as `recieve`, `seperate` or `wich`, as a whole word in a
-header or source. Needs [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`).
+header or source, also in a comment or a string literal.
 
 Misspelled names make code hard to search, and a misspelling in an interface spreads to all its users. **Solve:**
 correct the spelling; for a name in an interface, rename it everywhere (the IDE's rename refactoring helps). The list of

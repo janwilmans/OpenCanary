@@ -291,7 +291,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `const-cast` | contains `const_cast<` | readability | do not cast away constness |
 | `using-namespace-in-header` | starts with `using namespace`, after optional whitespace (headers only) | redflag | Using namespace found in header file (no prefix) |
 | `assign-in-condition` | matches `if (<lvalue> = ...)` (also `while` and `switch`); not a declaration (`if (auto x = f())`), an init-statement (`if (auto x = f(); x)`) or extra parentheses (`if ((x = f()))`) | bug | do not assign inside conditions |
-| `misspelled-word` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word; needs ripgrep, see below | spelling | Misspelled word '<word>' found |
+| `misspelled-word` | contains one of the misspelled words in `wrong_word_list` (such as `recieve`, `seperate`, `wich`) as a whole word (case sensitive), also in comments and string literals | spelling | Misspelled word '<word>' found |
 | `memset-zero-size` | matches `memset(..., 0);` | bug | see [rules.md](rules.md#memset-zero-size) |
 | `string-braced-size` | matches `std::string <name>{<number>}` (or `std::wstring`) | bug | see [rules.md](rules.md#string-braced-size) |
 | `assign-to-self` | matches `<name> = <same name>;` (not `this->x = x` or `a.x = x`) | bug | see [rules.md](rules.md#assign-to-self) |
@@ -335,9 +335,8 @@ rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (
 [rules.md](rules.md). Because the path is
 absolute, use `reference_depth` (`tr_customize.py --reference-depth`) to make the links match the repository.
 
-The spelling check (`misspelled-word`) runs `rg` (ripgrep) once in `<path>` and reports only matches in the headers and
-sources that the other checks read, so `.opencanaryignore` applies to it too. Without ripgrep on the `PATH` it is
-skipped with a message on stderr. The default `rules/priorities.txt` gives it priority 90.
+The spelling check (`misspelled-word`) reads the same headers and sources as the other checks, so `.opencanaryignore`
+applies to it too (and `.gitignore` does not). The default `rules/priorities.txt` gives it priority 90.
 
 ### cppcheck.py
 

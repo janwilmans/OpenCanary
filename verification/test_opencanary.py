@@ -842,14 +842,16 @@ int member;
             self.assertIn("(_Reserved)", reserved[0][7])
             self.assertIn("[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#reserved-macro-name}", reserved[0][8])
 
-    @unittest.skipUnless(__import__("shutil").which("rg"), "needs ripgrep (rg)")
-    def test_spelling_check_ignores_stdin(self):
+    def test_spelling(self):
         import tempfile
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "a.cc"), "w", encoding="utf-8") as f:
-                f.write("// recieve\n")
-            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d], stdin="wich\n"))]
-            self.assertEqual([(row[5], row[3].rsplit(":", 1)[1]) for row in rows if row[5] == "misspelled-word"], [("misspelled-word", "1")], rows)
+                # whole words only and case sensitive, as grep -w: not wich_x, xwich or Wich; literals are checked too
+                f.write('// recieve\nint wich_x, xwich, Wich;\nlog("seperate, wich");\n')
+            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d]))]
+        self.assertEqual([(row[3].rsplit(":", 1)[1], row[7]) for row in rows if row[5] == "misspelled-word"],
+                         [("1", "Misspelled word &#x27;recieve&#x27; found"), ("3", "Misspelled word &#x27;seperate&#x27; found"),
+                          ("3", "Misspelled word &#x27;wich&#x27; found")])
 
     COMMENTED = """// int* p = (int*)q; NULL
 int* p = (int*)q; // NULL todo
@@ -887,39 +889,17 @@ int n = 1'000; // (char*)x
                          sorted([(*issue, False) for issue in in_code] + [(*issue, True) for issue in in_comment]))
 
     def test_mark_comments_of_misspelled_words(self):
-        import contextlib
-        import io
-        import tempfile
         import oc_cpp_issues
-        with tempfile.TemporaryDirectory() as d:
-            filename = os.path.join(d, "a.cc")
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write("int recieve; // recieve\n/* wich */ int wich;\nint x; // seperate\n")
-            rg_output = "a.cc:1:5:recieve\na.cc:1:16:recieve\na.cc:2:4:wich\na.cc:2:16:wich\na.cc:3:11:seperate\n"
-            original, oc_cpp_issues.rip_grep = oc_cpp_issues.rip_grep, lambda _rootpath: rg_output
-            try:
-                out = io.StringIO()
-                with contextlib.redirect_stdout(out):
-                    oc_cpp_issues.check_spelling(d, [filename], True)
-            finally:
-                oc_cpp_issues.rip_grep = original
-        # a word that is also in the code of its line is not marked
-        self.assertEqual([row.split("|")[6] for row in lines(out.getvalue())],
-                         ["spelling", "spelling", "spelling", "spelling", "comments"])
+        text = 'int recieve; // recieve\n/* wich */ int wich;\nint x; // seperate\nlog("untill");\n'
+        issues = oc_cpp_issues.find_issues("a.cc", text.splitlines(keepends=True), oc_cpp_issues.check_source_line, True)
+        # a word that is also in the code or a literal of its line is not marked
+        self.assertEqual([(issue[1], issue[3]) for issue in issues if issue[2] == "misspelled-word"],
+                         [("1", "spelling"), ("1", "spelling"), ("2", "spelling"), ("2", "spelling"), ("3", "comments"), ("4", "spelling")])
 
     def test_without_comments_keeps_columns_and_line_endings(self):
         import oc_cpp_issues
         self.assertEqual(oc_cpp_issues.without_comments(["a /* b */ c // d\n", "'/' /* e\r\n", "f */ g\n"]),
                          ["a         c     \n", "'/'     \r\n", "     g\n"])
-
-    def test_spelling_matches_are_limited_to_the_checked_files(self):
-        import oc_cpp_issues
-        root = os.path.abspath("project")
-        checked = os.path.join(root, "src", "a.cc")
-        rg_output = "\n".join([os.path.join("src", "a.cc") + ":12:5:recieve",
-                               os.path.join("ignored", "b.cc") + ":3:1:wich",
-                               "not a match line"])
-        self.assertEqual(oc_cpp_issues.get_spelling_violations(rg_output, root, [checked]), [(checked, "12", "recieve")])
 
 
 class TestPype(unittest.TestCase):
