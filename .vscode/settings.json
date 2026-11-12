@@ -26,12 +26,14 @@
     "C_Cpp.autoAddFileAssociations": false,
     "C_Cpp.default.cppStandard": "c++23",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
 
-    "python.formatting.autopep8Args": [
-        "--max-line-length=160"
-    ]
-
+    // the project formats python with autopep8 (see [tool.autopep8] in pyproject.toml), not with a formatter set in the
+    // user settings such as ruff or black: they wrap at 88 columns and split the one-line rules in oc_cpp_issues.py
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.autopep8",
+        "editor.formatOnType": false
+    }
 }
 
 

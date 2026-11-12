@@ -1,0 +1,7 @@
+# formatter settings only, OpenCanary is not a package
+
+[tool.autopep8]
+# the same limit as .pylintrc; E501 (line too long) is not fixed, so a long line, such as a rule in
+# oc_cpp_issues.py, is never wrapped; the other ignored codes are the autopep8 defaults
+max_line_length = 160
+ignore = "E226,E24,W50,W690,E501"
