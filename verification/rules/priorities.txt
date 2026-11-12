@@ -150,7 +150,6 @@
 75  =reserved-macro-name  # reserved words
 70  =min-max-macro # min/max
 60  =extern # extern keyword
-99  =register-keyword  # register keyword
 45  =manual-delete  # delete
 15  =extern-volatile  # extern volatile
 60  =using-namespace-in-header  # using namespace in a header

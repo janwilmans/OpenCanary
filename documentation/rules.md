@@ -31,7 +31,6 @@ default priorities are in `rules/priorities.txt`, the exact patterns in [details
 | [reserved-macro-name](#reserved-macro-name) | ub | `#define` of a reserved name (starting with `_` or with `__`) | `AP#9` |
 | [min-max-macro](#min-max-macro) | modernize | `min` or `max` macro | `AP#10` |
 | [extern](#extern) | redflag | `extern` | `AP#11` |
-| [register-keyword](#register-keyword) | redflag | `register` (disabled) | `AP#12` |
 | [manual-delete](#manual-delete) | redflag | `delete` | `AP#13` |
 | [extern-volatile](#extern-volatile) | redflag | `extern volatile` | `AP#14` |
 | [string-literal-cast](#string-literal-cast) | ub | casting away the constness of a string literal | `AP#15` |
@@ -172,11 +171,6 @@ define `NOMINMAX` before including it.
 An `extern` variable is a global that any file can change, which hides dependencies and makes the initialization order
 between files undefined. **Solve:** pass the value as a parameter or make it a member; for a constant use `constexpr` or
 `inline constexpr` in a header; for a single shared instance use a function that returns a reference to a local static.
-
-### register-keyword
-
-**`register` (disabled).** This check is disabled: it gave too many false positives and compilers already report
-`register`, which is removed in C++17. **Solve:** remove the `register` keyword.
 
 ### manual-delete
 
