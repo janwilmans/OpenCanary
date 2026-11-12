@@ -675,6 +675,19 @@ class TestCppIssues(unittest.TestCase):
         self.assertEqual(self.include_issues(os.path.abspath("a.cpp"), text),
                          [(2, "duplicate-include"), (5, "duplicate-include"), (11, "duplicate-include"), (15, "duplicate-include")])
 
+    def test_local_helper_macros(self):
+        import oc_cpp_issues
+        text = "\n".join(["#undef Bool",                              # 1 a macro of another file
+                          "#define HDR() print(name)",                # 2 a local helper, #undef'd on line 4
+                          "HDR();",                                   # 3
+                          "#undef HDR",                               # 4
+                          "#define GET \"GET\"",                      # 5 short and never #undef'd
+                          "#undef ABC",                               # 6 #undef before its #define
+                          "#define ABC 1"]) + "\n"                    # 7 short, the #undef is before it
+        found = []
+        oc_cpp_issues.check_macros("a.cpp", text.splitlines(keepends=True), lambda _f, line, rule, *_: found.append((int(line), rule)))
+        self.assertEqual(found, [(1, "undef-macro"), (6, "undef-macro"), (5, "short-macro-name"), (7, "short-macro-name")])
+
     def test_min_max_macro(self):
         self.assert_rule("min-max-macro", ["#define min(a, b) ((a) < (b) ? (a) : (b))", "#define MAX(a,b) ((a)>(b)?(a):(b))",
                                            "# define max(a, b) x"],

@@ -332,7 +332,8 @@ not checked: there such a line is usually a member that the constructor initiali
 
 ### short-macro-name
 
-**Macro with a very short name.** Reported for `#define` of a name of 3 characters or less, such as `#define N 10`.
+**Macro with a very short name.** Reported for `#define` of a name of 3 characters or less, such as `#define N 10`,
+unless the same file `#undef`s it after use (a local helper macro).
 
 A macro replaces the name everywhere after it, also in other headers, so a short name such as `N`, `PI` or `MAX`
 easily changes unrelated code. **Solve:** use a `constexpr` variable or an `enum`, or give the macro a long name with
@@ -348,12 +349,12 @@ returns a count; compare it with the count stored in the constructor.
 
 ### undef-macro
 
-**`#undef`.** Reported for every `#undef`.
+**`#undef`.** Reported for an `#undef` of a macro that the file did not define itself before it.
 
 Undefining a macro changes the meaning of every header included after it, depending on the include order, and is
 usually a workaround for a macro that should not exist (such as `min` and `max` from `<windows.h>`). **Solve:**
 remove the macro at its source (for `<windows.h>`: define `NOMINMAX`), or replace it with a function or constant.
-Keep `#undef` only for a macro that is defined and undefined locally in the same file.
+An `#undef` of a macro that is defined and undefined locally in the same file is fine and is not reported.
 
 ### reset-with-new
 

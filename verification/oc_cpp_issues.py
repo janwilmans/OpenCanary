@@ -152,23 +152,23 @@ def without_comments(lines):
 
 
 def check_cpp_file(filename, check_file_line, mark_comments):
-    """check every line with check_file_line(filename, line_number, line, report), and the includes, and report the
-    issues; with mark_comments, an issue that is not found again with the comments removed (it was only matched inside
-    a comment) gets the category COMMENTS_CATEGORY"""
+    """check every line with check_file_line(filename, line_number, line, report), and the rules that need the whole
+    file, and report the issues; with mark_comments, an issue that is not found again with the comments removed (it
+    was only matched inside a comment) gets the category COMMENTS_CATEGORY"""
     lines = read_lines(filename)
     issues = []
     collect = lambda *issue: issues.append(issue)
     for line_number, line in enumerate(lines, 1):
         check_file_line(filename, line_number, line, collect)
-    check_includes(filename, lines, collect)
+    check_whole_file(filename, lines, collect)
     if mark_comments and issues:
         code = without_comments(lines)
         in_code = set()
         add = lambda _filename, line, rule, *_: in_code.add((line, rule))
-        # only the lines with an issue are checked again, the includes need the lines before them
+        # only the lines with an issue are checked again, the whole-file rules need the other lines
         for line_number in sorted({int(issue[1]) for issue in issues}):
             check_file_line(filename, line_number, code[line_number - 1], add)
-        check_includes(filename, code, add)
+        check_whole_file(filename, code, add)
         issues = [issue if (issue[1], issue[2]) in in_code else (*issue[:3], COMMENTS_CATEGORY, issue[4]) for issue in issues]
     for issue in issues:
         report_issue(*issue)
@@ -275,10 +275,8 @@ LINE_RULES = [
     ("memset-zero-size", "bug", r"\bmemset\s*\(.*,\s*0\s*\)\s*;", "memset with size 0 does nothing, are the last two arguments swapped?"),
     ("void-pointer-pointer-cast", "ub", r"\(\s*void\s*\*\s*\*\s*\)|reinterpret_cast\s*<\s*void\s*\*\s*\*\s*>", "prevent UB: writing through a T** cast to void** breaks strict aliasing"),
     ("string-braced-size", "bug", r"\bstd::w?string\s+\w+\s*\{\s*\d+\s*\}", "std::string s{n} is a string of one character n, use std::string s(n, 0) for n characters"),
-    ("undef-macro", "redflag", r"^\s*#\s*undef\b", "#undef changes a macro for everything that is included after it"),
     ("assign-to-self", "bug", r"(?<![\w.>:*&])(\w+)\s*=\s*\1\s*;", "assignment of a variable to itself"),
     ("include-source-file", "redflag", r"#\s*include\s*[\"<][^\">]*\.(cpp|cc|cxx)[\">]", "do not include a source file, it is compiled twice (odr violation)"),
-    ("short-macro-name", "redflag", r"#\s*define\s+\w{1,3}\b", "a macro with a name of 3 characters or less clashes easily"),
     ("catch-by-value", "redflag", r"\bcatch\s*\(\s*[^&*.)\s][^&*.)]*\)", "catch exceptions by (const) reference, catching by value slices"),
     ("reset-with-new", "modernize", r"\.reset\s*\(\s*new\b", "use std::make_unique or std::make_shared instead of reset(new ...)"),
     ("deprecated-uncaught-exception", "modernize", r"\buncaught_exception\s*\(", "std::uncaught_exception is deprecated in C++17 and removed in C++20, use std::uncaught_exceptions"),
@@ -321,6 +319,27 @@ def includes_itself(filename, included, quoted):
     if quoted and util.normpath(os.path.normpath(os.path.join(os.path.dirname(path), included))) == path:
         return True
     return "/" in included and path.endswith("/" + included.lstrip("./"))
+
+
+def check_whole_file(filename, lines, report):
+    """the rules that need the other lines of the file"""
+    check_includes(filename, lines, report)
+    check_macros(filename, lines, report)
+
+
+def check_macros(filename, lines, report):
+    """undef-macro and short-macro-name, but not for a local helper macro: one that the file defines and #undefs"""
+    defines, undefs = [], []
+    for line_number, line in enumerate(lines, 1):
+        match = re.match(r"\s*#\s*(define|undef)\s+(\w+)", line)
+        if match:
+            (defines if match[1] == "define" else undefs).append((line_number, match[2]))
+    for line_number, name in undefs:
+        if not any(name == defined and number < line_number for number, defined in defines):
+            report(filename, str(line_number), "undef-macro", "redflag", "#undef changes a macro for everything that is included after it")
+    for line_number, name in defines:
+        if len(name) <= 3 and not any(name == undefined and number > line_number for number, undefined in undefs):
+            report(filename, str(line_number), "short-macro-name", "redflag", "a macro with a name of 3 characters or less clashes easily")
 
 
 def check_includes(filename, lines, report):

@@ -302,9 +302,9 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `throw-non-exception` | matches `throw` followed by a string, a character or a number | redflag | see [rules.md](rules.md#throw-non-exception) |
 | `catch-by-value` | matches `catch (...)` with a type that is not a reference, pointer or `...` | redflag | see [rules.md](rules.md#catch-by-value) |
 | `uninitialized-variable` | starts with `int`, `bool`, `double` or `float` and a name without a value (sources only) | ub | see [rules.md](rules.md#uninitialized-variable) |
-| `short-macro-name` | matches `#define` of a name of 1 to 3 characters | redflag | see [rules.md](rules.md#short-macro-name) |
+| `short-macro-name` | matches `#define` of a name of 1 to 3 characters that the file does not `#undef` after it | redflag | see [rules.md](rules.md#short-macro-name) |
 | `deprecated-uncaught-exception` | matches `uncaught_exception(` | modernize | see [rules.md](rules.md#deprecated-uncaught-exception) |
-| `undef-macro` | starts with `#undef` | redflag | see [rules.md](rules.md#undef-macro) |
+| `undef-macro` | `#undef` of a macro that the file did not `#define` before it | redflag | see [rules.md](rules.md#undef-macro) |
 | `reset-with-new` | matches `.reset(new` | modernize | see [rules.md](rules.md#reset-with-new) |
 | `triple-pointer` | matches a name followed by `***` | readability | see [rules.md](rules.md#triple-pointer) |
 | `empty-special-member` | matches `<class>::<class>() {}` or `<class>::~<class>() {}` | modernize | see [rules.md](rules.md#empty-special-member) |
