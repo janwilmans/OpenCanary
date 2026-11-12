@@ -181,6 +181,9 @@
 90  =endless-for  # for (;;)
 90  =redundant-semicolon  # ;;
 95  =todo  # TODO
+10  =unnamed-lock  # std::lock_guard<std::mutex>{m};
+50  =suppressed-warning  # #pragma warning(disable: ...)
+30  =empty-catch  # catch (...) {}
 
 # categories
 category:ub =aggressive-loop-optimizations

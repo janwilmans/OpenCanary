@@ -331,6 +331,15 @@ LINE_RULES = [
 ]
 
 # only in sources: in headers these are mostly members, initialized by a constructor
+LINE_RULES += [
+    # a lock that is not a variable is a temporary, released at the end of the statement; not return std::unique_lock(m);
+    ("unnamed-lock", "bug",
+     r"^\s*(std::)?(lock_guard|unique_lock|scoped_lock|shared_lock|QMutexLocker|QReadLocker|QWriteLocker)\s*(<[^;]*>)?\s*[({][^;]*[)}]\s*;",
+     "the lock is a temporary, it is released at the end of the statement: give it a name"),
+    ("suppressed-warning", "redflag", r"#\s*pragma\s+(warning\s*\(\s*(disable|suppress|push\s*,\s*0)\b|(GCC|clang)\s+diagnostic\s+ignored\b)",
+     "a compiler warning is suppressed, the build log does not show what it hides"),
+]
+
 # rules about comments, they only look at the comments of a line (and --mark-comments does not change their category)
 COMMENT_LINE_RULES = [
     ("todo", "readability", r"(?i)\btodo\b", "a todo is left in the code"),
@@ -369,6 +378,17 @@ def check_whole_file(filename, lines, report):
     """the rules that need the other lines of the file"""
     check_includes(filename, lines, report)
     check_macros(filename, lines, report)
+    check_empty_catch(filename, lines, report)
+
+
+def check_empty_catch(filename, lines, report):
+    """a catch block with nothing in it, also when it spans lines; a comment in it says that this is intended"""
+    text = "".join(lines)
+    if "catch" not in text:
+        return
+    for match in re.finditer(r"\bcatch\s*\([^)]*\)\s*\{\s*\}", text):
+        line_number = text.count("\n", 0, match.start()) + 1
+        report(filename, str(line_number), "empty-catch", "redflag", "an empty catch block swallows the exception")
 
 
 def check_macros(filename, lines, report):

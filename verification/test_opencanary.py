@@ -694,6 +694,38 @@ class TestCppIssues(unittest.TestCase):
         oc_cpp_issues.check_macros("a.cpp", text.splitlines(keepends=True), lambda _f, line, rule, *_: found.append((int(line), rule)))
         self.assertEqual(found, [(1, "undef-macro"), (6, "undef-macro"), (5, "short-macro-name"), (7, "short-macro-name")])
 
+    def test_unnamed_lock(self):
+        self.assert_rule("unnamed-lock", ["std::lock_guard<std::mutex>{m_mutex};", "std::unique_lock<std::mutex>(m);",
+                                          "  std::scoped_lock{a, b};", "QMutexLocker(&m_mutex);", "lock_guard<mutex>{m};"],
+                         ["std::lock_guard<std::mutex> lock(m_mutex);", "std::scoped_lock lock{a, b};", "std::lock_guard lock(m);",
+                          "QMutexLocker locker(&m_mutex);", "return std::unique_lock<std::mutex>(m);",
+                          "auto lock = std::unique_lock<std::mutex>(m);", "f(std::unique_lock<std::mutex>(m));"])
+
+    def test_suppressed_warning(self):
+        self.assert_rule("suppressed-warning", ["#pragma warning(disable: 4996)", "#pragma warning( disable : 4100 4101 )",
+                                                "#pragma warning(suppress: 4100)", "#pragma warning(push, 0)",
+                                                '#pragma GCC diagnostic ignored "-Wunused"', '#  pragma clang diagnostic ignored "-Wfoo"'],
+                         ["#pragma warning(push)", "#pragma warning(pop)", "#pragma GCC diagnostic push",
+                          '#pragma GCC diagnostic warning "-Wall"', "#pragma once"])
+
+    def test_empty_catch(self):
+        import oc_cpp_issues
+        text = "\n".join(["try { f(); }",                             # 1
+                          "catch (...) {}",                           # 2 empty
+                          "try { f(); }",                             # 3
+                          "catch (const std::exception & e)",         # 4 empty, over three lines
+                          "{",                                        # 5
+                          "}",                                        # 6
+                          "catch (...) { /* ignore, best effort */ }",  # 7 a comment says it is intended
+                          "catch (...) { throw; }",                   # 8
+                          "catch (...)",                              # 9
+                          "{",                                        # 10
+                          "    // the file may not exist",            # 11
+                          "}"]) + "\n"                                # 12
+        rules = [(int(issue[1]), issue[2]) for issue in oc_cpp_issues.find_issues("a.cpp", text.splitlines(keepends=True),
+                                                                                  oc_cpp_issues.check_source_line, False)]
+        self.assertEqual(rules, [(2, "empty-catch"), (4, "empty-catch")])
+
     def test_min_max_macro(self):
         self.assert_rule("min-max-macro", ["#define min(a, b) ((a) < (b) ? (a) : (b))", "#define MAX(a,b) ((a)>(b)?(a):(b))",
                                            "# define max(a, b) x"],

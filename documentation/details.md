@@ -316,6 +316,9 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `endless-for` | matches `for (;;)` | readability | see [rules.md](rules.md#endless-for) |
 | `redundant-semicolon` | matches `;` followed by another `;` (not on a line with `for (`) | readability | see [rules.md](rules.md#redundant-semicolon) |
 | `todo` | has the word `todo` in a comment (ignoring case) | readability | see [rules.md](rules.md#todo) |
+| `unnamed-lock` | starts with `lock_guard`, `unique_lock`, `scoped_lock`, `shared_lock`, `QMutexLocker`, `QReadLocker` or `QWriteLocker` (optionally `std::` and template arguments) followed by `(...)` or `{...}` and `;`, so without a variable name | bug | see [rules.md](rules.md#unnamed-lock) |
+| `suppressed-warning` | matches `#pragma warning(disable`, `#pragma warning(suppress`, `#pragma warning(push, 0` or `#pragma GCC diagnostic ignored` (or `clang`) | redflag | see [rules.md](rules.md#suppressed-warning) |
+| `empty-catch` | a `catch (...)` followed by an empty block `{ }`, also over several lines; not when the block has a comment | redflag | see [rules.md](rules.md#empty-catch) |
 
 Every Visual Studio project (a file whose name ends with `proj`) is checked per `ItemDefinitionGroup`:
 

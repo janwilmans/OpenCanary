@@ -61,6 +61,9 @@ default priorities are in `rules/priorities.txt`, the exact patterns in [details
 | [endless-for](#endless-for) | readability | `for (;;)` |
 | [redundant-semicolon](#redundant-semicolon) | readability | `;;` |
 | [todo](#todo) | readability | `TODO` |
+| [unnamed-lock](#unnamed-lock) | bug | a lock that is not a variable |
+| [suppressed-warning](#suppressed-warning) | redflag | `#pragma` that disables a compiler warning |
+| [empty-catch](#empty-catch) | redflag | `catch (...) {}` |
 | [parse-error](#parse-error) | parse | file could not be read |
 
 ### make-unique-header
@@ -422,6 +425,36 @@ The empty statement does nothing, but it can hide an editing mistake. **Solve:**
 
 A todo in the code is work that is not tracked anywhere and is easily forgotten. **Solve:** do it, or move it to the
 issue tracker and remove the comment (or refer to the issue in it).
+
+### unnamed-lock
+
+**A lock that is not a variable.** Reported for a statement that only creates a lock, such as
+`std::lock_guard<std::mutex>{m_mutex};`, `std::unique_lock<std::mutex>(m);` or `QMutexLocker(&m_mutex);`.
+
+Without a name the lock is a temporary: it locks and unlocks within the statement, and the code after it runs without
+the lock. Compilers do not warn. (With round parentheses, `std::unique_lock<std::mutex>(m);` even declares a new,
+default constructed lock named `m`.) **Solve:** give the lock a name: `std::lock_guard<std::mutex> lock(m_mutex);` or,
+since C++17, `std::scoped_lock lock(m_mutex);`.
+
+### suppressed-warning
+
+**A suppressed compiler warning.** Reported for `#pragma warning(disable: ...)`, `#pragma warning(suppress: ...)`,
+`#pragma warning(push, 0)` and `#pragma GCC diagnostic ignored` (or `clang`).
+
+A suppressed warning does not show up in the build log, so OpenCanary cannot report it, and the suppression often
+outlives its reason. **Solve:** fix the code that causes the warning. When the warning comes from a third party header,
+include that header as a system header (`-isystem`, or `/external:I` with `/external:W0` for MSVC) instead. When the
+suppression is needed, keep it as narrow as possible (`push`/`pop` around one include or one line) with a comment that
+says why.
+
+### empty-catch
+
+**An empty `catch` block.** Reported for a `catch` whose block is empty, also when it spans lines. Not when the block
+has a comment, which says that ignoring the exception is intended.
+
+An empty catch block swallows the exception: the error is not handled, not logged and not passed on, and the program
+continues in an unknown state. **Solve:** handle the error, log it, or let it propagate. When ignoring it is correct,
+catch the specific exception type and add a comment that says why.
 
 ### parse-error
 
