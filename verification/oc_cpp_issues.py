@@ -101,20 +101,24 @@ def check_source_line(filename, line_number, line, report):
 COMMENTS_CATEGORY = "comments"  # the category of an issue that is only found in a comment, see --mark-comments
 
 
-def without_comments(lines):
-    """the lines with every comment replaced by spaces (line endings are kept), so checking these lines finds only
-    what is in the code; string and character literals are kept, a // or /* inside one does not start a comment"""
+CODE, LITERAL, COMMENT = "c", "s", "m"  # what a character of a line is, see classify()
+
+
+def classify(lines):
+    """per line None when the whole line is code, or a string of the same length that says what each character is:
+    CODE, LITERAL (the contents of a string or character literal, not its quotes) or COMMENT (including the // or /* */);
+    a /* */ comment continues on the next lines, a // or /* inside a literal does not start a comment"""
     result = []
     in_block = False
     for line in lines:
         # fast paths: most lines have no comment and no literal, or are completely inside a /* */ comment
         if not in_block and "/" not in line and '"' not in line and "'" not in line:
-            result.append(line)
+            result.append(None)
             continue
         if in_block and "*/" not in line:
-            result.append(re.sub(r"[^\r\n]", " ", line))
+            result.append(COMMENT * len(line))
             continue
-        code = []
+        mask = []
         quote = None  # unterminated literals end at the end of the line
         i = 0
         while i < len(line):
@@ -122,56 +126,92 @@ def without_comments(lines):
             if in_block:
                 if pair == "*/":
                     in_block = False
-                    code.append("  ")
+                    mask.append(COMMENT * 2)
                     i += 2
                     continue
-                code.append(char if char in "\r\n" else " ")
+                mask.append(COMMENT)
             elif quote:
-                code.append(char)
-                if char == "\\":
-                    code.append(line[i + 1:i + 2])
-                    i += 1
-                elif char == quote:
+                if char == quote:
                     quote = None
+                    mask.append(CODE)
+                elif char == "\\":
+                    mask.append(LITERAL * len(line[i:i + 2]))
+                    i += 1
+                else:
+                    mask.append(LITERAL)
             elif pair == "//":
-                code.append(re.sub(r"[^\r\n]", " ", line[i:]))
+                mask.append(COMMENT * (len(line) - i))
                 break
             elif pair == "/*":
                 in_block = True
-                code.append("  ")
+                mask.append(COMMENT * 2)
                 i += 2
                 continue
             else:
                 # a ' between two letters or digits is a digit separator (1'000), not the start of a character literal
                 if char == '"' or (char == "'" and not (line[i - 1:i].isalnum() and line[i + 1:i + 2].isalnum())):
                     quote = char
-                code.append(char)
+                mask.append(CODE)
             i += 1
-        result.append("".join(code))
+        result.append("".join(mask))
     return result
 
 
+def view(lines, masks, keep):
+    """the lines with every character that is not of a kind in 'keep' replaced by a space (line endings are kept); the
+    file name of an #include is kept as code, rules such as include-source-file look at it"""
+    result = []
+    for line, mask in zip(lines, masks):
+        if mask is None:
+            result.append(line if CODE in keep else re.sub(r"[^\r\n]", " ", line))
+            continue
+        if LITERAL not in keep and re.match(r"\s*#\s*include\b", line):
+            mask = mask.replace(LITERAL, CODE)
+        parts, start = [], 0
+        for run in re.finditer(f"[^{keep}]+", mask):
+            parts += [line[start:run.start()], re.sub(r"[^\r\n]", " ", line[run.start():run.end()])]
+            start = run.end()
+        result.append("".join(parts) + line[start:])
+    return result
+
+
+def without_comments(lines):
+    """the lines with every comment replaced by spaces (line endings are kept), string and character literals are kept"""
+    return view(lines, classify(lines), CODE + LITERAL)
+
+
 def check_cpp_file(filename, check_file_line, mark_comments):
-    """check every line with check_file_line(filename, line_number, line, report), and the rules that need the whole
-    file, and report the issues; with mark_comments, an issue that is not found again with the comments removed (it
-    was only matched inside a comment) gets the category COMMENTS_CATEGORY"""
-    lines = read_lines(filename)
+    for issue in find_issues(filename, read_lines(filename), check_file_line, mark_comments):
+        report_issue(*issue)
+
+
+def find_issues(filename, lines, check_file_line, mark_comments):
+    """the issues of the lines of a file: check_file_line(filename, line_number, line, report) and the rules that need
+    the whole file look at the code and the comments, not inside string literals; COMMENT_LINE_RULES look only at the
+    comments. With mark_comments, an issue of a code rule that is not found again with the comments removed (it was
+    only matched inside a comment) gets the category COMMENTS_CATEGORY"""
+    masks = classify(lines)
+    code_and_comments = view(lines, masks, CODE + COMMENT)
     issues = []
     collect = lambda *issue: issues.append(issue)
-    for line_number, line in enumerate(lines, 1):
+    for line_number, line in enumerate(code_and_comments, 1):
         check_file_line(filename, line_number, line, collect)
-    check_whole_file(filename, lines, collect)
-    if mark_comments and issues:
-        code = without_comments(lines)
+        mask = masks[line_number - 1]
+        if mask is not None and COMMENT in mask:
+            check_line(filename, line_number, view([lines[line_number - 1]], [mask], COMMENT)[0], collect, COMMENT_LINE_RULES)
+    check_whole_file(filename, code_and_comments, collect)
+    comment_rules = {rule for rule, *_ in COMMENT_LINE_RULES}
+    if mark_comments and any(issue[2] not in comment_rules for issue in issues):
+        code = view(lines, masks, CODE)
         in_code = set()
         add = lambda _filename, line, rule, *_: in_code.add((line, rule))
         # only the lines with an issue are checked again, the whole-file rules need the other lines
         for line_number in sorted({int(issue[1]) for issue in issues}):
             check_file_line(filename, line_number, code[line_number - 1], add)
         check_whole_file(filename, code, add)
-        issues = [issue if (issue[1], issue[2]) in in_code else (*issue[:3], COMMENTS_CATEGORY, issue[4]) for issue in issues]
-    for issue in issues:
-        report_issue(*issue)
+        issues = [issue if issue[2] in comment_rules or (issue[1], issue[2]) in in_code else (*issue[:3], COMMENTS_CATEGORY, issue[4])
+                  for issue in issues]
+    return issues
 
 
 def read_lines(filename):
@@ -282,7 +322,6 @@ LINE_RULES = [
     ("deprecated-uncaught-exception", "modernize", r"\buncaught_exception\s*\(", "std::uncaught_exception is deprecated in C++17 and removed in C++20, use std::uncaught_exceptions"),
     ("triple-pointer", "readability", r"\w\s*\*\s*\*\s*\*(?=\s*[\w)>,])", "a pointer to a pointer to a pointer is hard to understand"),
     ("empty-special-member", "modernize", r"\b(\w+)::~?\1\s*\(\s*\)\s*\{\s*\}", "an empty constructor or destructor, remove it or use = default"),
-    ("todo", "readability", r"(?i)\btodo\b", "a todo is left in the code"),
     ("address-null-check", "ub", r"(?<![&\w)\]])&\s*\w+\s*[!=]=\s*nullptr|\bnullptr\s*[!=]=\s*&\s*\w", "prevent UB: the address of a reference or object is never nullptr, the compiler may remove the check"),
     ("endless-for", "readability", r"\bfor\s*\(\s*;\s*;\s*\)", "use while (true) for an endless loop, it is clearer"),
     ("foreach-macro", "modernize", r"\b(foreach|Q_FOREACH|BOOST_FOREACH)\s*\(", "use a range-based for loop instead of a foreach macro"),
@@ -292,6 +331,11 @@ LINE_RULES = [
 ]
 
 # only in sources: in headers these are mostly members, initialized by a constructor
+# rules about comments, they only look at the comments of a line (and --mark-comments does not change their category)
+COMMENT_LINE_RULES = [
+    ("todo", "readability", r"(?i)\btodo\b", "a todo is left in the code"),
+]
+
 SOURCE_LINE_RULES = LINE_RULES + [
     ("uninitialized-variable", "ub", r"^\s*(int|bool|double|float)\s+\w+\s*;", "initialize variables where they are declared"),
 ]

@@ -258,7 +258,7 @@ With `--mark-comments` every issue is still reported, but the lines with an issu
 An issue that this second check does not find on the same line was matched inside a comment, and its category becomes
 `comments` instead of the category of its rule. So in `int* p = (int*)q; // NULL` the `c-style-pointer-cast` keeps
 `modernize` and the `null-macro` gets `comments`; so does an `#include` that is only a `duplicate-include` because of an
-`#include` inside a `/* */` block, and a `misspelled-word` that is not also in the code of its line. To leave them out of
+`#include` inside a `/* */` block, and a `misspelled-word` that is not also in the code of its line. `todo` is about comments and keeps its category. To leave them out of
 the report, add `drop "~|comments|"` to the interest rules (`rules/interest.txt`), or `drop "~|null-macro|comments|"`
 for one rule. A `category:<name>` line in `rules/priorities.txt` that matches the rule replaces `comments` again.
 
@@ -267,6 +267,8 @@ Files and directories listed in a `.opencanaryignore` file (`.gitignore` syntax)
 
 Every line of every header (`.h`, `.hpp`) and source file (`.cpp`, `.cc`) is checked. Why each rule is reported and
 how to solve it is in [rules.md](rules.md); the default `rules/links.txt` links the solution icon of each rule there.
+The rules look at the code and the comments of a line, not at the contents of string and character literals (the file
+name of an `#include` excepted), so `log("pointer is NULL")` is not a `null-macro`; `todo` only looks at the comments.
 
 The descriptions below are shortened; the reported text starts with `Anti-pattern: ` or `prevent UB: `.
 
@@ -313,7 +315,7 @@ The descriptions below are shortened; the reported text starts with `Anti-patter
 | `foreach-macro` | matches `foreach(`, `Q_FOREACH(` or `BOOST_FOREACH(` | modernize | see [rules.md](rules.md#foreach-macro) |
 | `endless-for` | matches `for (;;)` | readability | see [rules.md](rules.md#endless-for) |
 | `redundant-semicolon` | matches `;` followed by another `;` (not on a line with `for (`) | readability | see [rules.md](rules.md#redundant-semicolon) |
-| `todo` | contains the word `todo` (ignoring case) | readability | see [rules.md](rules.md#todo) |
+| `todo` | has the word `todo` in a comment (ignoring case) | readability | see [rules.md](rules.md#todo) |
 
 Every Visual Studio project (a file whose name ends with `proj`) is checked per `ItemDefinitionGroup`:
 

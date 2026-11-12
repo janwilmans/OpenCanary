@@ -599,12 +599,18 @@ class TestCppIssues(unittest.TestCase):
 
     @staticmethod
     def line_rules(line, header=False):
-        """the rules that report the single line in a source (or header)"""
+        """the rules that report a source (or header) of this single line"""
         import oc_cpp_issues
-        found = []
         check = oc_cpp_issues.check_header_line if header else oc_cpp_issues.check_source_line
-        check("a.h" if header else "a.cpp", 1, line + "\n", lambda _filename, _line, rule, *_: found.append(rule))
-        return found
+        return [issue[2] for issue in oc_cpp_issues.find_issues("a.h" if header else "a.cpp", [line + "\n"], check, False)]
+
+    def test_string_literals_and_comments(self):
+        self.assert_rule("null-macro", ["p = NULL; // set to NULL"], ['log("the pointer is NULL");', "c = '\"'; s = \"NULL\";"])
+        self.assert_rule("redundant-semicolon", ["x = 1;;"], ['s = "a;;b";', "s = \"\\\";;\";"])
+        self.assert_rule("manual-delete", ["delete p; // \"quoted\""], ['log("not able to delete value;");'])
+        self.assert_rule("include-source-file", ['#include "other.cpp"'], ['s = "#include \\"other.cpp\\"";'])
+        self.assert_rule("throw-non-exception", ['throw "text";'], [])
+        self.assert_rule("todo", ["x = 1; // TODO: fix", "/* todo */ x = 1;"], ["int todo = 1;", "while (todo != 0)", 's = "todo";'])
 
     def assert_rule(self, rule, reported, not_reported, header=False):
         for line in reported:
@@ -838,10 +844,11 @@ int n = 1'000; // (char*)x
                       for row in rows if row[5] != "misspelled-word")
 
     def test_mark_comments(self):
-        # (line, rule) of every issue, all of them are reported with and without --mark-comments
-        in_code = [(2, "c-style-pointer-cast"), (5, "const-cast"), (6, "c-style-pointer-cast"), (11, "duplicate-include")]
+        # (line, rule) of every issue, all of them are reported with and without --mark-comments; the (int*) in the
+        # string on line 6 is not reported, and todo is a rule about comments, it never gets the category 'comments'
+        in_code = [(2, "c-style-pointer-cast"), (2, "todo"), (5, "const-cast"), (11, "duplicate-include")]
         # line 10 is only a duplicate because of the include in the comment on line 9; line 11 duplicates line 8
-        in_comment = [(1, "c-style-pointer-cast"), (1, "null-macro"), (2, "null-macro"), (2, "todo"), (3, "reinterpret-cast"),
+        in_comment = [(1, "c-style-pointer-cast"), (1, "null-macro"), (2, "null-macro"), (3, "reinterpret-cast"),
                       (4, "manual-delete"), (7, "c-style-pointer-cast"), (10, "duplicate-include")]
         self.assertEqual(self.cpp_issues_of(self.COMMENTED), sorted((*issue, False) for issue in in_code + in_comment))
         self.assertEqual(self.cpp_issues_of(self.COMMENTED, ["--mark-comments"]),
