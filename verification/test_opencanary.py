@@ -144,6 +144,14 @@ class TestReport(unittest.TestCase):
         self.assertIn(':root[data-theme="dark"]', report)
         self.assertNotIn("/*DARK*/", report)
 
+    def test_low_hanging_priority_is_shown_as_low(self):
+        report = run_script("create_report.py", stdin=self.row("7"))
+        self.assertTrue(is_valid_xml(report))
+        # the data keeps the number, for sorting and filtering; the page script shows it as LOW
+        self.assertEqual(report_rows(report)[0][:2], ["t1", "7"])
+        self.assertIn("const LOW_HANGING = '7';", report)
+        self.assertNotIn("/*LOW_HANGING*/", report)
+
     def test_every_column_has_a_value_filter(self):
         import create_report
         report = run_script("create_report.py", stdin=self.row("5"))

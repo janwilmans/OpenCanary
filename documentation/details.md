@@ -541,6 +541,8 @@ e-mail attachment. It is well-formed XML.
   stops the script with `REPORT ERROR`.
 - **Priority bands**: *Fix now* (priority ≤ 10), *Likely bug* (11–50), *Wrong approach* (51–75), *Style* (76 and
   higher, and non-numeric priorities). The summary cards show the count per band.
+- The table shows priority `7`, the low hanging fruit of `apply_low_hanging_fruit.py`, as `LOW`; only the text
+  changes, sorting and filtering use the number.
 - The records are stored as gzip compressed, base64 encoded JSON blocks of 4000 issues; the browser unpacks them with
   `DecompressionStream` and renders only the rows in view, so reports with tens of thousands of issues stay fast.
   This needs a current Chrome, Edge, Firefox or Safari.

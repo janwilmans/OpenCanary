@@ -11,7 +11,7 @@ import os
 import sys
 import traceback
 import util
-from util import Column
+from util import Column, Priority
 from util import eprint
 
 # see https://validator.w3.org/nu/#textarea
@@ -406,6 +406,10 @@ def get_script_section():
     return low;
   }
 
+  // apply_low_hanging_fruit.py gives a rule with few issues this priority, the table shows it as LOW (only the text:
+  // sorting and filtering use the number)
+  const LOW_HANGING = '/*LOW_HANGING*/';
+
   // a light bulb, after the rule of an issue with a solution suggestion ([solution]{url} link)
   const SOLUTION_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4"/>' +
@@ -437,12 +441,15 @@ def get_script_section():
     record.cells.forEach((value, column) => {
       const name = columns[column];
       const cell = element('td', name);
-      let content = document.createTextNode(value);
+      const lowHanging = name === 'prio' && value.trim() === LOW_HANGING;
+      const text = lowHanging ? 'LOW' : value;
+      let content = document.createTextNode(text);
       const link = record.links[column];
       if (link && !/^\s*javascript:/i.test(link)) {
-        content = element('a', '', value);
+        content = element('a', '', text);
         content.href = link;
       }
+      if (lowHanging) cell.title = 'Low hanging fruit: priority ' + LOW_HANGING + ', a rule with only a few issues';
       if (name === 'prio' || name === 'file' || (name === 'rule' && value)) {
         const wrapper = element('span', { prio: 'badge', file: 'path' }[name] || '');
         wrapper.append(content);
@@ -753,7 +760,7 @@ def get_script_section():
   load();
 })();
 /*]]>*/</script>
-'''
+'''.replace("/*LOW_HANGING*/", str(Priority.LOW_HANGING.value))
 
 
 def has_index(list_value, column):
