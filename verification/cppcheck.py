@@ -25,11 +25,9 @@ def report_issue(filename, line, rule, description, component, category):
     if not rule == "":
         links += create_link(5, get_rule_url("cppcheck", rule))
 
-    priority = 10
-    if int(line) == 0:
-        priority = 1
+    # assignment of priority is done in apply_team_priorities.py, as for the other parsers
     source = "cppcheck"
-    report(priority, "", component, filename + ":" + str(line), source, rule, category, description, links)
+    report(Priority.UNASSIGNED.value, "", component, filename + ":" + str(line), source, rule, category, description, links)
 
 
 def parse(msg):

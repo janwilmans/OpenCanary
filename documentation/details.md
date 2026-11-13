@@ -55,8 +55,8 @@ Details:
   quotes from each field. A line that does not have nine fields is reported on stderr
   (`assertion failed: broken structured CSV`) but is still processed.
 - In the report the `[3]` link makes the file clickable and `[5]` makes the rule clickable; any field can carry a link.
-- Special priorities: `7` low hanging fruit, `99` unassigned (no priority rule matched yet, also what the parsers
-  and `oc_cpp_issues.py` write), `10` and `1` (`cppcheck.py`).
+- Special priorities: `7` low hanging fruit (`apply_low_hanging_fruit.py`, the report shows it as `LOW`), `99`
+  unassigned (no priority rule matched yet, also what the parsers, `cppcheck.py` and `oc_cpp_issues.py` write).
 - Placeholders in double brackets are filled in later by `apply_environment.py`, see
   [apply_environment.py](#apply_environmentpy) for the list.
 
@@ -351,7 +351,7 @@ Runs cppcheck (the `CPPCHECK` environment variable, else `cppcheck` on the `PATH
 
 - cppcheck's stdout is passed to stderr; its stderr lines are parsed as `file:line:severity:message`. Lines with fewer
   than four fields are printed to stderr as `err:`; messages `Redundant code` and `Consider using std` are skipped.
-- **priority** `10`, or `1` for line 0; **team** and **component** empty; **fileref** `file:line`;
+- **priority** `99` (assigned by `apply_team_priorities.py`); **team** and **component** empty; **fileref** `file:line`;
   **source** `cppcheck`; **rule** the literal text `rule`; **category** the cppcheck severity; **description** the
   message.
 - **links** `[3]` to `[[permalink-prefix]]` plus the file name from its second `/` on, and `[5]` to a search for

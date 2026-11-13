@@ -992,6 +992,17 @@ class TestStages(unittest.TestCase):
         out = run_script("apply_team_priorities.py", stdin=self.row(rule="C4100") + self.row(rule="C4701") + self.row(rule="C4505"))
         self.assertEqual([line.split("|")[0] for line in lines(out)], ["70", "5", "60"])
 
+    def test_cppcheck_issues_are_unassigned(self):
+        import contextlib
+        import io
+        import cppcheck
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            cppcheck.report_issue("src/a.cc", "12", "rule", "message", "", "style")
+            cppcheck.report_issue("cppcheck", 0, "exec", "cppcheck exited with exitcode 1", "ci", "ci")
+        # apply_team_priorities.py assigns the priority, as for the other parsers
+        self.assertEqual([line.split("|")[0] for line in lines(out.getvalue())], ["99", "99"])
+
     def test_low_hanging_fruit_threshold(self):
         rare = self.row(rule="rare", file="a.cc:1")
         important = self.row("5", rule="important", file="c.cc:1")
