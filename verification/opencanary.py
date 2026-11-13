@@ -44,6 +44,7 @@ STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative 
 # one [[input]] table for every log or location to analyse
 #   format  gcc | msvc          the log file is parsed (gcc also handles clang output)
 #           cpp-issues          the directory is scanned for common C++ problems
+#           cppcheck            cppcheck analyses the directory (needs cppcheck, or set CPPCHECK to its path)
 #   source  name shown in the 'source' column (defaults to the format)
 [[input]]
 format = "gcc"
@@ -52,6 +53,10 @@ path = "build/gcc.log"
 
 # [[input]]
 # format = "cpp-issues"
+# path = "."
+
+# [[input]]
+# format = "cppcheck"
 # path = "."
 
 [rules]
@@ -120,8 +125,10 @@ def run_pipeline(config, base):
                 data += run_stage(script("parse-" + fmt) + [source], f.read())
         elif fmt == "cpp-issues":
             data += run_stage(script("cpp-issues") + [location])
+        elif fmt == "cppcheck":
+            data += run_stage(script("cppcheck") + [location])
         else:
-            raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc or cpp-issues")
+            raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc, cpp-issues or cppcheck")
 
     def rules_option(key):
         return ["--rules", path(rules[key])] if key in rules else []

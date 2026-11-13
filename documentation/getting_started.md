@@ -64,8 +64,7 @@ Supported inputs:
 | `gcc` | gcc and clang (including clang-tidy style `[check-name]` warnings) | lines with `: warning:` |
 | `msvc` | cl.exe, MASM, `Command line warning Dxxxx` | lines with `: warning ` |
 | `cpp-issues` | OpenCanary's own text search for common C++ problems | scans a source directory instead of a log |
-
-`cppcheck.py` is available as a separate stage, see [details.md](details.md#cppcheckpy).
+| `cppcheck` | [cppcheck](https://cppcheck.sourceforge.io/), see [details.md](details.md#cppcheckpy) | runs cppcheck on a source directory |
 
 ## Step 2: create a configuration
 
@@ -79,7 +78,7 @@ table per log:
 
 ```toml
 [[input]]
-format = "gcc"          # gcc | msvc | cpp-issues
+format = "gcc"          # gcc | msvc | cpp-issues | cppcheck
 source = "gcc"          # free text, shown in the 'source' column
 path = "build/gcc.log"  # relative to this file
 ```

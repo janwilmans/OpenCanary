@@ -133,8 +133,8 @@ All relative paths are relative to the directory of the configuration file.
 
 | Table | Key | Default | Meaning |
 |-------|-----|---------|---------|
-| `[[input]]` (one or more) | `format` | required | `gcc`, `msvc` or `cpp-issues`; anything else stops the run |
-| | `path` | required | the log file (`gcc`, `msvc`) or the directory to scan (`cpp-issues`) |
+| `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues` or `cppcheck`; anything else stops the run |
+| | `path` | required | the log file (`gcc`, `msvc`) or the directory to scan (`cpp-issues`, `cppcheck`) |
 | | `source` | the format | value for the source field (passed to the parser) |
 | `[rules]` | `interest` | `verification/rules/interest.txt` | rules for `tr_interest.py` |
 | | `customize` | `verification/rules/customize.txt` | rules for `tr_customize.py` |
@@ -157,7 +157,7 @@ needs Python 3.11+ or the `tomli` package.
 ### What `run` does
 
 1. For every `[[input]]`, in order, collect the issues:
-   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path` or `oc_cpp_issues.py <path>`.
+   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path`, `oc_cpp_issues.py <path>` or `cppcheck.py <path>`.
    The results are concatenated.
 2. `tr_interest.py [--rules <interest>] [--msvc]`
 3. `tr_customize.py [--rules <customize>] [--display-depth=N] [--reference-depth=N] [--msvc]`
@@ -334,30 +334,35 @@ applies to it too (and `.gitignore` does not). The default `rules/priorities.txt
 ### cppcheck.py
 
 ```
-cppcheck.py <env.txt> <path> <basepath>
-cppcheck.py <env.txt> cdb <basepath>
+cppcheck.py <path> [--basepath DIR]
+cppcheck.py cdb [--basepath DIR]
+cppcheck.py <env.txt> <path> <basepath>     the older form, the environment file is not used
 ```
 
 | Argument | Description |
 |----------|-------------|
-| `<env.txt>` | Environment file (`KEY=value` lines), read but currently not used for the output. |
 | `<path>` | Directory that cppcheck analyses recursively. |
 | `cdb` | Instead of a directory: use the compile database `build_cppcheck/compile_commands.json` in the current directory, and `./suppressions.xml` when it exists. |
-| `<basepath>` | Its length is removed from the start of every reported file name, so paths are relative to it. |
+| `--basepath DIR` | Optional. Removed from the start of every file name, so paths are relative to it. Without it the file names are as cppcheck prints them (absolute for `<path>`), like the compiler logs, so `tr_customize.py --reference-depth` treats them the same. |
 
 Runs cppcheck (the `CPPCHECK` environment variable, else `cppcheck` on the `PATH`, else
-`C:\Program Files\Cppcheck\cppcheck.exe`) with `-q -D TEST -D TEST_F --enable=all
---template={file}:{line}:{severity}:{message}` and converts every reported line:
+`C:\Program Files\Cppcheck\cppcheck.exe`; when it is not found the script stops with exit code 1) with
+`-q -DTEST -DTEST_F --enable=all -j<cores>` and a tab separated template (`{file}`, `{line}`, `{severity}`, `{id}`,
+`{message}`; a file name such as `C:\...` and a message can contain `:`), and converts every reported line:
 
-- cppcheck's stdout is passed to stderr; its stderr lines are parsed as `file:line:severity:message`. Lines with fewer
-  than four fields are printed to stderr as `err:`; messages `Redundant code` and `Consider using std` are skipped.
+- cppcheck's stdout is passed to stderr. Lines of its stderr that are not in the template format are printed to stderr
+  as `err:`. Messages with severity `information` are about cppcheck itself (an include file that it did not find, the
+  check level) and are skipped, as are the ids `constStatement` and `useStlAlgorithm`.
 - **priority** `99` (assigned by `apply_team_priorities.py`); **team** and **component** empty; **fileref** `file:line`;
-  **source** `cppcheck`; **rule** the literal text `rule`; **category** the cppcheck severity; **description** the
-  message.
-- **links** `[3]` to `[[permalink-prefix]]` plus the file name from its second `/` on, and `[5]` to a search for
-  the rule.
+  **source** `cppcheck`; **rule** the cppcheck id (such as `nullPointer` or `variableScope`); **category** the cppcheck
+  severity (`error`, `warning`, `style`, `performance`, `portability`); **description** the message.
+- **links** `[3]` to `[[permalink-prefix]]` plus the file name (`tr_customize.py` replaces it in the pipeline), and
+  `[5]` to a search for the rule.
 - When cppcheck exits with a non-zero code an extra issue is reported: rule `exec`, category `ci`, description
   `cppcheck exited with exitcode N`.
+
+Without the include directories and the macros of the project cppcheck cannot parse every file; it reports that as
+`syntaxError` or `unknownMacro`. With `cdb` it gets them from the compile database.
 
 ---
 

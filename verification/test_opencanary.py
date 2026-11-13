@@ -1011,6 +1011,38 @@ class TestStages(unittest.TestCase):
         # apply_team_priorities.py assigns the priority, as for the other parsers
         self.assertEqual([line.split("|")[0] for line in lines(out.getvalue())], ["99", "99"])
 
+    def test_cppcheck_output_is_parsed(self):
+        import contextlib
+        import io
+        import cppcheck
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            cppcheck.parse("C:\\project\\a.cc\t12\tstyle\tvariableScope\tThe scope of the variable 'x' can be reduced: see 'f'.")
+            cppcheck.parse("C:\\project\\a.cc\t5\tinformation\tmissingInclude\tInclude file: \"a.h\" not found.")
+            cppcheck.parse("/home/me/project/src/b.cc\t3\twarning\tuninitvar\tUninitialized variable: y", "/home/me/project")
+            cppcheck.parse("not a template line")
+        rows = [line.split("|") for line in lines(out.getvalue())]
+        self.assertEqual([(row[3], row[5], row[6], row[7]) for row in rows],
+                         [("C:/project/a.cc:12", "variableScope", "style", "The scope of the variable &#x27;x&#x27; can be reduced: see &#x27;f&#x27;."),
+                          ("src/b.cc:3", "uninitvar", "warning", "Uninitialized variable: y")])
+        self.assertEqual(vars(cppcheck.parse_args(["env.txt", "src", "base"])), {"path": "src", "basepath": "base"})
+        self.assertEqual(vars(cppcheck.parse_args(["src"])), {"path": "src", "basepath": None})
+
+    @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
+    @unittest.skipUnless(__import__("cppcheck").cppcheck_cmd and __import__("shutil").which(__import__("cppcheck").cppcheck_cmd),
+                         "needs cppcheck")
+    def test_run_cppcheck_input(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "a.cpp"), "w", encoding="utf-8") as f:
+                f.write("int f()\n{\n    int x;\n    return x;\n}\n")
+            with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
+                f.write('[[input]]\nformat = "cppcheck"\npath = "."\n')
+            run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
+            with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
+                rows = [line.split("|") for line in lines(f.read())]
+        self.assertIn(("cppcheck", "uninitvar", "a.cpp:4"), [(row[4], row[5], os.path.basename(row[3])) for row in rows])
+
     def test_low_hanging_fruit_threshold(self):
         rare = self.row(rule="rare", file="a.cc:1")
         important = self.row("5", rule="important", file="c.cc:1")

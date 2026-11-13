@@ -1,27 +1,46 @@
 #!/usr/bin/env python3
-"""Parse issues from cppcheck
+""" Run cppcheck and write its issues in the OpenCanary format.
+
+    Usage: cppcheck.py <path> [--basepath DIR]
+           cppcheck.py cdb [--basepath DIR]
+      <path>          directory that cppcheck analyses recursively (every core is used, -j)
+      cdb             instead of a directory: the compile database build_cppcheck/compile_commands.json in the
+                      current directory, and ./suppressions.xml when it exists
+      --basepath DIR  remove DIR from the start of the file names; without it the file names are as cppcheck prints
+                      them (absolute for <path>), like the compiler logs, so tr_customize.py --reference-depth
+                      handles both the same way
+
+    The older form cppcheck.py <env.txt> <path> <basepath> still works (the environment file is not used).
+    The CPPCHECK environment variable selects the cppcheck binary, else cppcheck on the PATH, else
+    C:\\Program Files\\Cppcheck\\cppcheck.exe.
+
+    The rule is cppcheck's id (nullPointer, variableScope, ...) and the category its severity. Messages with severity
+    'information' are about cppcheck itself (an include file it did not find, the check level), not about the code, and
+    are skipped, as are constStatement and useStlAlgorithm. The priority is 99, apply_team_priorities.py assigns it.
 """
 
-import traceback
-import sys
+import argparse
 import os
 import shutil
+import sys
+import traceback
 from subprocess import Popen, PIPE
-from util import *
+
+from util import Priority, create_link, eprint, get_rule_url, normpath, report, urljoin
 
 # override with the CPPCHECK environment variable
 cppcheck_cmd = os.environ.get("CPPCHECK") or shutil.which("cppcheck") or r'c:\Program Files\Cppcheck\cppcheck.exe'
 
+# tab separated: a file name can contain ':' (C:\...), and so can a message
+TEMPLATE = "--template={file}\\t{line}\\t{severity}\\t{id}\\t{message}"
+OPTIONS = ['-q', '-DTEST', '-DTEST_F', TEMPLATE, '--enable=all', f'-j{os.cpu_count() or 1}']
 
-def shorten_path_stem(v):
-    i = find_nth(v, "/", 2)
-    if i == -1:
-        return v
-    return v[i:]
+# ids that are not reported: constStatement was a false positive (maybe caused by -DTEST), useStlAlgorithm not useful
+SKIPPED_IDS = {"constStatement", "useStlAlgorithm"}
 
 
 def report_issue(filename, line, rule, description, component, category):
-    links = create_link(3, urljoin("[[permalink-prefix]]", shorten_path_stem(filename) + "#L" + str(line)))
+    links = create_link(3, urljoin("[[permalink-prefix]]", normpath(filename) + "#L" + str(line)))
     if not rule == "":
         links += create_link(5, get_rule_url("cppcheck", rule))
 
@@ -30,37 +49,39 @@ def report_issue(filename, line, rule, description, component, category):
     report(Priority.UNASSIGNED.value, "", component, filename + ":" + str(line), source, rule, category, description, links)
 
 
-def parse(msg):
-    s = msg.split(":")
-    if len(s) < 4:  # corresponds with the fields in the --template argument
+def parse(msg, basepath=""):
+    """one line of cppcheck's stderr, in the TEMPLATE format"""
+    fields = msg.split("\t", 4)
+    if len(fields) < 5:  # not a template line
         if len(msg.strip()) > 0:
             eprint("err:", msg)
         return
-
-    if "Redundant code" == s[3]:            # false positive maybe caused by the '-D TEST'?
+    filename, line, severity, rule, message = fields
+    if severity == "information" or rule in SKIPPED_IDS:
         return
-
-    if "Consider using std" == s[3]:        # doesn't make any sense?
-        return
-    report_issue(normpath(s[0]), s[1], "rule", s[3], "", s[2])
+    filename = normpath(filename)
+    if basepath and filename.lower().startswith(basepath.lower() + "/"):
+        filename = filename[len(basepath) + 1:]
+    report_issue(filename, line, rule, message, "", severity)
 
 
 def run_cppcheck(path):
-    list_value = [cppcheck_cmd, os.path.realpath(path), '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
-            '--enable=all']  # notice 4 fields in the --template argument
-    return execute_popen(list_value)
+    return execute_popen([cppcheck_cmd, os.path.realpath(path)] + OPTIONS)
 
 
 def run_cppcheck_compile_db():
-    list_value = [cppcheck_cmd, '-q', '-D TEST', '-D TEST_F', '--template={file}:{line}:{severity}:{message}',
-            '--enable=all', '--project=build_cppcheck/compile_commands.json']
+    list_value = [cppcheck_cmd] + OPTIONS + ['--project=build_cppcheck/compile_commands.json']
     if os.path.exists('./suppressions.xml'):
         list_value += ['--suppress-xml=./suppressions.xml']
     return execute_popen(list_value)
 
 
 def execute_popen(list_value):
-    sub_process = Popen(list_value, stdout=PIPE, stderr=PIPE, universal_newlines=True)
+    try:
+        sub_process = Popen(list_value, stdout=PIPE, stderr=PIPE, universal_newlines=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError:
+        eprint(f"cppcheck.py: cppcheck not found ({list_value[0]}), install it or set CPPCHECK to its path")
+        sys.exit(1)
     (std_out, std_err) = sub_process.communicate()
     sub_process.wait()
     exitcode = sub_process.returncode
@@ -68,32 +89,31 @@ def execute_popen(list_value):
 
 
 def show_usage():
-    eprint("Usage: " + os.path.basename(__file__) + " <env.txt> <path> <basepath>")
-    eprint(r"  <env.txt> file containing CI environment variables")
-    eprint(r"  <path> is recursively processed by c:\Program Files\Cppcheck\cppcheck.exe and output reported in open-canary format, or if == cdb compile database in build/cpp_check is used")
-    eprint(r"  <basepath> files are shown as relative to this path")
+    eprint(__doc__)
+
+
+def parse_args(argv):
+    if len(argv) == 3 and not any(arg.startswith("-") for arg in argv):
+        return argparse.Namespace(path=argv[1], basepath=argv[2])  # the older form: <env.txt> <path> <basepath>
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("path", help="directory to analyse, or cdb for the compile database")
+    parser.add_argument("--basepath", help="remove this directory from the start of the file names")
+    return parser.parse_args(argv)
 
 
 def main():
-    if not len(sys.argv) == 4:
-        eprint("error: invalid argument(s)\n")
-        show_usage()
-        sys.exit(1)
-
-    read_envfile(sys.argv[1])
-
-    if sys.argv[2] == "cdb":
+    args = parse_args(sys.argv[1:])
+    if args.path == "cdb":
         std_out, std_err, exitcode = run_cppcheck_compile_db()
     else:
-        cpppath = os.path.abspath(sys.argv[2])
-        std_out, std_err, exitcode = run_cppcheck(cpppath)
+        std_out, std_err, exitcode = run_cppcheck(os.path.abspath(args.path))
 
-    basepath = os.path.abspath(sys.argv[3])
-    pathlen = len(basepath)
-    # cppcheck report its own errors on stdout, we redirect them to stderr
-    eprint(std_out)
+    basepath = normpath(os.path.abspath(args.basepath)) if args.basepath else ""
+    # cppcheck reports its own errors on stdout, we redirect them to stderr
+    if std_out.strip():
+        eprint(std_out)
     for line in std_err.splitlines():
-        parse(line[pathlen:])
+        parse(line, basepath)
 
     if exitcode != 0:
         report_issue(cppcheck_cmd, 0, "exec", "cppcheck exited with exitcode " + str(exitcode), "ci", "ci")
