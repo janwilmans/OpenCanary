@@ -53,7 +53,6 @@ path = "build/gcc.log"
 # [[input]]
 # format = "cpp-issues"
 # path = "."
-# mark_comments = true      an issue found only in a comment gets the category 'comments'
 
 [rules]
 # all optional, shown with their defaults (the files in the verification/rules directory)
@@ -120,7 +119,7 @@ def run_pipeline(config, base):
             with open(location, "rb") as f:
                 data += run_stage(script("parse-" + fmt) + [source], f.read())
         elif fmt == "cpp-issues":
-            data += run_stage(script("cpp-issues") + [location] + (["--mark-comments"] if item.get("mark_comments") else []))
+            data += run_stage(script("cpp-issues") + [location])
         else:
             raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc or cpp-issues")
 

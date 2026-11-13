@@ -2,11 +2,13 @@
 """ Search C++ headers, sources and Visual Studio projects for common problems that compilers do not report.
 
     The checks are plain text searches, without a C++ parser:
-    - line rules (LINE_RULES, SOURCE_LINE_RULES, HEADER_LINE_RULES): a regex per rule, matched against the code and
-      the comments of every line, not against the contents of string literals; COMMENT_LINE_RULES (todo) only look at
-      the comments
-    - whole-file rules (check_whole_file): self-include, duplicate-include, undef-macro, short-macro-name, empty-catch
-    - misspelled-word: the words of wrong_word_list, anywhere in the file
+    - line rules (LINE_RULES, SOURCE_LINE_RULES, HEADER_LINE_RULES): a regex per rule, matched against the code of
+      every line only: comments and the contents of string literals are blanked, so commented out code and text such
+      as 'returns NULL' are not reported; COMMENT_LINE_RULES (todo) only look at the comments, and
+      CODE_AND_COMMENT_LINE_RULES (non-english-word) at both
+    - whole-file rules (check_whole_file): self-include, duplicate-include, undef-macro, short-macro-name, empty-catch,
+      also only in the code
+    - misspelled-word: the words of wrong_word_list, anywhere in the file (code, comments and literals)
     - project rules: TreatWarningAsError and WarningLevel 4 in every configuration of a *proj file
 
     Files and directories listed in a .opencanaryignore file (.gitignore syntax) are skipped. Every issue is written
@@ -14,10 +16,8 @@
     the real one). Why each rule is reported and how to solve it: documentation/rules.md; the patterns:
     documentation/details.md.
 
-    Usage: oc_cpp_issues.py [--mark-comments] <path>
-      <path>           directory that is searched recursively
-      --mark-comments  an issue that is only found in a comment (code that is commented out, for example) gets the
-                       category 'comments', so the interest rules can drop it: drop "~|comments|"
+    Usage: oc_cpp_issues.py <path>
+      <path>  directory that is searched recursively
 """
 
 import argparse
@@ -56,20 +56,15 @@ WRONG_WORDS = frozenset(wrong_word_list)
 WORD = re.compile(r"\w+")  # a whole word: letters, digits and underscores, as grep -w and rg -w
 
 
-def check_spelling(filename, lines, masks, mark_comments, report):
+def check_spelling(filename, lines, report):
     """misspelled-word for every word of wrong_word_list in the lines (code, literals and comments, case sensitive);
-    with mark_comments, a word that is not also in the code or a literal of its line gets the category COMMENTS_CATEGORY.
-    The whole file is checked first, a misspelling is rare and splitting the lines is slower"""
+    the whole file is checked first, a misspelling is rare and splitting the lines is slower"""
     if WRONG_WORDS.isdisjoint(WORD.findall("".join(lines))):
         return
     for line_number, line in enumerate(lines, 1):
-        words = [word for word in WORD.findall(line) if word in WRONG_WORDS]
-        if not words:
-            continue
-        code = set(WORD.findall(view([line], [masks[line_number - 1]], CODE + LITERAL)[0])) if mark_comments else set()
-        for word in words:
-            category = COMMENTS_CATEGORY if mark_comments and word not in code else "spelling"
-            report(filename, str(line_number), "misspelled-word", category, f"Misspelled word '{word}' found")
+        for word in WORD.findall(line):
+            if word in WRONG_WORDS:
+                report(filename, str(line_number), "misspelled-word", "spelling", f"Misspelled word '{word}' found")
 
 
 def get_project_xml_root(projectname):
@@ -96,9 +91,6 @@ def get_cpp_files_from_project(project_root, project_directory):
 
 def check_source_line(filename, line_number, line, report):
     check_line(filename, line_number, line, report, SOURCE_LINE_RULES)
-
-
-COMMENTS_CATEGORY = "comments"  # the category of an issue that is only found in a comment, see --mark-comments
 
 
 CODE, LITERAL, COMMENT = "c", "s", "m"  # what a character of a line is, see classify()
@@ -175,43 +167,30 @@ def view(lines, masks, keep):
     return result
 
 
-def without_comments(lines):
-    """the lines with every comment replaced by spaces (line endings are kept), string and character literals are kept"""
-    return view(lines, classify(lines), CODE + LITERAL)
-
-
-def check_cpp_file(filename, check_file_line, mark_comments):
-    for issue in find_issues(filename, read_lines(filename), check_file_line, mark_comments):
+def check_cpp_file(filename, check_file_line):
+    for issue in find_issues(filename, read_lines(filename), check_file_line):
         report_issue(*issue)
 
 
-def find_issues(filename, lines, check_file_line, mark_comments):
-    """the issues of the lines of a file: check_file_line(filename, line_number, line, report) and the rules that need
-    the whole file look at the code and the comments, not inside string literals; COMMENT_LINE_RULES look only at the
-    comments. With mark_comments, an issue of a code rule that is not found again with the comments removed (it was
-    only matched inside a comment) gets the category COMMENTS_CATEGORY"""
+def find_issues(filename, lines, check_file_line):
+    """the issues of the lines of a file. A C++ rule is about code, so check_file_line(filename, line_number, line,
+    report) and the rules that need the whole file only look at the code: comments and the contents of string literals
+    are blanked (a commented out line is not reported, and neither is text such as 'returns NULL'). COMMENT_LINE_RULES
+    look only at the comments, CODE_AND_COMMENT_LINE_RULES at both, and the spelling check at everything"""
     masks = classify(lines)
-    code_and_comments = view(lines, masks, CODE + COMMENT)
+    code = view(lines, masks, CODE)
     issues = []
     collect = lambda *issue: issues.append(issue)
-    for line_number, line in enumerate(code_and_comments, 1):
+    for line_number, (line, mask) in enumerate(zip(code, masks), 1):
         check_file_line(filename, line_number, line, collect)
-        mask = masks[line_number - 1]
         if mask is not None and COMMENT in mask:
-            check_line(filename, line_number, view([lines[line_number - 1]], [mask], COMMENT)[0], collect, COMMENT_LINE_RULES)
-    check_whole_file(filename, code_and_comments, collect)
-    comment_rules = {rule for rule, *_ in COMMENT_LINE_RULES}
-    if mark_comments and any(issue[2] not in comment_rules for issue in issues):
-        code = view(lines, masks, CODE)
-        in_code = set()
-        add = lambda _filename, line, rule, *_: in_code.add((line, rule))
-        # only the lines with an issue are checked again, the whole-file rules need the other lines
-        for line_number in sorted({int(issue[1]) for issue in issues}):
-            check_file_line(filename, line_number, code[line_number - 1], add)
-        check_whole_file(filename, code, add)
-        issues = [issue if issue[2] in comment_rules or (issue[1], issue[2]) in in_code else (*issue[:3], COMMENTS_CATEGORY, issue[4])
-                  for issue in issues]
-    check_spelling(filename, lines, masks, mark_comments, collect)
+            original = lines[line_number - 1]
+            check_line(filename, line_number, view([original], [mask], COMMENT)[0], collect, COMMENT_LINE_RULES)
+            check_line(filename, line_number, view([original], [mask], CODE + COMMENT)[0], collect, CODE_AND_COMMENT_LINE_RULES)
+        else:
+            check_line(filename, line_number, line, collect, CODE_AND_COMMENT_LINE_RULES)
+    check_whole_file(filename, code, lambda: view(lines, masks, CODE + COMMENT), collect)
+    check_spelling(filename, lines, collect)
     return issues
 
 
@@ -291,7 +270,6 @@ LINE_RULES = [
     ("reinterpret-cast", "casting", r"reinterpret_cast<", "Anti-pattern: do not reinterpret_cast"),
     ("volatile-variable", "redflag", r"^(?!.*\bextern\s+volatile\b).*\bvolatile\b.*;", "Anti-pattern: do not use volatile"),
     ("null-macro", "modernize", r"\bNULL\b", "Anti-pattern: do not use NULL, use 0 or nullptr instead"),
-    ("non-english-word", "readability", r"(?i)(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", "Anti-pattern: do not use non-english words ('{match}') in code or comments"),
     ("constant-if-directive", "readability", r"(#\s*if\s*\(?\s*\d)", "Anti-pattern: {match}, do not keep historical code in ifdefs"),
     # (type *) followed by the expression that is cast: not a parameter list, a SLOT() signature or sizeof(T *);
     # (void **) is void-pointer-pointer-cast
@@ -341,9 +319,14 @@ LINE_RULES += [
      "a compiler warning is suppressed, the build log does not show what it hides"),
 ]
 
-# rules about comments, they only look at the comments of a line (and --mark-comments does not change their category)
+# rules about comments, they only look at the comments of a line
 COMMENT_LINE_RULES = [
     ("todo", "readability", r"(?i)\btodo\b", "a todo is left in the code"),
+]
+
+# rules about the words in names and comments, they look at the code and the comments of a line
+CODE_AND_COMMENT_LINE_RULES = [
+    ("non-english-word", "readability", r"(?i)(\sdeze\s|\sniet\s|\w+ectie|\snaam\s|\sals\s|voet)", "Anti-pattern: do not use non-english words ('{match}') in code or comments"),
 ]
 
 SOURCE_LINE_RULES = LINE_RULES + [
@@ -375,21 +358,25 @@ def includes_itself(filename, included, quoted):
     return "/" in included and path.endswith("/" + included.lstrip("./"))
 
 
-def check_whole_file(filename, lines, report):
-    """the rules that need the other lines of the file"""
-    check_includes(filename, lines, report)
-    check_macros(filename, lines, report)
-    check_empty_catch(filename, lines, report)
+def check_whole_file(filename, code, code_and_comments, report):
+    """the rules that need the other lines of the file; code are the lines without comments and literal contents,
+    code_and_comments() returns them with the comments"""
+    check_includes(filename, code, report)
+    check_macros(filename, code, report)
+    check_empty_catch(filename, code, code_and_comments, report)
 
 
-def check_empty_catch(filename, lines, report):
-    """a catch block with nothing in it, also when it spans lines; a comment in it says that this is intended"""
-    text = "".join(lines)
-    if "catch" not in text:
+def check_empty_catch(filename, code, code_and_comments, report):
+    """a catch block with nothing in it, also when it spans lines; a comment in it says that this is intended, so the
+    block is looked at with its comments, and the catch itself must be code (not in a comment)"""
+    code_text = "".join(code)
+    if "catch" not in code_text:
         return
+    text = "".join(code_and_comments())  # the same length as code_text, the comments are blanked in that one
     for match in re.finditer(r"\bcatch\s*\([^)]*\)\s*\{\s*\}", text):
-        line_number = text.count("\n", 0, match.start()) + 1
-        report(filename, str(line_number), "empty-catch", "redflag", "an empty catch block swallows the exception")
+        if code_text.startswith("catch", match.start()):
+            line_number = text.count("\n", 0, match.start()) + 1
+            report(filename, str(line_number), "empty-catch", "redflag", "an empty catch block swallows the exception")
 
 
 def check_macros(filename, lines, report):
@@ -492,8 +479,6 @@ def read_ignore_file(ignorefile, basepath):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("path", help="location to search for c++ sources recursively")
-    parser.add_argument("--mark-comments", action="store_true",
-                        help=f"an issue that is only found in a comment gets the category '{COMMENTS_CATEGORY}'")
     args = parser.parse_args()
 
     rootpath = os.path.abspath(args.path)
@@ -515,7 +500,7 @@ def main():
     headers, cpps = util.get_cpp_files_from_directory(rootpath)
     for filename in headers:
         try:
-            check_cpp_file(filename, check_header_line, args.mark_comments)
+            check_cpp_file(filename, check_header_line)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:
@@ -524,7 +509,7 @@ def main():
 
     for filename in cpps:
         try:
-            check_cpp_file(filename, check_source_line, args.mark_comments)
+            check_cpp_file(filename, check_source_line)
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as e:

@@ -9,11 +9,10 @@ Rules are named like the clang warnings (lowercase words separated by `-`), but 
 warning: `rules/priorities.txt` matches on the rule name only, so `c-style-pointer-cast` can get another priority than
 clang's `old-style-cast`; for the same reason a name does not contain a part that `priorities.txt` matches for compiler
 warnings with `~`, such as `comment`. (`rules/links.txt` gives the solution link to every issue with source
-`opencanary`.) The checks are plain text searches, without a C++ parser, so they can report a line that is fine (code
-that is commented out, for example). They do not look inside string literals, and `todo` only looks at comments. Exclude files with `.opencanaryignore`, drop a rule with `rules/interest.txt`, or
-give what is only found in comments the category `comments` with `--mark-comments` (`mark_comments` in
-`opencanary.toml`) and drop those with `drop "~|comments|"` in `rules/interest.txt`. The
-default priorities are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
+`opencanary`.) The checks are plain text searches, without a C++ parser, so they can report a line that is fine. They
+only look at the code, not at comments and the contents of string literals, so code that is commented out is not
+reported; `todo`, `non-english-word` and `misspelled-word` are about words and also look at the comments. Exclude files
+with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The default priorities are in `rules/priorities.txt`, the exact patterns in [details.md](details.md#oc_cpp_issuespy).
 
 | Rule | Category | In short |
 |------|----------|----------|

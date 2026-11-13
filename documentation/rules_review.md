@@ -98,9 +98,9 @@ None of these are reported by GCC, clang or MSVC (unless noted). Roughly in orde
 
 Done:
 - All confirmed bugs above are fixed, each with a test.
-- Every line rule is in one table (structural improvement 2), and the rules no longer look inside string literals;
-  `todo` only looks at comments (point 1, for literals; issues in comments are still reported, `--mark-comments`
-  gives them the category `comments`).
+- Every line rule is in one table (structural improvement 2), and the C++ rules only look at the code, not at
+  comments and string literals (point 1); `todo` only looks at comments, `non-english-word` at code and comments,
+  `misspelled-word` at everything. `--mark-comments` is removed, there is nothing in comments left for it to mark.
 - The category of `assign-in-condition` is `bug` (point 3, partly).
 - `unnamed-lock`, `suppressed-warning` and `empty-catch` are added.
 
