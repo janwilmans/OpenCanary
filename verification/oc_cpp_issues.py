@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
-"""Checks c++ projects
-- using namespace is not allowed in header files
-- treatwarningaserror should be true in all configurations
-- warninglevel should be 4 in all configurations
-- use std::make_unique iso custom implementations
-- with --mark-comments, an issue that is only found in a comment gets the category 'comments'
-- see https://github.com/janwilmans/OpenCanary/issues/4
+""" Search C++ headers, sources and Visual Studio projects for common problems that compilers do not report.
 
+    The checks are plain text searches, without a C++ parser:
+    - line rules (LINE_RULES, SOURCE_LINE_RULES, HEADER_LINE_RULES): a regex per rule, matched against the code and
+      the comments of every line, not against the contents of string literals; COMMENT_LINE_RULES (todo) only look at
+      the comments
+    - whole-file rules (check_whole_file): self-include, duplicate-include, undef-macro, short-macro-name, empty-catch
+    - misspelled-word: the words of wrong_word_list, anywhere in the file
+    - project rules: TreatWarningAsError and WarningLevel 4 in every configuration of a *proj file
+
+    Files and directories listed in a .opencanaryignore file (.gitignore syntax) are skipped. Every issue is written
+    to stdout as an OpenCanary issue line with source 'opencanary' and priority 99 (apply_team_priorities.py assigns
+    the real one). Why each rule is reported and how to solve it: documentation/rules.md; the patterns:
+    documentation/details.md.
+
+    Usage: oc_cpp_issues.py [--mark-comments] <path>
+      <path>           directory that is searched recursively
+      --mark-comments  an issue that is only found in a comment (code that is commented out, for example) gets the
+                       category 'comments', so the interest rules can drop it: drop "~|comments|"
 """
 
 import argparse
@@ -479,7 +490,7 @@ def read_ignore_file(ignorefile, basepath):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Checks C++ sources and Visual Studio projects for common problems.")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("path", help="location to search for c++ sources recursively")
     parser.add_argument("--mark-comments", action="store_true",
                         help=f"an issue that is only found in a comment gets the category '{COMMENTS_CATEGORY}'")
