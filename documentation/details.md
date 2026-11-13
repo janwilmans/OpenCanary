@@ -44,7 +44,7 @@ priority|team|component|fileref|source|rule|category|description|links
 | 4 | source | Tool or build that reported it, free text. | parsers | |
 | 5 | rule | The tool's name for the check, e.g. `C4701`, `sign-compare`, `manual-delete`. | parsers | |
 | 6 | category | Broad group, e.g. `warning`, `redflag`, `ub`. | parsers | `apply_team_priorities.py` |
-| 7 | description | The message, HTML-escaped (`&`, `<`, `>`, `"`, `'`). | parsers | `apply_low_hanging_fruit.py` (`[LOW] ` prefix) |
+| 7 | description | The message, HTML-escaped (`&`, `<`, `>`, `"`, `'`). | parsers | |
 | 8 | links | `[n]{url}` repeated; `n` is the field the link belongs to. `[solution]{url}` is a page with a solution suggestion for the rule, the report shows it as a small icon after the rule. | parsers | `tr_customize.py` (`[3]`) |
 
 Details:
@@ -498,8 +498,8 @@ apply_low_hanging_fruit.py [--threshold N] < issues
 | `-h`, `--help` | | show the usage |
 
 Reads all issues and counts them per rule (over the whole input). For every issue of a rule with at most N issues the
-priority becomes `7` and the description gets the prefix `[LOW] `. This also applies to rules that had a more
-important priority (for example `5` becomes `7`). Order is kept.
+priority becomes `7`, unless it already is more important (lower): a rule with priority `5` keeps `5`. Nothing else
+changes. Order is kept.
 
 ### sortby.py
 

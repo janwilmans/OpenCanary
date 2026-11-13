@@ -994,13 +994,13 @@ class TestStages(unittest.TestCase):
 
     def test_low_hanging_fruit_threshold(self):
         rare = self.row(rule="rare", file="a.cc:1")
+        important = self.row("5", rule="important", file="c.cc:1")
         common = "".join(self.row(rule="common", file=f"b.cc:{i}") for i in range(1, 22))
-        out = lines(run_script("apply_low_hanging_fruit.py", stdin=rare + common))
-        rare_out = [line for line in out if "|rare|" in line]
-        common_out = [line for line in out if "|common|" in line]
-        self.assertTrue(rare_out[0].startswith("7|"))
-        self.assertIn("[LOW]", rare_out[0])
-        self.assertTrue(all(line.startswith("8|") for line in common_out))
+        out = lines(run_script("apply_low_hanging_fruit.py", stdin=rare + important + common))
+        self.assertEqual(out[0], rare.rstrip("\n").replace("8|", "7|", 1))  # only the priority changes
+        self.assertEqual(out[1], important.rstrip("\n"))  # a more important priority than 7 is kept
+        self.assertTrue(all(line.startswith("8|") for line in out[2:]))
+        self.assertEqual(len(out), 23)
 
     def test_sortby_orders_and_deduplicates(self):
         data = self.row("20", file="b.cc:2") + self.row("5", file="z.cc:1") + self.row("20", file="b.cc:10") + self.row("20", file="b.cc:2")

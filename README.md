@@ -106,7 +106,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - `tr_customize.py`, assign 'component' and 'team', make the path presentable and add the permalink (`rules/customize.txt`). Replaces `tr_customize_vc.py`.
 - `apply_links.py`, sets the link of the rule and the solution suggestion shown as an icon after the rule (`rules/links.txt`), by default a search for `<source> <rule>`
 - `apply_team_priorities.py`, assigns the priority field (`rules/priorities.txt`), **should be customized** based on your preferences
-- `apply_low_hanging_fruit.py`, overrides priorities for types of issue that occur 20 times or less (`--threshold N`)
+- `apply_low_hanging_fruit.py`, raises the priority of types of issue that occur 20 times or less to 7 (`--threshold N`)
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename
 - `create_report.py`, transforms the 'structured CSV' to an HTML report, see [Reports](#reports).
 - `create_summary.py`, optional, the top 10 issues and the number of issues per rule, team, component and category as an e-mail friendly HTML page, see [Reports](#reports).
