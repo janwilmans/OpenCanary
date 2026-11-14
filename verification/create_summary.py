@@ -172,9 +172,12 @@ def create_summary(issues, report_url=""):
     result.append(heading("Issues per rule"))
     result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n')
     # 'Total' is the number of issues of the rule, the order of the rules; 'Issues' the number per team, component and
-    # category; the description and the file are those of the first issue of the rule
-    result.append(header_row([("Prio", "right"), ("Source", "left"), ("Rule", "left"), ("Total", "right"), ("Description", "left"),
-                              ("File", "left"), ("Team", "left"), ("Component", "left"), ("Category", "left"), ("Issues", "right")]))
+    # category; the description and the file are those of the first issue of the rule, an example
+    result.append(header_row([("Prio", "right"), ("Source", "left"), ("Rule", "left"), ("Total", "right"), ("Description (example)", "left"),
+                              ("File (example)", "left"), ("Team", "left"), ("Component", "left"), ("Category", "left"),
+                              ("Issues", "right")]))
+    # the directories that all example files share are left out, as in the top 10
+    shared = shared_directories([html.unescape(first[Column.FILE]).strip() for *_, first in rules])
     for rule, priorities, sources, description, rule_total, rows, first in rules:
         for index, (team, component, category, count) in enumerate(rows):
             result.append('<tr>')
@@ -184,7 +187,7 @@ def create_summary(issues, report_url=""):
                 result.append(cell("td", html.escape(rule), bold=True, rowspan=len(rows)))
                 result.append(cell("td", str(rule_total), "right", bold=True, rowspan=len(rows)))
                 result.append(cell("td", html.escape(description), rowspan=len(rows)))
-                result.append(cell("td", file_cell(first), rowspan=len(rows)))
+                result.append(cell("td", file_cell(first, shared), rowspan=len(rows)))
             result.extend(cell("td", html.escape(value)) for value in (team, component, category))
             result.append(cell("td", str(count), "right") + '</tr>\n')
     result.append('<tr>' + cell("td", "", background=TOTAL_BACKGROUND) * 2 + cell("td", "Total", bold=True, background=TOTAL_BACKGROUND))
