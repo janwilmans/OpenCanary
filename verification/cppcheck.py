@@ -3,7 +3,7 @@
 
     Usage: cppcheck.py <path> [--basepath DIR]
            cppcheck.py cdb [--basepath DIR]
-      <path>          directory that cppcheck analyses recursively (every core is used, -j)
+      <path>          directory that cppcheck analyses recursively (on one core, so unusedFunction runs too)
       cdb             instead of a directory: the compile database build_cppcheck/compile_commands.json in the
                       current directory, and ./suppressions.xml when it exists
       --basepath DIR  remove DIR from the start of the file names; without it the file names are as cppcheck prints
@@ -33,7 +33,8 @@ cppcheck_cmd = os.environ.get("CPPCHECK") or shutil.which("cppcheck") or r'c:\Pr
 
 # tab separated: a file name can contain ':' (C:\...), and so can a message
 TEMPLATE = "--template={file}\\t{line}\\t{severity}\\t{id}\\t{message}"
-OPTIONS = ['-q', '-DTEST', '-DTEST_F', TEMPLATE, '--enable=all', f'-j{os.cpu_count() or 1}']
+# one core: with -j cppcheck skips unusedFunction (unless it gets a --cppcheck-build-dir)
+OPTIONS = ['-q', '-DTEST', '-DTEST_F', TEMPLATE, '--enable=all']
 
 # ids that are not reported: constStatement was a false positive (maybe caused by -DTEST), useStlAlgorithm not useful
 SKIPPED_IDS = {"constStatement", "useStlAlgorithm"}
