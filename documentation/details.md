@@ -594,14 +594,18 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
   is left out.
 - One line of text: `<n> issues for <n> rules in <n> categories for <n> teams`.
 - **Top 10 issues**: the 10 most important issues, lowest priority number first; issues with the same priority keep
-  their input order (by file, as `sortby.py` writes them). Columns: priority, file (a link to the `[3]` file link of
-  the issue when it has one), rule, team and description (cut like below). The links still contain
-  `[[permalink-prefix]]`; pipe the summary through `apply_environment.py` to fill it in, as `opencanary.py run` does.
+  their input order (by file, as `sortby.py` writes them). Columns: priority, rule, description (cut like below), file
+  (a link to the `[3]` file link of the issue when it has one) and team. The leading directories that all ten files
+  share are left out, but never the two deepest directories of a file, so `src/infra/net/src/a.cc` and
+  `src/infra/dip/src/b.cc` become `net/src/a.cc` and `dip/src/b.cc`; the full path is the tooltip of the link. The
+  links still contain `[[permalink-prefix]]`; pipe the summary through `apply_environment.py` to fill it in, as
+  `opencanary.py run` does.
 - **Issues per rule**: a table with a row per combination of rule, team, component and category, with the number of
-  issues.
+  issues. Columns: priority, rule, total, description, file, team, component, category and issues.
 - The rows of one rule are grouped. The rule's **priority** (all distinct priorities, comma separated, if there are
-  several), its **name**, its **total** number of issues and the **description** of its first issue
-  (the most important one, as the input is sorted) are shown once, in cells that span the group. The description is
+  several), its **name**, its **total** number of issues and the **description** and the **file** (with its full path
+  and link) of its first issue (the most important one, as the input is sorted) are shown once, in cells that span the
+  group. The description is
   cut at the last space before 100 characters and ends with `…`.
 - Rules are ordered by their total number of issues (fewest first, the Total column), then by name (ignoring case). Rows within a rule by number of
   issues (fewest first), then team, component and category.

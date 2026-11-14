@@ -197,15 +197,15 @@ class TestSummary(unittest.TestCase):
         self.assertNotIn("class=", summary)
         # rules by number of issues (fewest first), then name; within a rule by count; the first description of each rule
         self.assertEqual(self.table(summary), [
-            ["Prio", "Rule", "Total", "Description", "Team", "Component", "Category", "Issues"],
-            ["7, 9", "b<ad", "2", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
-            ["10", "C4456", "2", "d", "net", "x", "warning", "2"],
-            ["45", "manual-delete", "5", "later", "gui", "CsGui", "redflag", "2"],
+            ["Prio", "Rule", "Total", "Description", "File", "Team", "Component", "Category", "Issues"],
+            ["7, 9", "b<ad", "2", " ".join(["word"] * 20) + "…", "a.cc:1", "(none)", "(none)", "(none)", "2"],
+            ["10", "C4456", "2", "d", "a.cc:1", "net", "x", "warning", "2"],
+            ["45", "manual-delete", "5", "later", "a.cc:1", "gui", "CsGui", "redflag", "2"],
             ["core", "CsCore", "redflag", "3"],
-            ["", "Total", "9", "", "", "", "", "9"],
+            ["", "Total", "9", "", "", "", "", "", "9"],
         ])
         self.assertNotIn("#f1f3f6", summary)
-        self.assertEqual(summary.count('<th align='), 8 + 5)   # both tables have the header in the color of the total line
+        self.assertEqual(summary.count('<th align='), 9 + 5)   # both tables have the header in the color of the total line
         self.assertEqual(summary.count('<th align='), summary.count('<th align="left" valign="top" bgcolor="#e8efff"')
                          + summary.count('<th align="right" valign="top" bgcolor="#e8efff"'))
         self.assertIn('rowspan="2"', summary)
@@ -219,12 +219,32 @@ class TestSummary(unittest.TestCase):
         self.assertTrue(is_valid_xml(summary))
         self.assertIn("Top 10 issues", summary)
         top = self.table(summary, 0)
-        self.assertEqual(top[0], ["Prio", "File", "Rule", "Team", "Description"])
-        self.assertEqual(top[1:4], [["5", "b.cc:7", "first", "core", "x < y"], ["20", "c.cc:2", "second", "(none)", "d"],
-                                    ["50", "z.cc:1", "late", "t", "d"]])
+        self.assertEqual(top[0], ["Prio", "Rule", "Description", "File", "Team"])
+        self.assertEqual(top[1:4], [["5", "first", "x < y", "b.cc:7", "core"], ["20", "second", "d", "c.cc:2", "(none)"],
+                                    ["50", "late", "d", "z.cc:1", "t"]])
         self.assertEqual(len(top), 11)
         self.assertIn('<a href="[[permalink-prefix]]/b.cc#L7"', summary)
         self.assertNotIn("https://rule", summary)
+
+    def test_top_10_leaves_out_the_shared_directories(self):
+        import create_summary
+        files = ["src/infrastructure/network/src/a.cc:85", "src/infrastructure/dip/src/b.cc:19"]
+        self.assertEqual(create_summary.shared_directories(files), 2)
+        self.assertEqual([create_summary.without_directories(f, 2) for f in files], ["network/src/a.cc:85", "dip/src/b.cc:19"])
+        # the two deepest directories are kept, also when every file shares them
+        self.assertEqual(create_summary.shared_directories(["src/a/b/x.cc:1", "src/a/b/y.cc:2"]), 1)
+        self.assertEqual(create_summary.shared_directories(["/abs/x/y/z/f.h:1"]), 3)
+        self.assertEqual(create_summary.shared_directories(["a.cc:1", "src/b.cc:2"]), 0)
+        windows = [r"C:\project\v\src\one\a.cc:1", r"C:\project\v\lib\two\b.cc:2"]
+        self.assertEqual(create_summary.shared_directories(windows), 3)
+        self.assertEqual(create_summary.without_directories(windows[0], 3), r"src\one\a.cc:1")
+        data = (self.row("5", "first", "core", "c", "w", file="home/me/project/src/net/a.cc:1", links="[3]{[[permalink-prefix]]/src/net/a.cc#L1}")
+                + self.row("6", "second", "core", "c", "w", file="home/me/project/src/dip/b.cc:2"))
+        summary = run_script("create_summary.py", stdin=data)
+        self.assertEqual([row[3] for row in self.table(summary, 0)[1:]], ["src/net/a.cc:1", "src/dip/b.cc:2"])
+        self.assertIn('title="home/me/project/src/net/a.cc:1"', summary)   # the full path is the tooltip
+        # the table per rule shows the full path
+        self.assertEqual([row[4] for row in self.table(summary)[1:3]], ["home/me/project/src/net/a.cc:1", "home/me/project/src/dip/b.cc:2"])
 
     def test_report_link(self):
         import tempfile

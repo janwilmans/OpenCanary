@@ -42,23 +42,25 @@ def priority_order(priority):
 
 def group(issues):
     """per rule the number of issues of each (team, component, category) combination, as an ordered list of
-    (rule, priorities, description, total, [(team, component, category, count), ...])
-    priorities are assigned per rule, so a rule normally has one; if it has more they are all listed"""
+    (rule, priorities, description, total, [(team, component, category, count), ...], first issue)
+    priorities are assigned per rule, so a rule normally has one; if it has more they are all listed; the description
+    and the file shown for a rule are those of its first issue"""
     rules = {}
     priorities = {}
-    descriptions = {}
+    first = {}
     for parts in issues:
         rule = name(parts, Column.RULE)
         combinations = rules.setdefault(rule, {})
         key = (name(parts, Column.TEAM), name(parts, Column.COMPONENT), name(parts, Column.CATEGORY))
         combinations[key] = combinations.get(key, 0) + 1
         priorities.setdefault(rule, set()).add(parts[Column.PRIO].strip())
-        descriptions.setdefault(rule, shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))
+        first.setdefault(rule, parts)
     result = []
     for rule, combinations in rules.items():
         rows = sorted(combinations.items(), key=lambda item: (item[1], [part.lower() for part in item[0]], item[0]))
         rule_priorities = ", ".join(sorted(priorities[rule], key=priority_order))
-        result.append((rule, rule_priorities, descriptions[rule], sum(combinations.values()), [key + (count,) for key, count in rows]))
+        description = shorten(html.unescape(first[rule][Column.DESCRIPTION]).strip())
+        result.append((rule, rule_priorities, description, sum(combinations.values()), [key + (count,) for key, count in rows], first[rule]))
     return sorted(result, key=lambda item: sort_key(item[0], item[3]))
 
 
@@ -97,17 +99,42 @@ def header_row(columns):
     return "<tr>" + "".join(cell("th", text, align, True, HEADER_BACKGROUND) for text, align in columns) + "</tr>\n"
 
 
+def shared_directories(files):
+    """the number of leading directories that all files (file:line, / or \\ separated) share and can be left out; the two
+    deepest directories of every file are kept, also when they are shared, so a file can still be recognized"""
+    directories = [re.split(r"[\\/]", re.sub(r"(:\d+)+$", "", file))[:-1] for file in files]
+    if not directories:
+        return 0
+    shared = 0
+    while all(len(path) > shared and path[shared] == directories[0][shared] for path in directories):
+        shared += 1
+    return max(0, min(shared, min(len(path) for path in directories) - 2))
+
+
+def without_directories(file, count):
+    """file without its first 'count' directories, its separators as they are"""
+    return "".join(re.split(r"([\\/])", file)[2 * count:])
+
+
+def file_cell(parts, shared=0):
+    """the file of the issue without the 'shared' leading directories, linked when it has a [3] link; the full path is the
+    tooltip"""
+    path = html.unescape(parts[Column.FILE]).strip()
+    file = html.escape(without_directories(path, shared))
+    url = file_link(parts)
+    if url:
+        file = f'<a href="{html.escape(url)}" title="{html.escape(path)}" style="color: {LINK_COLOR};">{file}</a>'
+    return file
+
+
 def create_top_table(issues):
+    shared = shared_directories([html.unescape(parts[Column.FILE]).strip() for parts in issues])
     result = ['<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n']
-    result.append(header_row([("Prio", "right"), ("File", "left"), ("Rule", "left"), ("Team", "left"), ("Description", "left")]))
+    result.append(header_row([("Prio", "right"), ("Rule", "left"), ("Description", "left"), ("File", "left"), ("Team", "left")]))
     for parts in issues:
-        file = html.escape(html.unescape(parts[Column.FILE]).strip())
-        url = file_link(parts)
-        if url:
-            file = f'<a href="{html.escape(url)}" style="color: {LINK_COLOR};">{file}</a>'
-        result.append("<tr>" + cell("td", html.escape(parts[Column.PRIO].strip()), "right") + cell("td", file))
-        result.append(cell("td", html.escape(name(parts, Column.RULE))) + cell("td", html.escape(name(parts, Column.TEAM))))
-        result.append(cell("td", html.escape(shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))) + "</tr>\n")
+        result.append("<tr>" + cell("td", html.escape(parts[Column.PRIO].strip()), "right") + cell("td", html.escape(name(parts, Column.RULE))))
+        result.append(cell("td", html.escape(shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))))
+        result.append(cell("td", file_cell(parts, shared)) + cell("td", html.escape(name(parts, Column.TEAM))) + "</tr>\n")
     return "".join(result) + "</table>\n"
 
 
@@ -137,10 +164,11 @@ def create_summary(issues, report_url=""):
     result.append(heading(f"Top {len(top)} issues") + create_top_table(top))
     result.append(heading("Issues per rule"))
     result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n')
-    # 'Total' is the number of issues of the rule, the order of the rules; 'Issues' the number per team, component and category
-    result.append(header_row([("Prio", "right"), ("Rule", "left"), ("Total", "right"), ("Description", "left"), ("Team", "left"),
-                              ("Component", "left"), ("Category", "left"), ("Issues", "right")]))
-    for rule, priorities, description, rule_total, rows in rules:
+    # 'Total' is the number of issues of the rule, the order of the rules; 'Issues' the number per team, component and
+    # category; the description and the file are those of the first issue of the rule
+    result.append(header_row([("Prio", "right"), ("Rule", "left"), ("Total", "right"), ("Description", "left"), ("File", "left"),
+                              ("Team", "left"), ("Component", "left"), ("Category", "left"), ("Issues", "right")]))
+    for rule, priorities, description, rule_total, rows, first in rules:
         for index, (team, component, category, count) in enumerate(rows):
             result.append('<tr>')
             if index == 0:
@@ -148,10 +176,11 @@ def create_summary(issues, report_url=""):
                 result.append(cell("td", html.escape(rule), bold=True, rowspan=len(rows)))
                 result.append(cell("td", str(rule_total), "right", bold=True, rowspan=len(rows)))
                 result.append(cell("td", html.escape(description), rowspan=len(rows)))
+                result.append(cell("td", file_cell(first), rowspan=len(rows)))
             result.extend(cell("td", html.escape(value)) for value in (team, component, category))
             result.append(cell("td", str(count), "right") + '</tr>\n')
     result.append('<tr>' + cell("td", "", background=TOTAL_BACKGROUND) + cell("td", "Total", bold=True, background=TOTAL_BACKGROUND))
-    result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + cell("td", "", background=TOTAL_BACKGROUND) * 4)
+    result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + cell("td", "", background=TOTAL_BACKGROUND) * 5)
     result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + '</tr>\n</table>\n</body>\n</html>\n')
     return "".join(result)
 
