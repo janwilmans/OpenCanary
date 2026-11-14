@@ -26,15 +26,17 @@ TIERS = [
     ("t4", None, "Style", "priority 76+"),
 ]
 
+# the columns of the table, in this order: (name, heading, title, field of the issue line); the cells of a record follow
+# this order too, so the page script needs no mapping
 COLUMNS = [
-    ("prio", "Prio", "Team assigned priority, lower is more important"),
-    ("team", "Team", "Team responsible for the file"),
-    ("component", "Component", "Component the file belongs to"),
-    ("file", "File", "Location of the issue"),
-    ("source", "Source", "Tool that raised the issue"),
-    ("rule", "Rule", "Rule that raised the issue"),
-    ("category", "Category", "Category of the issue"),
-    ("description", "Description", "Description of the issue"),
+    ("prio", "Prio", "Team assigned priority, lower is more important", Column.PRIO),
+    ("rule", "Rule", "Rule that raised the issue", Column.RULE),
+    ("description", "Description", "Description of the issue", Column.DESCRIPTION),
+    ("file", "File", "Location of the issue", Column.FILE),
+    ("team", "Team", "Team responsible for the file", Column.TEAM),
+    ("component", "Component", "Component the file belongs to", Column.COMPONENT),
+    ("category", "Category", "Category of the issue", Column.CATEGORY),
+    ("source", "Source", "Tool that raised the issue", Column.SOURCE),
 ]
 
 
@@ -185,13 +187,14 @@ kbd { padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; bac
 .table-wrap { overflow: auto; max-height: calc(100vh - 70px); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 /* fixed layout and one line per row, so every row has the same height and only the visible rows need to exist */
 table { width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+/* the description has no width, it gets what is left: the most of the row */
 col.prio { width: 96px; }
-col.team { width: 120px; }
+col.rule { width: 180px; }
+col.file { width: 22%; }
+col.team { width: 104px; }
 col.component { width: 140px; }
-col.file { width: 30%; }
-col.source { width: 120px; }
-col.rule { width: 112px; }
-col.category { width: 124px; }
+col.category { width: 128px; }
+col.source { width: 112px; }
 thead th {
   position: sticky; top: 0; z-index: 1; padding: 0; text-align: left; white-space: nowrap;
   background: var(--surface-2); border-bottom: 1px solid var(--border);
@@ -850,12 +853,13 @@ def create_toolbar(display_count, total_count):
 
 
 def create_record(parts):
-    """one issue as [tier, ...cells, {column: link}], the cells as plain text, the page script escapes them"""
+    """one issue as [tier, ...cells, {column: link}], the cells in the order of COLUMNS, as plain text (the page script
+    escapes them); a link is keyed by the index of its column in COLUMNS"""
+    fields = list(get_link_map(parts))
     cells = []
     links = {}
-    for column, (value, link) in enumerate(get_link_map(parts)):
-        if column >= len(COLUMNS):
-            break
+    for column, (_name, _heading, _title, field) in enumerate(COLUMNS):
+        value, link = fields[field] if field < len(fields) else ("", "")
         cells.append(html.unescape(value))
         if link:
             links[column] = link
@@ -874,9 +878,9 @@ def encode_block(records):
 def create_table():
     # only the table shell, the page script renders the rows that are visible from the embedded data
     result = '<div class="table-wrap">\n<table id="issues">\n<colgroup>'
-    result += ''.join(f'<col class="{column}"/>' for column, _name, _title in COLUMNS)
+    result += ''.join(f'<col class="{column}"/>' for column, _name, _title, _field in COLUMNS)
     result += '</colgroup>\n<thead><tr>\n'
-    for column, name, title in COLUMNS:
+    for column, name, title, _field in COLUMNS:
         result += f'<th scope="col" data-column="{column}" title="{title}"><div class="head">' \
                   f'<button type="button" class="column-filter" aria-haspopup="dialog" aria-expanded="false" ' \
                   f'aria-label="Filter {name} values" title="Filter by value">{FUNNEL_ICON}</button>' \

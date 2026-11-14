@@ -544,9 +544,10 @@ Any other argument prints the usage and exits with code 1.
 Writes one self-contained HTML file: no external scripts, stylesheets, fonts or images, so it works offline and as an
 e-mail attachment. It is well-formed XML.
 
-- Every issue becomes a record `[band, priority, team, component, file, source, rule, category, description,
-  {field: link}]`. HTML escapes in the fields are decoded; the page shows them as plain text. A malformed links field
-  stops the script with `REPORT ERROR`.
+- Every issue becomes a record `[band, priority, rule, description, file, team, component, category, source,
+  {column: link}]`, in the order of the table columns (`COLUMNS`); a link is keyed by the index of its column. HTML
+  escapes in the fields are decoded; the page shows them as plain text. A malformed links field stops the script with
+  `REPORT ERROR`.
 - **Priority bands**: *Fix now* (priority ≤ 10), *Likely bug* (11–50), *Wrong approach* (51–75), *Style* (76 and
   higher, and non-numeric priorities). The summary cards show the count per band.
 - The table shows priority `7`, the low hanging fruit of `apply_low_hanging_fruit.py`, as a blue `FIX`; only the text
