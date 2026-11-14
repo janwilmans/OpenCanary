@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """ Report the targets in a compile database that are compiled with other ABI relevant settings than the rest.
 
-    Usage: compile_flags.py <compile_commands.json | build directory>
+    Usage: compile_flags.py <compile_commands.json | build directory> [--macro NAME]... [--ignore-setting NAME]...
+                            [--ignore-target NAME]...
+      --macro NAME           also compare this macro, a project setting that changes types (a glob: MYLIB_CONFIG_*)
+      --ignore-setting NAME  do not compare this setting (as named in the report: "runtime library", _FILE_OFFSET_BITS)
+      --ignore-target NAME   leave out this target (a glob: *_test), one that is built differently on purpose; it does
+                             not count for the norm either
+      opencanary.toml sets these with macros, ignore_settings and ignore_targets on the [[input]] of compile-flags.
 
     When two parts of one program see a different definition of the same type, the program breaks the One Definition
     Rule (ODR). Neither the compiler nor the linker reports it: the linker only compares names. The program crashes at
@@ -28,6 +34,7 @@
 """
 
 import argparse
+import fnmatch
 import json
 import os
 import re
@@ -64,6 +71,8 @@ FLAGS = [
     ("vtordisp", re.compile(r"^[-/]vd\d$")),
     ("runtime library", re.compile(r"^[-/]M[DT]d?$")),
 ]
+
+FLAG_SETTINGS = {setting for setting, _regex in FLAGS}
 
 
 def show_usage():
@@ -108,8 +117,13 @@ def macro(arg, next_arg):
     return name, value if "=" in definition else "1"
 
 
-def settings(args):
-    """the ABI relevant settings of one translation unit as {setting: value shown in the report}"""
+def is_compared_macro(name, extra_macros=()):
+    return name in ABI_MACROS or bool(CONFIG_SELECT.match(name)) or any(fnmatch.fnmatchcase(name, glob) for glob in extra_macros)
+
+
+def settings(args, extra_macros=()):
+    """the ABI relevant settings of one translation unit as {setting: value shown in the report}; extra_macros are
+    globs of macros that are compared as well"""
     result = {"language standard": DEFAULT}
     macros = {}
     for index, arg in enumerate(args):
@@ -122,7 +136,7 @@ def settings(args):
             if regex.match(arg):
                 result[setting] = DEFAULT if re.match(r"^-[fm]no-", arg) else arg
         definition = macro(arg, args[index + 1] if index + 1 < len(args) else None)
-        if definition and (definition[0] in ABI_MACROS or CONFIG_SELECT.match(definition[0])):
+        if definition and is_compared_macro(definition[0], extra_macros):
             macros[definition[0]] = definition[1]
     for name, value in macros.items():
         result[name] = NOT_DEFINED if value is None else value
@@ -141,8 +155,9 @@ def target(entry, args, file):
     return match[1] if match else os.path.dirname(file)
 
 
-def translation_units(database):
-    """[(target, file, settings)] of the C++ translation units, the file as an absolute path with /"""
+def translation_units(database, extra_macros=(), ignore_targets=()):
+    """[(target, file, settings)] of the C++ translation units, the file as an absolute path with /, without the
+    targets that match a glob in ignore_targets"""
     units = []
     for entry in database:
         args = arguments(entry)
@@ -150,19 +165,20 @@ def translation_units(database):
         if not file:
             continue
         file = util.normpath(os.path.normpath(os.path.join(entry.get("directory", ""), file)))
-        if is_cpp(file, args):
-            units.append((target(entry, args, file), file, settings(args)))
+        unit_target = target(entry, args, file)
+        if is_cpp(file, args) and not any(fnmatch.fnmatchcase(unit_target, glob) for glob in ignore_targets):
+            units.append((unit_target, file, settings(args, extra_macros)))
     return units
 
 
-def find_inconsistencies(units):
+def find_inconsistencies(units, ignore_settings=()):
     """[(file, setting, value, norm, target, files with value in target, units with norm)] for every target and
     setting where (some of) the target differs from the value that most translation units use"""
-    names = sorted({name for _target, _file, values in units for name in values})
+    names = sorted({name for _target, _file, values in units for name in values} - set(ignore_settings))
     found = []
     for name in names:
         # a translation unit without the macro or flag has the default value
-        missing = NOT_DEFINED if name in ABI_MACROS or CONFIG_SELECT.match(name) else DEFAULT
+        missing = DEFAULT if name == "language standard" or name in FLAG_SETTINGS else NOT_DEFINED
         counts = Counter(values.get(name, missing) for _target, _file, values in units)
         if len(counts) < 2:
             continue
@@ -200,10 +216,13 @@ def load(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("path", help="compile_commands.json, or the build directory that contains it")
+    parser.add_argument("--macro", action="append", default=[], help="also compare this macro (a glob)")
+    parser.add_argument("--ignore-setting", action="append", default=[], help="do not compare this setting")
+    parser.add_argument("--ignore-target", action="append", default=[], help="leave out this target (a glob)")
     args = parser.parse_args()
 
-    units = translation_units(load(args.path))
-    for file, setting, value, norm, unit_target, count, norm_count in find_inconsistencies(units):
+    units = translation_units(load(args.path), args.macro, args.ignore_target)
+    for file, setting, value, norm, unit_target, count, norm_count in find_inconsistencies(units, args.ignore_setting):
         report_issue(file, 0, describe(setting, value, norm, unit_target, count, norm_count))
     util.eprint(f"compile_flags.py: {len(units)} C++ translation units compared")
 

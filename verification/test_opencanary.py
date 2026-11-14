@@ -622,14 +622,21 @@ class TestRunner(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "compile_commands.json"), "w", encoding="utf-8") as f:
                 json.dump([TestCompileFlags.entry("/s/a.cc", "a", "-std=c++17"), TestCompileFlags.entry("/s/b.cc", "a", "-std=c++17"),
-                           TestCompileFlags.entry("/s/dep/c.cc", "dep", "-std=c++14")], f)
-            with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
-                f.write('[[input]]\nformat = "compile-flags"\npath = "compile_commands.json"\n')
-            run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
+                           TestCompileFlags.entry("/s/dep/c.cc", "dep", "-std=c++14"),
+                           TestCompileFlags.entry("/s/legacy/d.cc", "legacy", "-std=c++11", "-DMY_CONFIG=1")], f)
+            config = os.path.join(d, "oc.toml")
+            with open(config, "w", encoding="utf-8") as f:
+                # a list, or one string
+                f.write('[[input]]\nformat = "compile-flags"\npath = "compile_commands.json"\nmacros = ["MY_*"]\nignore_targets = "leg*"\n')
+            run_script("opencanary.py", ["run", "-c", config])
             with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
                 rows = [line.split("|") for line in lines(f.read())]
-            # one issue of a rule is low hanging fruit (7)
+            # one issue of a rule is low hanging fruit (7); the legacy target and its macro are left out
             self.assertEqual([(row[0], row[3], row[5]) for row in rows], [("7", "s/dep/c.cc", "inconsistent-compile-flags")])
+            with open(config, "w", encoding="utf-8") as f:
+                f.write('[[input]]\nformat = "compile-flags"\npath = "compile_commands.json"\nmacros = [1]\n')
+            with self.assertRaisesRegex(AssertionError, "macros of the compile-flags input must be a list of strings"):
+                run_script("opencanary.py", ["run", "-c", config])
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))
@@ -989,14 +996,14 @@ class TestCompileFlags(unittest.TestCase):
         return {"directory": "/build", "file": file,
                 "arguments": [compiler, *flags, "-o", f"{target}/CMakeFiles/{target}.dir/x.o", "-c", file]}
 
-    def run_flags(self, database):
+    def run_flags(self, database, options=()):
         import json
         import tempfile
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "compile_commands.json"), "w", encoding="utf-8") as f:
                 json.dump(database, f)
             # the build directory works as well as the file
-            return [line.split("|") for line in lines(run_script("compile_flags.py", [d]))]
+            return [line.split("|") for line in lines(run_script("compile_flags.py", [d, *options]))]
 
     def test_a_dependency_with_another_standard(self):
         database = [self.entry(f"/src/app/{n}.cc", "app", "-std=c++17") for n in range(3)]
@@ -1030,6 +1037,16 @@ class TestCompileFlags(unittest.TestCase):
         rows = self.run_flags(database)
         self.assertEqual([(row[3], row[7].split(":")[0]) for row in rows],
                          [("/src/dep/d.cc", "variant_CONFIG_SELECT_VARIANT is 1 for 1 file of dep, but (not defined) for 2 other translation units")])
+
+    def test_options(self):
+        database = [self.entry(f"/src/app/{n}.cc", "app", "-std=c++17", "-DMYLIB_CONFIG_FAST=1", "/MD") for n in range(3)]
+        database += [self.entry("/src/lib/a.cc", "lib", "-std=c++17", "-DMYLIB_CONFIG_FAST=0", "/MT"),
+                     self.entry("/src/old/a.cc", "old_legacy", "-std=c++11"), self.entry("/src/old/b.cc", "old_legacy", "-std=c++11")]
+        # without options: the legacy target's standard; MYLIB_CONFIG_FAST is not compared, the runtime library is
+        rows = self.run_flags(database)
+        self.assertEqual(sorted(row[7].split(" is ")[0] for row in rows), ["language standard", "runtime library", "runtime library"])
+        rows = self.run_flags(database, ["--macro=MYLIB_CONFIG_*", "--ignore-setting=runtime library", "--ignore-target=*_legacy"])
+        self.assertEqual([(row[3], row[7].split(" for ")[0]) for row in rows], [("/src/lib/a.cc", "MYLIB_CONFIG_FAST is 0")])
 
     def test_command_strings_and_targets(self):
         import compile_flags

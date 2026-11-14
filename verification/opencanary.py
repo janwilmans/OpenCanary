@@ -65,6 +65,9 @@ path = "build/gcc.log"
 # [[input]]
 # format = "compile-flags"
 # path = "build/compile_commands.json"
+# macros = ["MYLIB_CONFIG_*"]           also compare these macros (globs), project settings that change types
+# ignore_settings = ["runtime library"] do not compare these settings, as named in the report
+# ignore_targets = ["*_legacy"]         leave out these targets (globs), built differently on purpose
 
 [rules]
 # all optional, shown with their defaults (the files in the verification/rules directory)
@@ -114,6 +117,22 @@ def load_config(filename):
         return tomllib.load(f)
 
 
+# the keys of a compile-flags [[input]] and the option of compile_flags.py that each one repeats
+COMPILE_FLAGS_OPTIONS = {"macros": "--macro", "ignore_settings": "--ignore-setting", "ignore_targets": "--ignore-target"}
+
+
+def compile_flags_options(item):
+    """the options of compile_flags.py from the keys of its [[input]]: a list of strings, or one string"""
+    options = []
+    for key, option in COMPILE_FLAGS_OPTIONS.items():
+        values = item.get(key, [])
+        values = [values] if isinstance(values, str) else values
+        if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+            raise SystemExit(f"opencanary: {key} of the compile-flags input must be a list of strings")
+        options += [f"{option}={value}" for value in values]
+    return options
+
+
 def run_pipeline(config, base):
     def path(value):
         return value if os.path.isabs(value) else os.path.join(base, value)
@@ -132,8 +151,10 @@ def run_pipeline(config, base):
                 data += run_stage(script("parse-" + fmt) + [source], f.read())
         elif fmt == "cpp-issues":
             data += run_stage(script("cpp-issues") + [location])
-        elif fmt in ("cppcheck", "compile-flags"):
-            data += run_stage(script(fmt) + [location])
+        elif fmt == "cppcheck":
+            data += run_stage(script("cppcheck") + [location])
+        elif fmt == "compile-flags":
+            data += run_stage(script("compile-flags") + [location] + compile_flags_options(item))
         else:
             raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc, cpp-issues, cppcheck or compile-flags")
 

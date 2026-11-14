@@ -137,6 +137,9 @@ All relative paths are relative to the directory of the configuration file.
 | `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues`, `cppcheck` or `compile-flags`; anything else stops the run |
 | | `path` | required | the log file (`gcc`, `msvc`), the directory to scan (`cpp-issues`, `cppcheck`) or `compile_commands.json` or its build directory (`compile-flags`) |
 | | `source` | the format | value for the source field (passed to the parser) |
+| | `macros` | none | `compile-flags` only: macros (globs) to compare as well, `--macro` of `compile_flags.py` |
+| | `ignore_settings` | none | `compile-flags` only: settings not to compare, `--ignore-setting` |
+| | `ignore_targets` | none | `compile-flags` only: targets (globs) to leave out, `--ignore-target` |
 | `[rules]` | `interest` | `verification/rules/interest.txt` | rules for `tr_interest.py` |
 | | `customize` | `verification/rules/customize.txt` | rules for `tr_customize.py` |
 | | `links` | `verification/rules/links.txt` | rules for `apply_links.py` |
@@ -385,7 +388,26 @@ Without the include directories and the macros of the project cppcheck cannot pa
 ### compile_flags.py
 
 ```
-compile_flags.py <compile_commands.json | build directory>
+compile_flags.py <compile_commands.json | build directory> [--macro NAME]... [--ignore-setting NAME]... [--ignore-target NAME]...
+```
+
+| Argument | Description |
+|----------|-------------|
+| `<path>` | Required. `compile_commands.json`, or the build directory that contains it. |
+| `--macro NAME` | Also compare this macro: a setting of the project or of a library that changes types, such as `MYLIB_CONFIG_*` (a glob, `fnmatch` syntax, case sensitive). Can be repeated. |
+| `--ignore-setting NAME` | Do not compare this setting, as it is named in the report: `language standard`, `runtime library`, `struct packing`, `_FILE_OFFSET_BITS`, ... Can be repeated. |
+| `--ignore-target NAME` | Leave out the targets that match this glob, such as a tool that is built differently on purpose and not linked into the program. They do not count for the norm either. Can be repeated. |
+
+In `opencanary.toml` these are the keys `macros`, `ignore_settings` and `ignore_targets` of the `compile-flags`
+`[[input]]`, each a list of strings (or one string):
+
+```toml
+[[input]]
+format = "compile-flags"
+path = "build/release"
+macros = ["MYLIB_CONFIG_*"]
+ignore_settings = ["runtime library"]
+ignore_targets = ["pylon_tool", "*_legacy"]
 ```
 
 Finds a cause of violations of the One Definition Rule (ODR) that neither the compiler nor the linker reports: a

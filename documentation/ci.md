@@ -60,6 +60,8 @@ path = "."
 [[input]]
 format = "compile-flags"
 path = "build/release"     # the build directory, or its compile_commands.json
+# macros = ["MYLIB_CONFIG_*"]          also compare these project macros (globs)
+# ignore_targets = ["standalone_tool"] leave out targets that are built differently on purpose
 ```
 
 ## Warning settings
