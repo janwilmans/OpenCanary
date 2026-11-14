@@ -30,13 +30,13 @@ TIERS = [
 # this order too, so the page script needs no mapping
 COLUMNS = [
     ("prio", "Prio", "Team assigned priority, lower is more important", Column.PRIO),
+    ("source", "Source", "Tool that raised the issue", Column.SOURCE),
     ("rule", "Rule", "Rule that raised the issue", Column.RULE),
     ("description", "Description", "Description of the issue", Column.DESCRIPTION),
     ("file", "File", "Location of the issue", Column.FILE),
     ("team", "Team", "Team responsible for the file", Column.TEAM),
     ("component", "Component", "Component the file belongs to", Column.COMPONENT),
     ("category", "Category", "Category of the issue", Column.CATEGORY),
-    ("source", "Source", "Tool that raised the issue", Column.SOURCE),
 ]
 
 

@@ -544,7 +544,7 @@ Any other argument prints the usage and exits with code 1.
 Writes one self-contained HTML file: no external scripts, stylesheets, fonts or images, so it works offline and as an
 e-mail attachment. It is well-formed XML.
 
-- Every issue becomes a record `[band, priority, rule, description, file, team, component, category, source,
+- Every issue becomes a record `[band, priority, source, rule, description, file, team, component, category,
   {column: link}]`, in the order of the table columns (`COLUMNS`); a link is keyed by the index of its column. HTML
   escapes in the fields are decoded; the page shows them as plain text. A malformed links field stops the script with
   `REPORT ERROR`.

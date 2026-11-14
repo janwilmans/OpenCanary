@@ -126,15 +126,15 @@ class TestReport(unittest.TestCase):
 
     def test_rows_are_plain_text_with_links(self):
         report = run_script("create_report.py", stdin=self.row("5", "&#x27;a&#x27; &lt;b&gt; &amp;", "[3]{[[permalink-prefix]]/a.cc#L1}[5]{https://x/rule}"))
-        # the cells in the order of the columns: prio, rule, description, file, team, component, category, source; a link
+        # the cells in the order of the columns: prio, source, rule, description, file, team, component, category; a link
         # is keyed by its column
-        self.assertEqual(report_rows(report), [["t1", "5", "rule", "'a' <b> &", "a.cc:1", "team", "comp", "warning", "src",
-                                                {"3": "[[permalink-prefix]]/a.cc#L1", "1": "https://x/rule"}]])
+        self.assertEqual(report_rows(report), [["t1", "5", "src", "rule", "'a' <b> &", "a.cc:1", "team", "comp", "warning",
+                                                {"4": "[[permalink-prefix]]/a.cc#L1", "2": "https://x/rule"}]])
 
     def test_solution_link_is_not_a_column(self):
         report = run_script("create_report.py", stdin=self.row("5", link="[5]{https://x/rule}[solution]{[[permalink-prefix]]/rule}"))
         self.assertTrue(is_valid_xml(report))
-        self.assertEqual(report_rows(report)[0][-1], {"1": "https://x/rule", "solution": "[[permalink-prefix]]/rule"})
+        self.assertEqual(report_rows(report)[0][-1], {"2": "https://x/rule", "solution": "[[permalink-prefix]]/rule"})
         self.assertIn("How to solve", report)
 
     def test_theme_button(self):
