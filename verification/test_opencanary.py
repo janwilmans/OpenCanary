@@ -172,8 +172,8 @@ class TestReport(unittest.TestCase):
 class TestSummary(unittest.TestCase):
 
     @staticmethod
-    def row(prio, rule, team, component, category, description="d", file="a.cc:1", links=""):
-        return "|".join([prio, team, component, file, "src", rule, category, description, links]) + "\n"
+    def row(prio, rule, team, component, category, description="d", file="a.cc:1", links="", source="src"):
+        return "|".join([prio, team, component, file, source, rule, category, description, links]) + "\n"
 
     @staticmethod
     def table(summary, index=1):
@@ -190,22 +190,23 @@ class TestSummary(unittest.TestCase):
         data = (self.row("45", "manual-delete", "gui", "CsGui", "redflag", "later") * 2
                 + self.row("45", "manual-delete", "core", "CsCore", "redflag", "do not use delete &lt;p&gt;") * 3
                 + self.row("9", "b<ad", "", "", "", long_description) + self.row("7", "b<ad", "", "", "")
-                + self.row("10", "C4456", "net", "x", "warning") * 2)
+                + self.row("10", "C4456", "net", "x", "warning") + self.row("10", "C4456", "net", "x", "warning", source="clang-cl"))
         summary = run_script("create_summary.py", stdin=data)
         self.assertTrue(is_valid_xml(summary))
         self.assertNotIn("<script", summary)
         self.assertNotIn("class=", summary)
-        # rules by number of issues (fewest first), then name; within a rule by count; the first description of each rule
+        # rules by number of issues (fewest first), then name; within a rule by count; the first description of each rule;
+        # all sources of a rule
         self.assertEqual(self.table(summary), [
-            ["Prio", "Rule", "Total", "Description", "File", "Team", "Component", "Category", "Issues"],
-            ["7, 9", "b<ad", "2", " ".join(["word"] * 20) + "…", "a.cc:1", "(none)", "(none)", "(none)", "2"],
-            ["10", "C4456", "2", "d", "a.cc:1", "net", "x", "warning", "2"],
-            ["45", "manual-delete", "5", "later", "a.cc:1", "gui", "CsGui", "redflag", "2"],
+            ["Prio", "Source", "Rule", "Total", "Description", "File", "Team", "Component", "Category", "Issues"],
+            ["7, 9", "src", "b<ad", "2", " ".join(["word"] * 20) + "…", "a.cc:1", "(none)", "(none)", "(none)", "2"],
+            ["10", "clang-cl, src", "C4456", "2", "d", "a.cc:1", "net", "x", "warning", "2"],
+            ["45", "src", "manual-delete", "5", "later", "a.cc:1", "gui", "CsGui", "redflag", "2"],
             ["core", "CsCore", "redflag", "3"],
-            ["", "Total", "9", "", "", "", "", "", "9"],
+            ["", "", "Total", "9", "", "", "", "", "", "9"],
         ])
         self.assertNotIn("#f1f3f6", summary)
-        self.assertEqual(summary.count('<th align='), 9 + 5)   # both tables have the header in the color of the total line
+        self.assertEqual(summary.count('<th align='), 10 + 6)   # both tables have the header in the color of the total line
         self.assertEqual(summary.count('<th align='), summary.count('<th align="left" valign="top" bgcolor="#e8efff"')
                          + summary.count('<th align="right" valign="top" bgcolor="#e8efff"'))
         self.assertIn('rowspan="2"', summary)
@@ -219,9 +220,9 @@ class TestSummary(unittest.TestCase):
         self.assertTrue(is_valid_xml(summary))
         self.assertIn("Top 10 issues", summary)
         top = self.table(summary, 0)
-        self.assertEqual(top[0], ["Prio", "Rule", "Description", "File", "Team"])
-        self.assertEqual(top[1:4], [["5", "first", "x < y", "b.cc:7", "core"], ["20", "second", "d", "c.cc:2", "(none)"],
-                                    ["50", "late", "d", "z.cc:1", "t"]])
+        self.assertEqual(top[0], ["Prio", "Source", "Rule", "Description", "File", "Team"])
+        self.assertEqual(top[1:4], [["5", "src", "first", "x < y", "b.cc:7", "core"], ["20", "src", "second", "d", "c.cc:2", "(none)"],
+                                    ["50", "src", "late", "d", "z.cc:1", "t"]])
         self.assertEqual(len(top), 11)
         self.assertIn('<a href="[[permalink-prefix]]/b.cc#L7"', summary)
         self.assertNotIn("https://rule", summary)
@@ -241,10 +242,10 @@ class TestSummary(unittest.TestCase):
         data = (self.row("5", "first", "core", "c", "w", file="home/me/project/src/net/a.cc:1", links="[3]{[[permalink-prefix]]/src/net/a.cc#L1}")
                 + self.row("6", "second", "core", "c", "w", file="home/me/project/src/dip/b.cc:2"))
         summary = run_script("create_summary.py", stdin=data)
-        self.assertEqual([row[3] for row in self.table(summary, 0)[1:]], ["src/net/a.cc:1", "src/dip/b.cc:2"])
+        self.assertEqual([row[4] for row in self.table(summary, 0)[1:]], ["src/net/a.cc:1", "src/dip/b.cc:2"])
         self.assertIn('title="home/me/project/src/net/a.cc:1"', summary)   # the full path is the tooltip
         # the table per rule shows the full path
-        self.assertEqual([row[4] for row in self.table(summary)[1:3]], ["home/me/project/src/net/a.cc:1", "home/me/project/src/dip/b.cc:2"])
+        self.assertEqual([row[5] for row in self.table(summary)[1:3]], ["home/me/project/src/net/a.cc:1", "home/me/project/src/dip/b.cc:2"])
 
     def test_report_link(self):
         import tempfile
