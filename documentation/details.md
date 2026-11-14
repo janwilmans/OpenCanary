@@ -252,7 +252,7 @@ oc_cpp_issues.py <path>
 |----------|-------------|
 | `<path>` | Required. Directory that is searched recursively. |
 
-Searches C++ sources and Visual Studio projects for common problems with plain text checks (no compiler involved).
+Searches C++ sources, Visual Studio projects and CMake files for common problems with plain text checks (no compiler involved).
 Files and directories listed in a `.opencanaryignore` file (`.gitignore` syntax) are skipped.
 
 Every line of every header (`.h`, `.hpp`) and source file (`.cpp`, `.cc`) is checked. Why each rule is reported and
@@ -321,6 +321,15 @@ Every Visual Studio project (a file whose name ends with `proj`) is checked per 
 | `warnings-not-errors` | `ClCompile/TreatWarningAsError` is missing or not `true` | redflag |
 | `warning-level-not-4` | `ClCompile/WarningLevel` is missing or does not end with `4` | redflag |
 | `parse-error` | the project, header or source could not be read (for example not UTF-8) | parse |
+
+Every CMake file (`CMakeLists.txt`, `*.cmake`) is checked, except the top level `<path>/CMakeLists.txt` and the files
+that it `include()`s by path (relative to `<path>`, or starting with `${CMAKE_SOURCE_DIR}`, `${CMAKE_CURRENT_SOURCE_DIR}`,
+`${PROJECT_SOURCE_DIR}` or `${CMAKE_CURRENT_LIST_DIR}`): that is where the standard of the whole program belongs. A
+`#` comment is left out (not a `#` in a quoted string).
+
+| Rule | Reported when | Category |
+|------|---------------|----------|
+| `hardcoded-cxx-standard` | `set(CMAKE_CXX_STANDARD <n>)` (not when the file has `if(NOT CMAKE_CXX_STANDARD)` or `if(NOT DEFINED CMAKE_CXX_STANDARD)`, then it is a default), `CXX_STANDARD <n>` (the property of a target) or `-std=c++<n>`, `-std=gnu++<n>`, `/std:c++<n>`; see [rules.md](rules.md#hardcoded-cxx-standard) | redflag |
 
 Fields: **priority** `99` (to be set by `apply_team_priorities.py`, the default `rules/priorities.txt` lists all these
 rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (`:0` for project checks),

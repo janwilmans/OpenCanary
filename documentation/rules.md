@@ -1,7 +1,7 @@
 # OpenCanary rules
 
 The rules that OpenCanary reports itself: `oc_cpp_issues.py` checks every line of the headers and sources (and the
-Visual Studio projects) for common C++ problems, `compile_flags.py` compares the flags in the compile database. This page explains, per rule, why it is reported and how to solve it.
+Visual Studio projects and CMake files) for common C++ problems, `compile_flags.py` compares the flags in the compile database. This page explains, per rule, why it is reported and how to solve it.
 In the report, the rule links to its section here, and so does the light bulb before it (see `rules/links.txt`);
 every section has an anchor: `rules.md#manual-delete` for `manual-delete`.
 
@@ -63,6 +63,7 @@ with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The default 
 | [unnamed-lock](#unnamed-lock) | bug | a lock that is not a variable |
 | [suppressed-warning](#suppressed-warning) | redflag | `#pragma` that disables a compiler warning |
 | [empty-catch](#empty-catch) | redflag | `catch (...) {}` |
+| [hardcoded-cxx-standard](#hardcoded-cxx-standard) | redflag | `set(CMAKE_CXX_STANDARD 14)` in a dependency |
 | [inconsistent-compile-flags](#inconsistent-compile-flags) | bug | a target with another `-std` (or other ABI flags) than the rest |
 | [parse-error](#parse-error) | parse | file could not be read |
 
@@ -455,6 +456,31 @@ has a comment, which says that ignoring the exception is intended.
 An empty catch block swallows the exception: the error is not handled, not logged and not passed on, and the program
 continues in an unknown state. **Solve:** handle the error, log it, or let it propagate. When ignoring it is correct,
 catch the specific exception type and add a comment that says why.
+
+### hardcoded-cxx-standard
+
+**A C++ standard that is fixed in one part of the build.** Reported in a `CMakeLists.txt` or `*.cmake` file, other than
+the top level `CMakeLists.txt` and the files that it includes by path, for `set(CMAKE_CXX_STANDARD 14)`, the
+`CXX_STANDARD` property of a target and `-std=c++14` or `/std:c++14` in the flags. A `set()` in a file that first
+checks `if(NOT DEFINED CMAKE_CXX_STANDARD)` is a default and is not reported.
+
+The line is part of the preamble in many CMake tutorials. In a dependency it overrides the standard that the build of
+the whole program sets (in the top level `CMakeLists.txt`, a preset, or the Conan profile) for the targets of that
+dependency only, and the build still succeeds. When a library that both use depends on the standard, such as
+variant-lite (`std::variant` under C++17, its own implementation under C++14), its types get two definitions in one
+program, an ODR violation: random crashes that neither the compiler nor the linker reports, see
+[inconsistent-compile-flags](#inconsistent-compile-flags). A `Find<Package>.cmake` that sets the standard changes it
+for everything after its `find_package()`. **Solve:** never hardcode the version in the script of a library or a
+module. Declare the minimum standard that the target needs:
+
+```cmake
+target_compile_features(<target> PUBLIC cxx_std_14)
+```
+
+and let whoever builds the whole program set the exact version for all of it, once: the top level `CMakeLists.txt`,
+a preset, a toolchain file or the Conan profile (`compiler.cppstd`). In third party code a `set()` overrides what is
+passed from outside (`-DCMAKE_CXX_STANDARD=17`), so patch the line out (a Conan recipe or FetchContent's
+`PATCH_COMMAND` can) and report it upstream.
 
 ### inconsistent-compile-flags
 

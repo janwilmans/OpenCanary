@@ -672,6 +672,36 @@ class TestCppIssues(unittest.TestCase):
         self.assert_rule("throw-non-exception", ['throw "text";'], [])
         self.assert_rule("todo", ["x = 1; // TODO: fix", "/* todo */ x = 1;"], ["int todo = 1;", "while (todo != 0)", 's = "todo";'])
 
+    def test_hardcoded_cxx_standard(self):
+        import tempfile
+        files = {
+            # the top level CMakeLists.txt and the files it includes by path set the standard of the whole program
+            "CMakeLists.txt": 'project(p)\nset(CMAKE_CXX_STANDARD 17)\ninclude(cmake/settings.cmake)\ninclude(FetchContent)\n',
+            "cmake/settings.cmake": 'set(CMAKE_CXX_STANDARD 17)\n',
+            "cmake/FindTool.cmake": 'set(CMAKE_CXX_STANDARD 20)\n',
+            "dep/CMakeLists.txt": ('project(dep)\n'
+                                   'set(CMAKE_CXX_STANDARD 14)\n'
+                                   'set(CMAKE_CXX_STANDARD_REQUIRED ON)\n'
+                                   '# set(CMAKE_CXX_STANDARD 11)\n'
+                                   'set_target_properties(dep PROPERTIES CXX_STANDARD 14)\n'
+                                   'target_compile_options(dep PRIVATE -std=gnu++14 "-DX=#1")\n'
+                                   'target_compile_features(dep PUBLIC cxx_std_14)\n'),
+            # only a default: the build of the whole program can still set another one
+            "guarded/CMakeLists.txt": 'if(NOT DEFINED CMAKE_CXX_STANDARD)\n  set(CMAKE_CXX_STANDARD 14)\nendif()\n',
+        }
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in files.items():
+                os.makedirs(os.path.dirname(os.path.join(d, name)), exist_ok=True)
+                with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                    f.write(text)
+            rows = [line.split("|") for line in lines(run_script("oc_cpp_issues.py", [d]))]
+            found = sorted((os.path.relpath(row[3].rsplit(":", 1)[0], d).replace("\\", "/"), row[3].rsplit(":", 1)[1])
+                           for row in rows if row[5] == "hardcoded-cxx-standard")
+            self.assertEqual(found, [("cmake/FindTool.cmake", "1"), ("dep/CMakeLists.txt", "2"), ("dep/CMakeLists.txt", "5"),
+                                     ("dep/CMakeLists.txt", "6")])
+            descriptions = [row[7] for row in rows if row[5] == "hardcoded-cxx-standard"]
+            self.assertIn("target_compile_features(&lt;target&gt; PUBLIC cxx_std_14)", " ".join(descriptions))
+
     def assert_rule(self, rule, reported, not_reported, header=False):
         for line in reported:
             self.assertIn(rule, self.line_rules(line, header), line)

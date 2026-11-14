@@ -10,6 +10,8 @@
       also only in the code
     - misspelled-word: the words of wrong_word_list, anywhere in the file (code, comments and literals)
     - project rules: TreatWarningAsError and WarningLevel 4 in every configuration of a *proj file
+    - cmake rule: hardcoded-cxx-standard, a C++ standard set in a CMakeLists.txt or *.cmake file other than the top level
+      CMakeLists.txt of <path> and the files that it includes by path
 
     Files and directories listed in a .opencanaryignore file (.gitignore syntax) are skipped. Every issue is written
     to stdout as an OpenCanary issue line with source 'opencanary' and priority 99 (apply_team_priorities.py assigns
@@ -456,15 +458,66 @@ def check_project(projectname):
         report_issue(projectname, "0", "warning-level-not-4", "redflag", "Warning level is not set to 4")
 
 
-def get_projects_recursively(path):
-    result = []
+def get_build_files_recursively(path):
+    """the Visual Studio projects (*proj) and the CMake files (CMakeLists.txt, *.cmake) below path"""
+    projects = []
+    cmake_files = []
     for root, _dirs, files in gitignore_parser.walk(path, filenames=['.opencanaryignore']):
         for file in files:
             if file.endswith("proj"):
-                project = os.path.abspath(root + "\\" + file)
-                # print ("Found " + project)
-                result += [project]
+                projects.append(os.path.abspath(os.path.join(root, file)))
+            elif file == "CMakeLists.txt" or file.endswith(".cmake"):
+                cmake_files.append(os.path.abspath(os.path.join(root, file)))
+    return projects, cmake_files
+
+
+# set(CMAKE_CXX_STANDARD 14), the CXX_STANDARD 14 property of a target, or -std=c++14 / /std:c++14 in the flags
+CMAKE_CXX_STANDARD = re.compile(r"\b(?:set\s*\(\s*(CMAKE_CXX_STANDARD)|(CXX_STANDARD))\s+\"?(\d+)|[-/]std[=:](?:c|gnu)\+\+(\w+)", re.IGNORECASE)
+# if(NOT DEFINED CMAKE_CXX_STANDARD) or if(NOT CMAKE_CXX_STANDARD): the set() is a default, not a fixed standard
+CMAKE_CXX_STANDARD_GUARD = re.compile(r"\bNOT\s+(?:DEFINED\s+)?CMAKE_CXX_STANDARD\b", re.IGNORECASE)
+CMAKE_INCLUDE = re.compile(r"^\s*include\s*\(\s*\"?([^)\s\"]+)", re.IGNORECASE | re.MULTILINE)
+CMAKE_ROOT_VARIABLES = ("${CMAKE_CURRENT_SOURCE_DIR}", "${CMAKE_SOURCE_DIR}", "${PROJECT_SOURCE_DIR}", "${CMAKE_CURRENT_LIST_DIR}")
+
+
+def cmake_code(line):
+    """the line without its # comment ('#' inside a quoted string is not a comment)"""
+    quoted = False
+    for index, char in enumerate(line):
+        if char == '"' and (index == 0 or line[index - 1] != "\\"):
+            quoted = not quoted
+        elif char == "#" and not quoted:
+            return line[:index]
+    return line
+
+
+def top_level_cmake_files(rootpath):
+    """the top level CMakeLists.txt and the files that it include()s by path: where the standard of the whole program
+    belongs"""
+    top = os.path.join(rootpath, "CMakeLists.txt")
+    result = {os.path.normcase(top)}
+    if os.path.exists(top):
+        code = "\n".join(cmake_code(line) for line in read_lines(top))
+        for included in CMAKE_INCLUDE.findall(code):
+            for variable in CMAKE_ROOT_VARIABLES:
+                included = included.replace(variable, rootpath)
+            path = os.path.join(rootpath, included)
+            if os.path.isfile(path):
+                result.add(os.path.normcase(os.path.abspath(path)))
     return result
+
+
+def check_cmake_file(filename, report):
+    lines = [cmake_code(line) for line in read_lines(filename)]
+    guarded = any(CMAKE_CXX_STANDARD_GUARD.search(line) for line in lines)
+    for line_number, line in enumerate(lines, 1):
+        for match in CMAKE_CXX_STANDARD.finditer(line):
+            if match[1] and guarded:
+                continue
+            what = "set(CMAKE_CXX_STANDARD)" if match[1] else "the CXX_STANDARD property" if match[2] else "a -std flag"
+            level = match[3] or match[4]
+            report(filename, str(line_number), "hardcoded-cxx-standard", "redflag",
+                   f"the C++ standard is fixed with {what} in a part of the build, instead of once for the whole program; "
+                   f"state the minimum with target_compile_features(<target> PUBLIC cxx_std_{level})")
 
 
 def read_ignore_file(ignorefile, basepath):
@@ -484,7 +537,7 @@ def main():
     rootpath = os.path.abspath(args.path)
 
     eprint("checking folder", rootpath, "(recursively)")
-    projects = get_projects_recursively(rootpath)
+    projects, cmake_files = get_build_files_recursively(rootpath)
     for project in projects:
         # eprint("checking " + project)
         try:
@@ -496,6 +549,11 @@ def main():
             # eprint(info)                   # uncomment to debug parsing issues
             # maybe related: https://stackoverflow.com/questions/31390213/how-to-parse-an-xml-file-with-encoding-declaration-in-python
             report_issue(project, "0", "parse-error", "parse", "Could not parse project file")
+
+    top_level = top_level_cmake_files(rootpath)
+    for filename in cmake_files:
+        if os.path.normcase(filename) not in top_level:
+            check_cmake_file(filename, report_issue)
 
     headers, cpps = util.get_cpp_files_from_directory(rootpath)
     for filename in headers:
