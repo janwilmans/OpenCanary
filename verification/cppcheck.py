@@ -3,7 +3,8 @@
 
     Usage: cppcheck.py <path> [--basepath DIR]
            cppcheck.py cdb [--basepath DIR]
-      <path>          directory that cppcheck analyses recursively (on one core, so unusedFunction runs too)
+      <path>          directory that cppcheck analyses recursively, on every core (-j, with a temporary
+                      --cppcheck-build-dir so the whole program checks such as unusedFunction run too)
       cdb             instead of a directory: the compile database build_cppcheck/compile_commands.json in the
                       current directory, and ./suppressions.xml when it exists
       --basepath DIR  remove DIR from the start of the file names; without it the file names are as cppcheck prints
@@ -23,6 +24,7 @@ import argparse
 import os
 import shutil
 import sys
+import tempfile
 import traceback
 from subprocess import Popen, PIPE
 
@@ -33,8 +35,9 @@ cppcheck_cmd = os.environ.get("CPPCHECK") or shutil.which("cppcheck") or r'c:\Pr
 
 # tab separated: a file name can contain ':' (C:\...), and so can a message
 TEMPLATE = "--template={file}\\t{line}\\t{severity}\\t{id}\\t{message}"
-# one core: with -j cppcheck skips unusedFunction (unless it gets a --cppcheck-build-dir)
-OPTIONS = ['-q', '-DTEST', '-DTEST_F', TEMPLATE, '--enable=all']
+# every core; with -j cppcheck skips the whole program checks (unusedFunction) unless it gets a --cppcheck-build-dir,
+# execute_popen() gives it a new, empty one for every run (a cache kept between runs saved little, and can go stale)
+OPTIONS = ['-q', '-DTEST', '-DTEST_F', TEMPLATE, '--enable=all', f'-j{os.cpu_count() or 1}']
 
 # ids that are not reported: constStatement was a false positive (maybe caused by -DTEST), useStlAlgorithm not useful
 SKIPPED_IDS = {"constStatement", "useStlAlgorithm"}
@@ -78,14 +81,15 @@ def run_cppcheck_compile_db():
 
 
 def execute_popen(list_value):
-    try:
-        sub_process = Popen(list_value, stdout=PIPE, stderr=PIPE, universal_newlines=True, encoding="utf-8", errors="replace")
-    except FileNotFoundError:
-        eprint(f"cppcheck.py: cppcheck not found ({list_value[0]}), install it or set CPPCHECK to its path")
-        sys.exit(1)
-    (std_out, std_err) = sub_process.communicate()
-    sub_process.wait()
-    exitcode = sub_process.returncode
+    with tempfile.TemporaryDirectory(prefix="cppcheck-build-") as build_dir:
+        try:
+            sub_process = Popen(list_value + [f"--cppcheck-build-dir={build_dir}"], stdout=PIPE, stderr=PIPE,
+                                universal_newlines=True, encoding="utf-8", errors="replace")
+        except FileNotFoundError:
+            eprint(f"cppcheck.py: cppcheck not found ({list_value[0]}), install it or set CPPCHECK to its path")
+            sys.exit(1)
+        (std_out, std_err) = sub_process.communicate()
+        exitcode = sub_process.returncode
     return std_out, std_err, exitcode
 
 

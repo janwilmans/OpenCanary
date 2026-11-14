@@ -347,9 +347,11 @@ cppcheck.py <env.txt> <path> <basepath>     the older form, the environment file
 
 Runs cppcheck (the `CPPCHECK` environment variable, else `cppcheck` on the `PATH`, else
 `C:\Program Files\Cppcheck\cppcheck.exe`; when it is not found the script stops with exit code 1) with
-`-q -DTEST -DTEST_F --enable=all` and a tab separated template (`{file}`, `{line}`, `{severity}`, `{id}`,
-`{message}`; a file name such as `C:\...` and a message can contain `:`), and converts every reported line. It runs on
-one core: with `-j` cppcheck skips the checks that look at the whole program, such as `unusedFunction`.
+`-q -DTEST -DTEST_F --enable=all -j<cores>` and a tab separated template (`{file}`, `{line}`, `{severity}`, `{id}`,
+`{message}`; a file name such as `C:\...` and a message can contain `:`), and converts every reported line. With `-j`
+cppcheck only runs the checks that look at the whole program, such as `unusedFunction`, when it has a build directory,
+so every run gets a new, empty one (`--cppcheck-build-dir`) in the temp directory, which is removed afterwards. No cache
+is kept between runs: it saved little (28 s instead of 31 s on a 726k line code base) and could go stale.
 
 - cppcheck's stdout is passed to stderr. Lines of its stderr that are not in the template format are printed to stderr
   as `err:`. Messages with severity `information` are about cppcheck itself (an include file that it did not find, the
