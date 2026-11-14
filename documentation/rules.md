@@ -1,7 +1,7 @@
 # OpenCanary rules
 
 The rules that OpenCanary reports itself: `oc_cpp_issues.py` checks every line of the headers and sources (and the
-Visual Studio projects) for common C++ problems. This page explains, per rule, why it is reported and how to solve it.
+Visual Studio projects) for common C++ problems, `compile_flags.py` compares the flags in the compile database. This page explains, per rule, why it is reported and how to solve it.
 In the report, the rule links to its section here, and so does the light bulb before it (see `rules/links.txt`);
 every section has an anchor: `rules.md#manual-delete` for `manual-delete`.
 
@@ -63,6 +63,7 @@ with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The default 
 | [unnamed-lock](#unnamed-lock) | bug | a lock that is not a variable |
 | [suppressed-warning](#suppressed-warning) | redflag | `#pragma` that disables a compiler warning |
 | [empty-catch](#empty-catch) | redflag | `catch (...) {}` |
+| [inconsistent-compile-flags](#inconsistent-compile-flags) | bug | a target with another `-std` (or other ABI flags) than the rest |
 | [parse-error](#parse-error) | parse | file could not be read |
 
 ### make-unique-header
@@ -454,6 +455,30 @@ has a comment, which says that ignoring the exception is intended.
 An empty catch block swallows the exception: the error is not handled, not logged and not passed on, and the program
 continues in an unknown state. **Solve:** handle the error, log it, or let it propagate. When ignoring it is correct,
 catch the specific exception type and add a comment that says why.
+
+### inconsistent-compile-flags
+
+**A target that is compiled with other ABI relevant flags than the rest of the program.** Reported by
+`compile_flags.py` from `compile_commands.json`, once per target, setting and value, on the first source file of the
+target. It compares the language standard (`-std=c++NN`, `/std:c++NN`), the macros that change standard library types
+(`_GLIBCXX_USE_CXX11_ABI`, `_GLIBCXX_DEBUG`, `_ITERATOR_DEBUG_LEVEL`, `_FILE_OFFSET_BITS`, ... and the
+`*_CONFIG_SELECT_*` macros of the nonstd -lite libraries), the flags that change the layout of types (`-m32`,
+`-fpack-struct`, `/Zp`, `-fshort-enums`, ...) and the MSVC runtime library (`/MD`, `/MT`); the value that most
+translation units have is the norm. The exact list is in [details.md](details.md#compile_flagspy).
+
+When the same type has a different definition in two parts of one program, the program breaks the One Definition Rule
+(ODR), and its behavior is undefined. Neither the compiler nor the linker reports it, as the linker only compares
+names: the program crashes at random places, or the debugger steps through the code in strange ways. For example,
+variant-lite is `std::variant` under C++17 and its own implementation under C++14. A dependency that sets
+`CMAKE_CXX_STANDARD 14` in a C++17 build still compiles and links, but every type that it and the rest of the program
+build on `nonstd::variant` now has two different definitions. **Solve:** let the whole program use one value. For
+the language standard: remove the hardcoded standard from the target (see
+[hardcoded-cxx-standard](#hardcoded-cxx-standard)), let the library state the minimum it needs with
+`target_compile_features(<target> PUBLIC cxx_std_14)`, and set the standard once, for everything, where the whole
+program is built (the top level `CMakeLists.txt`, a preset, a toolchain file or the Conan profile).
+
+A library that arrives prebuilt is not in the compile database; GCC's `-Wodr` in an LTO build also checks those that
+were built with LTO, see [ci.md](ci.md#lto-builds).
 
 ### parse-error
 

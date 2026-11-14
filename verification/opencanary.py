@@ -5,8 +5,8 @@
     opencanary.py run [-c opencanary.toml]  parse, filter, prioritize and report according to the configuration
     opencanary.py <command> [args...]       run one stage, input/output is stdin/stdout like the scripts themselves
 
-    commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, interest, customize, links, prioritize, low-hanging,
-              sort, report, summary, metrics, environment, regression
+    commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, compile-flags, interest, customize, links, prioritize,
+              low-hanging, sort, report, summary, metrics, environment, regression
 """
 
 import argparse
@@ -21,6 +21,7 @@ COMMANDS = {
     "parse-msvc": "parse_msvc.py",
     "cpp-issues": "oc_cpp_issues.py",
     "cppcheck": "cppcheck.py",
+    "compile-flags": "compile_flags.py",
     "interest": "tr_interest.py",
     "customize": "tr_customize.py",
     "links": "apply_links.py",
@@ -35,7 +36,7 @@ COMMANDS = {
 }
 
 # stages that produce their output without reading stdin
-NO_STDIN_COMMANDS = {"cpp-issues", "cppcheck"}
+NO_STDIN_COMMANDS = {"cpp-issues", "cppcheck", "compile-flags"}
 
 STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative to this file.
 # use forward slashes in paths, also on Windows ("c:/project/src"): in TOML a backslash starts an escape sequence
@@ -45,6 +46,8 @@ STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative 
 #   format  gcc | msvc          the log file is parsed (gcc also handles clang output)
 #           cpp-issues          the directory is scanned for common C++ problems
 #           cppcheck            cppcheck analyses the directory (needs cppcheck, or set CPPCHECK to its path)
+#           compile-flags       compile_commands.json (or its build directory): targets with another language standard
+#                               or other ABI relevant flags than the rest, a cause of ODR violations
 #   source  name shown in the 'source' column (defaults to the format)
 [[input]]
 format = "gcc"
@@ -58,6 +61,10 @@ path = "build/gcc.log"
 # [[input]]
 # format = "cppcheck"
 # path = "."
+
+# [[input]]
+# format = "compile-flags"
+# path = "build/compile_commands.json"
 
 [rules]
 # all optional, shown with their defaults (the files in the verification/rules directory)
@@ -125,10 +132,10 @@ def run_pipeline(config, base):
                 data += run_stage(script("parse-" + fmt) + [source], f.read())
         elif fmt == "cpp-issues":
             data += run_stage(script("cpp-issues") + [location])
-        elif fmt == "cppcheck":
-            data += run_stage(script("cppcheck") + [location])
+        elif fmt in ("cppcheck", "compile-flags"):
+            data += run_stage(script(fmt) + [location])
         else:
-            raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc, cpp-issues or cppcheck")
+            raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc, cpp-issues, cppcheck or compile-flags")
 
     def rules_option(key):
         return ["--rules", path(rules[key])] if key in rules else []

@@ -6,7 +6,7 @@ first setup, read [getting_started.md](getting_started.md) first.
 - [The issue format](#the-issue-format)
 - [Rule files](#rule-files)
 - [opencanary.py, the entry point](#opencanarypy)
-- Gather: [parse_gcc.py](#parse_gccpy), [parse_msvc.py](#parse_msvcpy), [oc_cpp_issues.py](#oc_cpp_issuespy), [cppcheck.py](#cppcheckpy)
+- Gather: [parse_gcc.py](#parse_gccpy), [parse_msvc.py](#parse_msvcpy), [oc_cpp_issues.py](#oc_cpp_issuespy), [cppcheck.py](#cppcheckpy), [compile_flags.py](#compile_flagspy)
 - Transform: [tr_interest.py](#tr_interestpy), [tr_customize.py](#tr_customizepy), [apply_links.py](#apply_linkspy),
   [apply_team_priorities.py](#apply_team_prioritiespy), [apply_low_hanging_fruit.py](#apply_low_hanging_fruitpy),
   [sortby.py](#sortbypy)
@@ -120,10 +120,11 @@ opencanary.py -h | --help                show the usage
 | `interest` | `tr_interest.py` | | `environment` | `apply_environment.py` |
 | `customize` | `tr_customize.py` | | `regression` | `tr_regression.py` |
 | `prioritize` | `apply_team_priorities.py` | | `metrics` | `create_metrics.py` |
+| `compile-flags` | `compile_flags.py` | | | |
 
 `opencanary.py <command>` passes the remaining arguments to the script and returns its exit code. When a command that
 reads stdin is started from a terminal without redirected input it does not wait, it prints how to redirect and exits
-with code 1. `cpp-issues` and `cppcheck` do not read stdin.
+with code 1. `cpp-issues`, `cppcheck` and `compile-flags` do not read stdin.
 
 `init` refuses to overwrite an existing `opencanary.toml`.
 
@@ -133,8 +134,8 @@ All relative paths are relative to the directory of the configuration file.
 
 | Table | Key | Default | Meaning |
 |-------|-----|---------|---------|
-| `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues` or `cppcheck`; anything else stops the run |
-| | `path` | required | the log file (`gcc`, `msvc`) or the directory to scan (`cpp-issues`, `cppcheck`) |
+| `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues`, `cppcheck` or `compile-flags`; anything else stops the run |
+| | `path` | required | the log file (`gcc`, `msvc`), the directory to scan (`cpp-issues`, `cppcheck`) or `compile_commands.json` or its build directory (`compile-flags`) |
 | | `source` | the format | value for the source field (passed to the parser) |
 | `[rules]` | `interest` | `verification/rules/interest.txt` | rules for `tr_interest.py` |
 | | `customize` | `verification/rules/customize.txt` | rules for `tr_customize.py` |
@@ -157,7 +158,7 @@ needs Python 3.11+ or the `tomli` package.
 ### What `run` does
 
 1. For every `[[input]]`, in order, collect the issues:
-   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path`, `oc_cpp_issues.py <path>` or `cppcheck.py <path>`.
+   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path`, `oc_cpp_issues.py <path>`, `cppcheck.py <path>` or `compile_flags.py <path>`.
    The results are concatenated.
 2. `tr_interest.py [--rules <interest>] [--msvc]`
 3. `tr_customize.py [--rules <customize>] [--display-depth=N] [--reference-depth=N] [--msvc]`
@@ -371,6 +372,42 @@ so the parallel checks fail (`internalError`, failed to load `cosmetic.a1`). On 
 
 Without the include directories and the macros of the project cppcheck cannot parse every file; it reports that as
 `syntaxError` or `unknownMacro`. With `cdb` it gets them from the compile database.
+
+### compile_flags.py
+
+```
+compile_flags.py <compile_commands.json | build directory>
+```
+
+Finds a cause of violations of the One Definition Rule (ODR) that neither the compiler nor the linker reports: a
+target that is compiled with another language standard, or with other flags that change the layout or the identity of
+types, than the rest of the program. A library such as variant-lite is `std::variant` under C++17 and its own type
+under C++14, so a dependency built with C++14 in a C++17 program gives every type built on it two definitions. See
+[rules.md](rules.md#inconsistent-compile-flags).
+
+It reads the compile database (CMake writes it with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, for the Makefile and Ninja
+generators) and compares these settings of all C++ translation units (`.c` files, `-x c` and `/TC` are left out):
+
+| Setting | Arguments |
+|---------|-----------|
+| language standard | `-std=c++NN`, `-std=gnu++NN`, `/std:c++NN`; `gnu++17` and `c++17` are the same standard, without one it is `(default)` |
+| library ABI macros | `-D`/`-U` of `_GLIBCXX_USE_CXX11_ABI`, `_GLIBCXX_DEBUG`, `_GLIBCXX_DEBUG_PEDANTIC`, `_LIBCPP_ABI_VERSION`, `_LIBCPP_ABI_UNSTABLE`, `_LIBCPP_DEBUG`, `_ITERATOR_DEBUG_LEVEL`, `_HAS_ITERATOR_DEBUGGING`, `_SECURE_SCL`, `_FILE_OFFSET_BITS`, `_TIME_BITS`, `_USE_32BIT_TIME_T`, and every `*_CONFIG_SELECT_*` (the nonstd -lite libraries) |
+| layout flags | `-m32`/`-m64`/`-mx32`, `-fpack-struct`, `/Zp`, `-fshort-enums`, `-fshort-wchar`, `-malign-double`, `-fabi-version=N`, `/vd` |
+| runtime library | `/MD`, `/MDd`, `/MT`, `/MTd` |
+
+The arguments come from `arguments`, or from `command` split like a shell does (backslashes are taken as path
+separators). The last argument for a setting wins, as in the compiler; `-fno-...` and `-mno-...` are the default.
+Arguments in a response file (`@file`) are not read.
+
+Per setting, the value that most translation units have is the norm. Every target with another value gets one issue
+per setting and value, on its first source file (without a line number): **source** `opencanary`, **rule**
+`inconsistent-compile-flags`, **category** `bug`, priority 99 (`rules/priorities.txt` assigns it). The target is the
+name in CMake's `CMakeFiles/<target>.dir/` in the `output` of the entry (or its `-o`, `/Fo`), else the directory of the
+source file. The description says the value, the norm, and how many files have each, for example
+`language standard is C++14 for 12 files of dep, but C++17 for 340 other translation units: ...`.
+
+A library that arrives prebuilt is not in the compile database, so this does not find it; see
+[ci.md](ci.md#lto-builds) for a check that does.
 
 ---
 

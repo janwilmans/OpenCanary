@@ -489,7 +489,9 @@ class TestRulesDocumentation(unittest.TestCase):
         with open(os.path.join(HERE, "oc_cpp_issues.py"), encoding="utf-8") as f:
             # the rule of every report_issue() or report() call that is not commented out
             rules = set(re.findall(r'^\s*report(?:_issue)?\([^,]+, [^,]+, "([^"]+)"', f.read(), re.M))
+        import compile_flags
         import oc_cpp_issues
+        rules.add(compile_flags.RULE)
         rules |= {rule for rule, _category, _regex, _description in oc_cpp_issues.SOURCE_LINE_RULES + oc_cpp_issues.HEADER_LINE_RULES
                   + oc_cpp_issues.COMMENT_LINE_RULES + oc_cpp_issues.CODE_AND_COMMENT_LINE_RULES}
         self.assertTrue({"todo", "non-english-word", "empty-catch", "unnamed-lock"} <= rules, rules)
@@ -612,6 +614,22 @@ class TestRunner(unittest.TestCase):
                 rows = [line.split("|") for line in lines(f.read())]
             # the cast in the code, not the one in the comment
             self.assertEqual([(row[3].rsplit(":", 1)[1], row[5], row[6]) for row in rows], [("1", "c-style-pointer-cast", "modernize")])
+
+    @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
+    def test_run_compile_flags(self):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "compile_commands.json"), "w", encoding="utf-8") as f:
+                json.dump([TestCompileFlags.entry("/s/a.cc", "a", "-std=c++17"), TestCompileFlags.entry("/s/b.cc", "a", "-std=c++17"),
+                           TestCompileFlags.entry("/s/dep/c.cc", "dep", "-std=c++14")], f)
+            with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
+                f.write('[[input]]\nformat = "compile-flags"\npath = "compile_commands.json"\n')
+            run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
+            with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
+                rows = [line.split("|") for line in lines(f.read())]
+            # one issue of a rule is low hanging fruit (7)
+            self.assertEqual([(row[0], row[3], row[5]) for row in rows], [("7", "s/dep/c.cc", "inconsistent-compile-flags")])
 
     def test_single_stage_command(self):
         out = run_script("opencanary.py", ["sort"], TestStages.row("9", file="b.cc:1") + TestStages.row("1", file="a.cc:1"))
@@ -932,6 +950,67 @@ int n = 1'000; // (char*)x
                          ["a         c     \n", "' '     \r\n", "     g\n", 'x = " ";     \n', '#include "a.h"     \n'])
         self.assertEqual(oc.view(lines, masks, oc.COMMENT),
                          ["  /* b */   // d\n", "    /* e\r\n", "f */  \n", "         // t\n", "               // b\n"])
+
+
+class TestCompileFlags(unittest.TestCase):
+
+    @staticmethod
+    def entry(file, target, *flags, compiler="g++"):
+        return {"directory": "/build", "file": file,
+                "arguments": [compiler, *flags, "-o", f"{target}/CMakeFiles/{target}.dir/x.o", "-c", file]}
+
+    def run_flags(self, database):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            with open(os.path.join(d, "compile_commands.json"), "w", encoding="utf-8") as f:
+                json.dump(database, f)
+            # the build directory works as well as the file
+            return [line.split("|") for line in lines(run_script("compile_flags.py", [d]))]
+
+    def test_a_dependency_with_another_standard(self):
+        database = [self.entry(f"/src/app/{n}.cc", "app", "-std=c++17") for n in range(3)]
+        database += [self.entry("/src/dep/b.cpp", "dep", "-std=gnu++14"), self.entry("/src/dep/a.cpp", "dep", "-std=c++1y")]
+        # the C standard of a C source does not count
+        database.append(self.entry("/src/dep/c.c", "dep", "-std=c99"))
+        rows = self.run_flags(database)
+        self.assertEqual([(row[0], row[3], row[4], row[5], row[6]) for row in rows],
+                         [("99", "/src/dep/a.cpp", "opencanary", "inconsistent-compile-flags", "bug")])
+        self.assertTrue(rows[0][7].startswith("language standard is C++14 for 2 files of dep, but C++17 for 3 other"), rows[0][7])
+        self.assertIn("[5]{https://github.com/janwilmans/OpenCanary/blob/main/documentation/rules.md#inconsistent-compile-flags}", rows[0][8])
+
+    def test_the_same_standard_is_not_reported(self):
+        database = [self.entry("/src/a.cc", "a", "-std=c++17"), self.entry("/src/b.cc", "b", "-std=gnu++17"),
+                    self.entry("/src/c.cc", "c", "-std=c++1z", "-DNDEBUG", "-O2", "-Wall")]
+        self.assertEqual(self.run_flags(database), [])
+
+    def test_abi_macros_and_layout_flags(self):
+        import compile_flags
+        values = compile_flags.settings(["g++", "-D_GLIBCXX_USE_CXX11_ABI=0", "-D", "variant_CONFIG_SELECT_VARIANT=1",
+                                         "-DOTHER=1", "-fshort-enums", "-fno-short-enums", "-m32", "-U_GLIBCXX_DEBUG"])
+        self.assertEqual(values, {"language standard": "(default)", "_GLIBCXX_USE_CXX11_ABI": "0", "variant_CONFIG_SELECT_VARIANT": "1",
+                                  "enum size": "(default)", "data model": "-m32", "_GLIBCXX_DEBUG": "(not defined)"})
+        msvc = compile_flags.settings(["cl.exe", "/nologo", "/TP", "/std:c++20", "/MDd", "/Zp4", "/DFOO", "/D_ITERATOR_DEBUG_LEVEL=2"])
+        self.assertEqual(msvc, {"language standard": "C++20", "runtime library": "/MDd", "struct packing": "/Zp4",
+                                "_ITERATOR_DEBUG_LEVEL": "2"})
+
+    def test_macro_defined_in_one_target(self):
+        database = [self.entry("/src/app/a.cc", "app"), self.entry("/src/app/b.cc", "app"),
+                    self.entry("/src/dep/d.cc", "dep", "-Dvariant_CONFIG_SELECT_VARIANT=1")]
+        rows = self.run_flags(database)
+        self.assertEqual([(row[3], row[7].split(":")[0]) for row in rows],
+                         [("/src/dep/d.cc", "variant_CONFIG_SELECT_VARIANT is 1 for 1 file of dep, but (not defined) for 2 other translation units")])
+
+    def test_command_strings_and_targets(self):
+        import compile_flags
+        units = compile_flags.translation_units([
+            {"directory": "C:/b", "file": "w.cpp", "command": r"C:\PROGRA~1\cl.exe /TP /std:c++17 /FoCMakeFiles\win.dir\w.cpp.obj /c C:\s\w.cpp"},
+            {"directory": "/b", "file": "/s/lib/x.cc", "command": "g++ -std=c++14 -c /s/lib/x.cc"},
+            {"directory": "/b", "file": "/s/lib/y.c", "command": "gcc -x c++ -std=c++14 -c /s/lib/y.c"},
+            {"directory": "/b", "file": "/s/lib/z.cc", "command": "g++ -x c -c /s/lib/z.cc"}])
+        # without an output in a CMakeFiles/<target>.dir the target is the directory of the source
+        self.assertEqual([(target, file, values["language standard"]) for target, file, values in units],
+                         [("win", "C:/b/w.cpp", "C++17"), ("/s/lib", "/s/lib/x.cc", "C++14"), ("/s/lib", "/s/lib/y.c", "C++14")])
 
 
 class TestPype(unittest.TestCase):

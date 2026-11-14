@@ -43,6 +43,7 @@ Team specific behavior lives in plain text rule files, first matching line wins 
 - gcc / clang commandline warnings
 - msvc warnings
 - cppcheck issues
+- inconsistent compile flags in compile_commands.json (ODR violations)
 - sanitizer (ubsan, tsan, asan, etc) issues
 - clang-tidy
 - coverage results
@@ -101,7 +102,7 @@ These steps/stages are suggestions, you can design your own process flow, but th
 
 All scripts are in `verification/`, `opencanary.py run` applies them in this order:
 
-- Gather: `parse_gcc.py` (gcc and clang), `parse_msvc.py`, `cppcheck.py`, `oc_cpp_issues.py` (raw text search for common C++ problems, respects `.opencanaryignore`)
+- Gather: `parse_gcc.py` (gcc and clang), `parse_msvc.py`, `cppcheck.py`, `oc_cpp_issues.py` (raw text search for common C++ problems, respects `.opencanaryignore`), `compile_flags.py` (targets in `compile_commands.json` with another language standard or other ABI relevant flags, a cause of ODR violations)
 - `tr_interest.py`, remove what the team is not interested in (`rules/interest.txt`, `--msvc` normalizes paths). Replaces `tr_interest_cs.py`, `tr_interest_vc.py` and `filter_thirdparty.py`.
 - `tr_customize.py`, assign 'component' and 'team', make the path presentable and add the permalink (`rules/customize.txt`). Replaces `tr_customize_vc.py`.
 - `apply_links.py`, sets the link of the rule and the solution suggestion shown as an icon before the rule (`rules/links.txt`), by default a search for `<source> <rule>`
