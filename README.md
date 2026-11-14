@@ -35,7 +35,7 @@ Team specific behavior lives in plain text rule files, first matching line wins 
 - `rules/priorities.txt` priority (and category) per rule, **customize this**
 - `rules/interest.txt` lines the team is not interested in (3rd party, known noise)
 - `rules/customize.txt` component and team per path
-- `rules/links.txt` the link of each rule and an optional solution suggestion (an icon after the rule in the report)
+- `rules/links.txt` the link of each rule and an optional solution suggestion (an icon before the rule in the report)
 - `examples/` has larger example rule sets (CopperSpice, MSVC system headers, toolkit) and a project specific customizer
 
 ## Gather
@@ -66,7 +66,7 @@ that way issues are clustered per-file as good as possible.
 * [6] category - tool specific (ie. PARSE ERROR, COMPILE ERROR, ISSUE)
 * [7] description - the actual message that was reported
 * link - tool specific links where [n] refers back to a 0-indexed column (so 0=priority, 1=team etc.), and the named
-  link `[solution]{url}`: a page with a solution suggestion for the rule, shown as a small icon after the rule
+  link `[solution]{url}`: a page with a solution suggestion for the rule, shown as a small icon before the rule
 
 ## category and rule
 Its important that the rule is specific enough so advice can be offered on how to handle a particular issue. This is because the rule is what makes links to the Wiki pages unique. Conversely the category must be broad enough to group silimar issues together, but typically only issues with the same priority. However, the latter is not strictly required, specfic rules _can_ have a different priority from their category.
@@ -104,7 +104,7 @@ All scripts are in `verification/`, `opencanary.py run` applies them in this ord
 - Gather: `parse_gcc.py` (gcc and clang), `parse_msvc.py`, `cppcheck.py`, `oc_cpp_issues.py` (raw text search for common C++ problems, respects `.opencanaryignore`)
 - `tr_interest.py`, remove what the team is not interested in (`rules/interest.txt`, `--msvc` normalizes paths). Replaces `tr_interest_cs.py`, `tr_interest_vc.py` and `filter_thirdparty.py`.
 - `tr_customize.py`, assign 'component' and 'team', make the path presentable and add the permalink (`rules/customize.txt`). Replaces `tr_customize_vc.py`.
-- `apply_links.py`, sets the link of the rule and the solution suggestion shown as an icon after the rule (`rules/links.txt`), by default a search for `<source> <rule>`
+- `apply_links.py`, sets the link of the rule and the solution suggestion shown as an icon before the rule (`rules/links.txt`), by default a search for `<source> <rule>`
 - `apply_team_priorities.py`, assigns the priority field (`rules/priorities.txt`), **should be customized** based on your preferences
 - `apply_low_hanging_fruit.py`, raises the priority of types of issue that occur 20 times or less to 7 (`--threshold N`)
 - `sortby.py`, filters duplicates and sorts first by priority and then by filename

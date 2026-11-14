@@ -252,11 +252,11 @@ tbody tr.spacer td, tbody tr.loading td { padding: 0; border: 0; }
 tbody tr.loading td { padding: 40px; text-align: center; color: var(--muted); }
 td.team, td.component, td.source, td.category { color: var(--muted); }
 td.file { font-family: var(--mono); font-size: 12.5px; }
-/* cut long paths at the start, the file name and line number at the end matter most */
-tbody tr:not(.expanded) td.file { direction: rtl; text-align: left; }
+/* right aligned, so the file names line up; long paths are cut at the start, the file name and line number matter most */
+tbody tr:not(.expanded) td.file { direction: rtl; text-align: right; }
 td.file .path { direction: ltr; unicode-bidi: isolate; }
 td.rule span { padding: 1px 6px; border-radius: 4px; background: var(--surface-2); font-family: var(--mono); font-size: 12.5px; }
-/* the solution icon stays visible after a long rule name, the name is cut instead */
+/* the solution icon stays visible before a long rule name, the name is cut instead */
 td.rule .rule-cell { display: flex; align-items: center; gap: 4px; min-width: 0; padding: 0; background: none; }
 td.rule .rule-cell > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 td.rule a.solution { flex: none; display: inline-flex; color: var(--accent); }
@@ -414,7 +414,7 @@ def get_script_section():
   // sorting and filtering use the number)
   const LOW_HANGING = '/*LOW_HANGING*/';
 
-  // a light bulb, after the rule of an issue with a solution suggestion ([solution]{url} link)
+  // a light bulb, before the rule of an issue with a solution suggestion ([solution]{url} link)
   const SOLUTION_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
     'stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 22h4"/>' +
     '<path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg>';
@@ -467,7 +467,7 @@ def get_script_section():
         icon.setAttribute('aria-label', icon.title);
         icon.innerHTML = SOLUTION_ICON;
         const cellContent = element('span', 'rule-cell');
-        cellContent.append(content, icon);
+        cellContent.append(icon, content);
         content = cellContent;
       }
       cell.append(content);

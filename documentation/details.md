@@ -45,7 +45,7 @@ priority|team|component|fileref|source|rule|category|description|links
 | 5 | rule | The tool's name for the check, e.g. `C4701`, `sign-compare`, `manual-delete`. | parsers | |
 | 6 | category | Broad group, e.g. `warning`, `redflag`, `ub`. | parsers | `apply_team_priorities.py` |
 | 7 | description | The message, HTML-escaped (`&`, `<`, `>`, `"`, `'`). | parsers | |
-| 8 | links | `[n]{url}` repeated; `n` is the field the link belongs to. `[solution]{url}` is a page with a solution suggestion for the rule, the report shows it as a small icon after the rule. | parsers | `tr_customize.py` (`[3]`) |
+| 8 | links | `[n]{url}` repeated; `n` is the field the link belongs to. `[solution]{url}` is a page with a solution suggestion for the rule, the report shows it as a small icon before the rule. | parsers | `tr_customize.py` (`[3]`) |
 
 Details:
 
@@ -465,7 +465,7 @@ For every issue with a rule, matched against the **rule** field:
 - **rule link** (`[5]`): the first matching `link:<url>` rule sets it. Without a match the link of the parser is kept,
   and an issue without one gets `https://duckduckgo.com/?q=!ducky+<source>+<rule>`.
 - **solution link** (`[solution]`): the first matching `solution:<url>` rule sets it; the report shows it as a small
-  light bulb after the rule, a link to a page with a solution suggestion. Without a match there is none.
+  light bulb before the rule, a link to a page with a solution suggestion. Without a match there is none.
 
 In the url `<source>` and `<rule>` are replaced by the url encoded source and rule, `<anchor>` by the anchor GitHub and
 GitLab give a markdown heading with the rule: lowercase, only letters, digits, `-` and `_` (`### C4100` gets `#c4100`,

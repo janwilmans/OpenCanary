@@ -2,7 +2,7 @@
 
 The rules that OpenCanary reports itself: `oc_cpp_issues.py` checks every line of the headers and sources (and the
 Visual Studio projects) for common C++ problems. This page explains, per rule, why it is reported and how to solve it.
-In the report, the rule links to its section here, and so does the light bulb after it (see `rules/links.txt`);
+In the report, the rule links to its section here, and so does the light bulb before it (see `rules/links.txt`);
 every section has an anchor: `rules.md#manual-delete` for `manual-delete`.
 
 Rules are named like the clang warnings (lowercase words separated by `-`), but never with the name of a compiler
