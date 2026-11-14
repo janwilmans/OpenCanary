@@ -1,7 +1,7 @@
 # rule and solution links: first matching line wins, the text that is matched is the rule name (as in priorities.txt)
 #
 # format:  link:<url> <matcher>...      the link of the rule (the rule column in the report)
-#          solution:<url> <matcher>...  a page with a solution suggestion, shown as an icon after the rule
+#          solution:<url> <matcher>...  a page with a solution suggestion, shown as an icon before the rule
 #   =text   rule equals text
 #   ~text   rule contains text
 #   ?regex  rule matches the regular expression
