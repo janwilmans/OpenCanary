@@ -55,7 +55,7 @@ Details:
   quotes from each field. A line that does not have nine fields is reported on stderr
   (`assertion failed: broken structured CSV`) but is still processed.
 - In the report the `[3]` link makes the file clickable and `[5]` makes the rule clickable; any field can carry a link.
-- Special priorities: `7` low hanging fruit (`apply_low_hanging_fruit.py`, the report shows it as `LOW`), `99`
+- Special priorities: `7` low hanging fruit (`apply_low_hanging_fruit.py`, the report shows it as a blue `FIX`), `99`
   unassigned (no priority rule matched yet, also what the parsers, `cppcheck.py` and `oc_cpp_issues.py` write).
 - Placeholders in double brackets are filled in later by `apply_environment.py`, see
   [apply_environment.py](#apply_environmentpy) for the list.
@@ -549,7 +549,7 @@ e-mail attachment. It is well-formed XML.
   stops the script with `REPORT ERROR`.
 - **Priority bands**: *Fix now* (priority ≤ 10), *Likely bug* (11–50), *Wrong approach* (51–75), *Style* (76 and
   higher, and non-numeric priorities). The summary cards show the count per band.
-- The table shows priority `7`, the low hanging fruit of `apply_low_hanging_fruit.py`, as `LOW`; only the text
+- The table shows priority `7`, the low hanging fruit of `apply_low_hanging_fruit.py`, as a blue `FIX`; only the text
   changes, sorting and filtering use the number.
 - The records are stored as gzip compressed, base64 encoded JSON blocks of 4000 issues; the browser unpacks them with
   `DecompressionStream` and renders only the rows in view, so reports with tens of thousands of issues stay fast.

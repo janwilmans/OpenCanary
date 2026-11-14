@@ -263,6 +263,7 @@ td.rule a.solution svg { width: 15px; height: 15px; }
   background: var(--tier-soft); color: var(--tier); font-weight: 700; font-size: 12.5px;
 }
 .badge a { color: inherit; }
+.badge.fix { background: var(--accent-soft); color: var(--accent); }  /* the low hanging fruit priority, shown as FIX */
 .empty-message { margin: 0; padding: 40px; text-align: center; color: var(--muted); }
 .notice { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: var(--t2-soft); color: var(--text); }
 footer { padding: 16px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
@@ -406,7 +407,7 @@ def get_script_section():
     return low;
   }
 
-  // apply_low_hanging_fruit.py gives a rule with few issues this priority, the table shows it as LOW (only the text:
+  // apply_low_hanging_fruit.py gives a rule with few issues this priority, the table shows it as a blue FIX (only the text:
   // sorting and filtering use the number)
   const LOW_HANGING = '/*LOW_HANGING*/';
 
@@ -442,16 +443,16 @@ def get_script_section():
       const name = columns[column];
       const cell = element('td', name);
       const lowHanging = name === 'prio' && value.trim() === LOW_HANGING;
-      const text = lowHanging ? 'LOW' : value;
+      const text = lowHanging ? 'FIX' : value;
       let content = document.createTextNode(text);
       const link = record.links[column];
       if (link && !/^\s*javascript:/i.test(link)) {
         content = element('a', '', text);
         content.href = link;
       }
-      if (lowHanging) cell.title = 'Low hanging fruit: priority ' + LOW_HANGING + ', a rule with only a few issues';
+      if (lowHanging) cell.title = 'Low hanging fruit (priority ' + LOW_HANGING + '): a rule with only a few issues, fix these first';
       if (name === 'prio' || name === 'file' || (name === 'rule' && value)) {
-        const wrapper = element('span', { prio: 'badge', file: 'path' }[name] || '');
+        const wrapper = element('span', { prio: lowHanging ? 'badge fix' : 'badge', file: 'path' }[name] || '');
         wrapper.append(content);
         content = wrapper;
       }
