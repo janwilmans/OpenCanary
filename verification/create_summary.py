@@ -145,6 +145,17 @@ def create_top_table(issues):
     return "".join(result) + "</table>\n"
 
 
+# visible text, not tooltips: classic Outlook (Word) ignores the title attribute
+PER_RULE_EXPLANATION = (
+    f'<p style="margin: 0 0 8px; {FONT} color: #667085; max-width: 900px;">'
+    '<b>Total</b> is the number of issues of the rule; <b>Issues</b> splits that total per team, component and category, '
+    'so the two are the same when all issues of the rule have the same team, component and category. '
+    '<b>Description</b> and <b>File</b> are an example: those of the first issue of the rule. When the rule has one issue '
+    'that is all there is, otherwise the other issues can be about different code. For example, a Total of 2 for '
+    "\"identifier '_example_' is reserved because it starts with '_' at global scope\" does not mean that _example_ "
+    "is used twice: the other issue can be about a different identifier that starts with '_'.</p>\n")
+
+
 def create_summary(issues, report_url=""):
     rules = group(issues)
     total = len(issues)
@@ -170,6 +181,7 @@ def create_summary(issues, report_url=""):
     top = top_issues(issues)
     result.append(heading(f"Top {len(top)} issues") + create_top_table(top))
     result.append(heading("Issues per rule"))
+    result.append(PER_RULE_EXPLANATION)
     result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n')
     # 'Total' is the number of issues of the rule, the order of the rules; 'Issues' the number per team, component and
     # category; the description and the file are those of the first issue of the rule, an example

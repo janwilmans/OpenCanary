@@ -609,7 +609,9 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
   issues. Columns: priority, source, rule, total, description (example), file (example), team, component, category and
   issues; the description and the file are those of the first issue of the rule, hence "(example)". The directories
   that all example files share are left out, as in the top 10. There are no column tooltips: classic Outlook renders
-  the e-mail with Word, which ignores the `title` attribute.
+  the e-mail with Word, which ignores the `title` attribute. A paragraph above the table explains the Total, Issues,
+  Description and File columns instead, including that the example is one issue of the rule: a total of 2 for
+  "identifier '_example_' is reserved ..." can be two different identifiers.
 - The rows of one rule are grouped. The rule's **priority** (all distinct priorities, comma separated, if there are
   several), its **sources** (all of them, comma separated: gcc and clang both have `sign-compare`), its **name**, its **total** number of issues and the **description** and the **file** (with its full path
   and link) of its first issue (the most important one, as the input is sorted) are shown once, in cells that span the

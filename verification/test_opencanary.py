@@ -227,6 +227,15 @@ class TestSummary(unittest.TestCase):
         self.assertIn('<a href="[[permalink-prefix]]/b.cc#L7"', summary)
         self.assertNotIn("https://rule", summary)
 
+    def test_explains_the_columns_per_rule(self):
+        summary = run_script("create_summary.py", stdin=self.row("5", "first", "core", "c", "w"))
+        self.assertTrue(is_valid_xml(summary))
+        explanation = summary.index("<b>Total</b> is the number of issues of the rule")
+        self.assertTrue(summary.index("Issues per rule") < explanation < summary.index("Description (example)"))
+        self.assertIn("<b>Description</b> and <b>File</b> are an example", summary)
+        # not shown without issues, there is no table then
+        self.assertNotIn("<b>Total</b>", run_script("create_summary.py", stdin=""))
+
     def test_leaves_out_the_shared_directories(self):
         import create_summary
         files = ["src/infrastructure/network/src/a.cc:85", "src/infrastructure/dip/src/b.cc:19"]
