@@ -1052,6 +1052,20 @@ class TestStages(unittest.TestCase):
         self.assertEqual(vars(cppcheck.parse_args(["env.txt", "src", "base"])), {"path": "src", "basepath": "base"})
         self.assertEqual(vars(cppcheck.parse_args(["src"])), {"path": "src", "basepath": None})
 
+    def test_cppcheck_runs_in_parallel_only_where_file_names_are_case_sensitive(self):
+        import cppcheck
+        self.assertEqual(cppcheck.PARALLEL, sys.platform not in ("win32", "darwin"))
+        original = cppcheck.PARALLEL
+        try:
+            cppcheck.PARALLEL = True
+            options = cppcheck.parallel_options("build")
+            self.assertTrue(options[0].startswith("-j"))
+            self.assertEqual(options[1], "--cppcheck-build-dir=build")
+            cppcheck.PARALLEL = False
+            self.assertEqual(cppcheck.parallel_options("build"), [])
+        finally:
+            cppcheck.PARALLEL = original
+
     @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
     @unittest.skipUnless(__import__("cppcheck").cppcheck_cmd and __import__("shutil").which(__import__("cppcheck").cppcheck_cmd),
                          "needs cppcheck")
