@@ -45,7 +45,8 @@ STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative 
 # one [[input]] table for every log or location to analyse
 #   format  gcc | msvc          the log file is parsed (gcc also handles clang output)
 #           cpp-issues          the directory is scanned for common C++ problems
-#           cppcheck            cppcheck analyses the directory (needs cppcheck, or set CPPCHECK to its path)
+#           cppcheck            cppcheck analyses the directory, or compile_commands.json (or its build directory)
+#                               with its flags (needs cppcheck, or set CPPCHECK to its path)
 #           compile-flags       compile_commands.json (or its build directory): targets with another language standard
 #                               or other ABI relevant flags than the rest, a cause of ODR violations
 #   source  name shown in the 'source' column (defaults to the format)

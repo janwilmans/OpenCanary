@@ -1202,6 +1202,24 @@ class TestStages(unittest.TestCase):
         finally:
             cppcheck.PARALLEL = original
 
+    def test_cppcheck_finds_the_compile_database_and_leaves_out_missing_files(self):
+        import cppcheck
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            db = os.path.join(d, "compile_commands.json")
+            with open(os.path.join(d, "a.cpp"), "w", encoding="utf-8") as f:
+                f.write("int a;\n")
+            with open(db, "w", encoding="utf-8") as f:
+                f.write("[]")
+            self.assertEqual(cppcheck.compile_db_path(d), db)
+            self.assertEqual(cppcheck.compile_db_path(db), db)
+            self.assertIsNone(cppcheck.compile_db_path(os.path.join(d, "src")))
+            database = [{"directory": d, "file": "a.cpp"},
+                        {"directory": d, "file": os.path.join(d, "a_autogen", "mocs_compilation.cpp")}]
+            kept, missing = cppcheck.existing_entries(database)
+        self.assertEqual(kept, database[:1])
+        self.assertEqual(missing, [cppcheck.normpath(os.path.join(d, "a_autogen", "mocs_compilation.cpp"))])
+
     @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
     @unittest.skipUnless(__import__("cppcheck").cppcheck_cmd and __import__("shutil").which(__import__("cppcheck").cppcheck_cmd),
                          "needs cppcheck")

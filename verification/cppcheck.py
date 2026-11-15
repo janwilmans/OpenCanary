@@ -3,14 +3,19 @@
 
     Usage: cppcheck.py <path> [--basepath DIR]
            cppcheck.py cdb [--basepath DIR]
-      <path>          directory that cppcheck analyses recursively; on Linux on every core (-j, with a temporary
-                      --cppcheck-build-dir so the whole program checks such as unusedFunction run too), on Windows
-                      and macOS on one core (file names that only differ in case clash in a build directory there)
-      cdb             instead of a directory: the compile database build_cppcheck/compile_commands.json in the
-                      current directory, and ./suppressions.xml when it exists
+      <path>          directory that cppcheck analyses recursively, or a compile_commands.json (or the build directory
+                      that contains it) whose translation units cppcheck analyses with their flags; on Linux on every
+                      core (-j, with a temporary --cppcheck-build-dir so the whole program checks such as
+                      unusedFunction run too), on Windows and macOS on one core (file names that only differ in case
+                      clash in a build directory there)
+      cdb             the compile database build_cppcheck/compile_commands.json in the current directory, and
+                      ./suppressions.xml when it exists
       --basepath DIR  remove DIR from the start of the file names; without it the file names are as cppcheck prints
                       them (absolute for <path>), like the compiler logs, so tr_customize.py --reference-depth
                       handles both the same way
+
+    cppcheck stops when a file in the compile database does not exist, such as the generated file of a target that
+    was not built (mocs_compilation.cpp of Qt's AUTOMOC); those entries are left out, with a warning.
 
     The older form cppcheck.py <env.txt> <path> <basepath> still works (the environment file is not used).
     The CPPCHECK environment variable selects the cppcheck binary, else cppcheck on the PATH, else
@@ -22,6 +27,7 @@
 """
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -78,15 +84,46 @@ def parse(msg, basepath=""):
     report_issue(filename, line, rule, message, "", severity)
 
 
+def compile_db_path(path):
+    """the compile database that path names, or None when path is a directory to analyse"""
+    if os.path.isfile(path):
+        return path
+    candidate = os.path.join(path, "compile_commands.json")
+    return candidate if os.path.isfile(candidate) else None
+
+
+def entry_file(entry):
+    return os.path.join(entry.get("directory", ""), entry["file"])
+
+
+def existing_entries(database):
+    """the entries of the compile database whose file exists, and the files that do not"""
+    kept, missing = [], []
+    for entry in database:
+        (kept if os.path.isfile(entry_file(entry)) else missing).append(entry)
+    return kept, [normpath(entry_file(entry)) for entry in missing]
+
+
 def run_cppcheck(path):
+    db_path = compile_db_path(path)
+    if db_path:
+        return run_cppcheck_compile_db(db_path, [])
     return execute_popen([cppcheck_cmd, os.path.realpath(path)] + OPTIONS)
 
 
-def run_cppcheck_compile_db():
-    list_value = [cppcheck_cmd] + OPTIONS + ['--project=build_cppcheck/compile_commands.json']
-    if os.path.exists('./suppressions.xml'):
-        list_value += ['--suppress-xml=./suppressions.xml']
-    return execute_popen(list_value)
+def run_cppcheck_compile_db(db_path='build_cppcheck/compile_commands.json', extra=None):
+    if extra is None:
+        extra = ['--suppress-xml=./suppressions.xml'] if os.path.exists('./suppressions.xml') else []
+    with open(db_path, encoding="utf-8") as f:
+        kept, missing = existing_entries(json.load(f))
+    if missing:
+        eprint(f"cppcheck.py: {len(missing)} file(s) in {normpath(db_path)} do not exist and are not analysed (not built?), "
+               f"such as {missing[0]}")
+    with tempfile.TemporaryDirectory(prefix="cppcheck-db-") as db_dir:
+        filtered = os.path.join(db_dir, "compile_commands.json")
+        with open(filtered, "w", encoding="utf-8") as f:
+            json.dump(kept, f)
+        return execute_popen([cppcheck_cmd] + OPTIONS + extra + ['--project=' + filtered])
 
 
 def execute_popen(list_value):
@@ -110,7 +147,7 @@ def parse_args(argv):
     if len(argv) == 3 and not any(arg.startswith("-") for arg in argv):
         return argparse.Namespace(path=argv[1], basepath=argv[2])  # the older form: <env.txt> <path> <basepath>
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("path", help="directory to analyse, or cdb for the compile database")
+    parser.add_argument("path", help="directory to analyse, compile_commands.json or its build directory, or cdb")
     parser.add_argument("--basepath", help="remove this directory from the start of the file names")
     return parser.parse_args(argv)
 

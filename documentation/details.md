@@ -135,7 +135,7 @@ All relative paths are relative to the directory of the configuration file.
 | Table | Key | Default | Meaning |
 |-------|-----|---------|---------|
 | `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues`, `cppcheck` or `compile-flags`; anything else stops the run |
-| | `path` | required | the log file (`gcc`, `msvc`), the directory to scan (`cpp-issues`, `cppcheck`) or `compile_commands.json` or its build directory (`compile-flags`) |
+| | `path` | required | the log file (`gcc`, `msvc`), the directory to scan (`cpp-issues`, `cppcheck`) or `compile_commands.json` or its build directory (`compile-flags`, `cppcheck`) |
 | | `source` | the format | value for the source field (passed to the parser) |
 | | `macros` | none | `compile-flags` only: macros (globs) to compare as well, `--macro` of `compile_flags.py` |
 | | `ignore_settings` | none | `compile-flags` only: settings not to compare, `--ignore-setting` |
@@ -354,7 +354,7 @@ cppcheck.py <env.txt> <path> <basepath>     the older form, the environment file
 
 | Argument | Description |
 |----------|-------------|
-| `<path>` | Directory that cppcheck analyses recursively. |
+| `<path>` | Directory that cppcheck analyses recursively, or a `compile_commands.json` (or the build directory that contains it): cppcheck then analyses its translation units with their include paths and macros. |
 | `cdb` | Instead of a directory: use the compile database `build_cppcheck/compile_commands.json` in the current directory, and `./suppressions.xml` when it exists. |
 | `--basepath DIR` | Optional. Removed from the start of every file name, so paths are relative to it. Without it the file names are as cppcheck prints them (absolute for `<path>`), like the compiler logs, so `tr_customize.py --reference-depth` treats them the same. |
 
@@ -370,6 +370,10 @@ Windows and macOS cppcheck runs on one core without a build directory: it names 
 source files, and on a file system that ignores case two sources such as `cosmetic.cc` and `Cosmetic.cc` share one,
 so the parallel checks fail (`internalError`, failed to load `cosmetic.a1`). On a 726k line code base: 4 s on Linux
 (8 cores), 110 s on Windows.
+
+cppcheck stops without checking anything when a file in a compile database does not exist ("failed to load project"),
+such as the `mocs_compilation.cpp` that Qt's AUTOMOC generates for a target that was not built. Those entries are left
+out of a copy of the database that cppcheck gets, and a warning on stderr says how many, with the first one.
 
 - cppcheck's stdout is passed to stderr. Lines of its stderr that are not in the template format are printed to stderr
   as `err:`. Messages with severity `information` are about cppcheck itself (an include file that it did not find, the
