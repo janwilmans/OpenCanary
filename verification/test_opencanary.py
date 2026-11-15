@@ -198,15 +198,15 @@ class TestSummary(unittest.TestCase):
         # rules by number of issues (fewest first), then name; within a rule by count; the first description of each rule;
         # all sources of a rule
         self.assertEqual(self.table(summary), [
-            ["Prio", "Source", "Rule", "Total", "Description (example)", "File (example)", "Team", "Component", "Category", "Issues"],
-            ["7, 9", "src", "b<ad", "2", " ".join(["word"] * 20) + "…", "a.cc:1", "(none)", "(none)", "(none)", "2"],
-            ["10", "clang-cl, src", "C4456", "2", "d", "a.cc:1", "net", "x", "warning", "2"],
-            ["45", "src", "manual-delete", "5", "later", "a.cc:1", "gui", "CsGui", "redflag", "2"],
+            ["Prio", "Source", "Rule", "Total", "Description (example)", "Team", "Component", "Category", "Issues"],
+            ["7, 9", "src", "b<ad", "2", " ".join(["word"] * 20) + "…", "(none)", "(none)", "(none)", "2"],
+            ["10", "clang-cl, src", "C4456", "2", "d", "net", "x", "warning", "2"],
+            ["45", "src", "manual-delete", "5", "later", "gui", "CsGui", "redflag", "2"],
             ["core", "CsCore", "redflag", "3"],
-            ["", "", "Total", "9", "", "", "", "", "", "9"],
+            ["", "", "Total", "9", "", "", "", "", "9"],
         ])
         self.assertNotIn("#f1f3f6", summary)
-        self.assertEqual(summary.count('<th align='), 10 + 6)   # both tables have the header in the color of the total line
+        self.assertEqual(summary.count('<th align='), 9 + 6)   # both tables have the header in the color of the total line
         self.assertEqual(summary.count('<th align='), summary.count('<th align="left" valign="top" bgcolor="#e8efff"')
                          + summary.count('<th align="right" valign="top" bgcolor="#e8efff"'))
         self.assertIn('rowspan="2"', summary)
@@ -232,7 +232,16 @@ class TestSummary(unittest.TestCase):
         self.assertTrue(is_valid_xml(summary))
         explanation = summary.index("<b>Total</b> is the number of issues of the rule")
         self.assertTrue(summary.index("Issues per rule") < explanation < summary.index("Description (example)"))
-        self.assertIn("<b>Description</b> and <b>File</b> are an example", summary)
+        self.assertIn("<b>Description</b> is an example", summary)
+
+    def test_description_per_rule_links_to_the_file(self):
+        data = self.row("5", "first", "core", "c", "w", "x &lt; y", "src/b.cc:7", "[3]{[[permalink-prefix]]/src/b.cc#L7}")
+        data += self.row("6", "other", "core", "c", "w", "no link", "c.cc:2")
+        summary = run_script("create_summary.py", stdin=data)
+        self.assertTrue(is_valid_xml(summary))
+        per_rule = summary[summary.index("Issues per rule"):]
+        self.assertIn('<a href="[[permalink-prefix]]/src/b.cc#L7" title="src/b.cc:7" style="color: #1a56db;">x &lt; y</a>', per_rule)
+        self.assertIn(">no link</td>", per_rule)
         # not shown without issues, there is no table then
         self.assertNotIn("<b>Total</b>", run_script("create_summary.py", stdin=""))
 
@@ -253,8 +262,7 @@ class TestSummary(unittest.TestCase):
         summary = run_script("create_summary.py", stdin=data)
         self.assertEqual([row[4] for row in self.table(summary, 0)[1:]], ["src/net/a.cc:1", "src/dip/b.cc:2"])
         self.assertIn('title="home/me/project/src/net/a.cc:1"', summary)   # the full path is the tooltip
-        # the table per rule leaves out the directories that its example files share, too
-        self.assertEqual([row[5] for row in self.table(summary)[1:3]], ["src/net/a.cc:1", "src/dip/b.cc:2"])
+        # the description in the table per rule links to the file, with the full path as its tooltip as well
         self.assertEqual(summary.count('title="home/me/project/src/net/a.cc:1"'), 2)
 
     def test_report_link(self):

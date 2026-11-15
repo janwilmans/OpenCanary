@@ -678,15 +678,14 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
   links still contain `[[permalink-prefix]]`; pipe the summary through `apply_environment.py` to fill it in, as
   `opencanary.py run` does.
 - **Issues per rule**: a table with a row per combination of rule, team, component and category, with the number of
-  issues. Columns: priority, source, rule, total, description (example), file (example), team, component, category and
-  issues; the description and the file are those of the first issue of the rule, hence "(example)". The directories
-  that all example files share are left out, as in the top 10. There are no column tooltips: classic Outlook renders
-  the e-mail with Word, which ignores the `title` attribute. A paragraph above the table explains the Total, Issues,
-  Description and File columns instead, including that the example is one issue of the rule: a total of 2 for
+  issues. Columns: priority, source, rule, total, description (example), team, component, category and issues; the
+  description is that of the first issue of the rule, hence "(example)", and links to the file of that issue (the file
+  is its tooltip). There are no column tooltips: classic Outlook renders the e-mail with Word, which ignores the
+  `title` attribute. A paragraph above the table explains the Total, Issues and Description columns instead, including that the example is one issue of the rule: a total of 2 for
   "identifier '_example_' is reserved ..." can be two different identifiers.
 - The rows of one rule are grouped. The rule's **priority** (all distinct priorities, comma separated, if there are
-  several), its **sources** (all of them, comma separated: gcc and clang both have `sign-compare`), its **name**, its **total** number of issues and the **description** and the **file** (with its full path
-  and link) of its first issue (the most important one, as the input is sorted) are shown once, in cells that span the
+  several), its **sources** (all of them, comma separated: gcc and clang both have `sign-compare`), its **name**, its **total** number of issues and the **description** of its first issue (the most
+  important one, as the input is sorted), linked to the file of that issue, are shown once, in cells that span the
   group. The description is
   cut at the last space before 100 characters and ends with `…`.
 - Rules are ordered by their total number of issues (fewest first, the Total column), then by name (ignoring case). Rows within a rule by number of
