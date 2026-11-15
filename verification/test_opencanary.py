@@ -718,6 +718,22 @@ class TestCppIssues(unittest.TestCase):
             descriptions = [row[7] for row in rows if row[5] == "hardcoded-cxx-standard"]
             self.assertIn("target_compile_features(&lt;target&gt; PUBLIC cxx_std_14)", " ".join(descriptions))
 
+    def test_file_name_case_clash(self):
+        import oc_cpp_issues
+        found = []
+        clashing = ["src/liba/include/util/header.h", "src/libb/include/util/Header.h", "src/libb/include/Util/Header.h",
+                    "src/libb/include/Util/header.h", "a/Foo.cc", "a/foo.cc"]
+        not_clashing = ["src/libc/include/util/other.h", "src/libd/include/util/other.h",  # spelled the same
+                        "a/cosmetic.cc", "b/Cosmetic.cc",  # another directory
+                        "x/util/view.h", "x/Utils/View.h"]  # another directory name
+        files = [os.path.join("root", *name.split("/")) for name in clashing + not_clashing]
+        oc_cpp_issues.check_file_name_case(files, "root", lambda *issue: found.append(issue))
+        self.assertEqual([(os.path.relpath(filename, "root").replace("\\", "/"), line, rule) for filename, line, rule, _, _ in found],
+                         [(name, "1", "file-name-case-clash") for name in clashing])
+        self.assertEqual(found[0][4], "util/header.h only differs in case from src/libb/include/Util/Header.h, "
+                         "src/libb/include/Util/header.h, src/libb/include/util/Header.h; a file system that ignores case "
+                         "(Windows, macOS) cannot tell them apart")
+
     def assert_rule(self, rule, reported, not_reported, header=False):
         for line in reported:
             self.assertIn(rule, self.line_rules(line, header), line)

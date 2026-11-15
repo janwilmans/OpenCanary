@@ -334,6 +334,12 @@ that it `include()`s by path (relative to `<path>`, or starting with `${CMAKE_SO
 |------|---------------|----------|
 | `hardcoded-cxx-standard` | `set(CMAKE_CXX_STANDARD <n>)` (not when the file has `if(NOT CMAKE_CXX_STANDARD)` or `if(NOT DEFINED CMAKE_CXX_STANDARD)`, then it is a default), `CXX_STANDARD <n>` (the property of a target) or `-std=c++<n>`, `-std=gnu++<n>`, `/std:c++<n>`; see [rules.md](rules.md#hardcoded-cxx-standard) | redflag |
 
+The directories and names of all headers and sources below `<path>` are compared too:
+
+| Rule | Reported when | Category |
+|------|---------------|----------|
+| `file-name-case-clash` | headers or sources whose last directory and name are equal when case is ignored, but spelled in more than one way (`liba/include/util/header.h` and `libb/include/Util/Header.h`), on line 1 of every file of the group; the description names the files spelled differently; see [rules.md](rules.md#file-name-case-clash) | redflag |
+
 Fields: **priority** `99` (to be set by `apply_team_priorities.py`, the default `rules/priorities.txt` lists all these
 rules), **team** and **component** empty, **fileref** `<absolute path>:<line>` (`:0` for project checks),
 **source** `opencanary`, **links** `[3]{[[permalink-prefix]]/<absolute path with />#L<line>}` and

@@ -12,6 +12,8 @@
     - project rules: TreatWarningAsError and WarningLevel 4 in every configuration of a *proj file
     - cmake rule: hardcoded-cxx-standard, a C++ standard set in a CMakeLists.txt or *.cmake file other than the top level
       CMakeLists.txt of <path> and the files that it includes by path
+    - file rule: file-name-case-clash, headers and sources whose directory and name only differ in case
+      (util/header.h and Util/Header.h, also in different libraries)
 
     Files and directories listed in a .opencanaryignore file (.gitignore syntax) are skipped. Every issue is written
     to stdout as an OpenCanary issue line with source 'opencanary' and priority 99 (apply_team_priorities.py assigns
@@ -520,6 +522,29 @@ def check_cmake_file(filename, report):
                    f"state the minimum with target_compile_features(<target> PUBLIC cxx_std_{level})")
 
 
+def directory_and_name(filename):
+    """the last directory and the name of the file, util/header.h for src/liba/include/util/header.h"""
+    return "/".join(util.normpath(filename).split("/")[-2:])
+
+
+def check_file_name_case(filenames, rootpath, report):
+    """files whose last directory and name only differ in case (util/header.h and Util/Header.h), also in different
+    parts of the tree: a file system that ignores case (Windows, macOS) cannot hold both in one directory, and with
+    both on the include path #include "util/header.h" can no longer tell them apart"""
+    groups = {}
+    for filename in filenames:
+        groups.setdefault(directory_and_name(filename).lower(), []).append(filename)
+    for group in groups.values():
+        if len({directory_and_name(filename) for filename in group}) < 2:
+            continue  # spelled the same everywhere: not a case problem
+        for filename in group:
+            others = sorted(util.normpath(os.path.relpath(other, rootpath)) for other in group
+                            if directory_and_name(other) != directory_and_name(filename))
+            report(filename, "1", "file-name-case-clash", "redflag",
+                   f"{directory_and_name(filename)} only differs in case from {', '.join(others)}; a file system that "
+                   f"ignores case (Windows, macOS) cannot tell them apart")
+
+
 def read_ignore_file(ignorefile, basepath):
     if not os.path.exists(ignorefile):
         return
@@ -556,6 +581,7 @@ def main():
             check_cmake_file(filename, report_issue)
 
     headers, cpps = util.get_cpp_files_from_directory(rootpath)
+    check_file_name_case(headers + cpps, rootpath, report_issue)
     for filename in headers:
         try:
             check_cpp_file(filename, check_header_line)

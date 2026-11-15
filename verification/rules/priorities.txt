@@ -186,6 +186,7 @@
 30  =empty-catch  # catch (...) {}
 10  =inconsistent-compile-flags  # a target with another -std than the rest, ODR violation
 20  =hardcoded-cxx-standard  # set(CMAKE_CXX_STANDARD 14) in a dependency, can break the ODR
+60  =file-name-case-clash  # util/header.h and Util/Header.h, the same file where case is ignored
 
 # categories
 category:ub =aggressive-loop-optimizations

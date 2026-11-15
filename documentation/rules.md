@@ -64,6 +64,7 @@ with `.opencanaryignore`, or drop a rule with `rules/interest.txt`. The default 
 | [suppressed-warning](#suppressed-warning) | redflag | `#pragma` that disables a compiler warning |
 | [empty-catch](#empty-catch) | redflag | `catch (...) {}` |
 | [hardcoded-cxx-standard](#hardcoded-cxx-standard) | redflag | `set(CMAKE_CXX_STANDARD 14)` in a dependency |
+| [file-name-case-clash](#file-name-case-clash) | redflag | `liba/util/header.h` and `libb/Util/Header.h` |
 | [inconsistent-compile-flags](#inconsistent-compile-flags) | bug | a target with another `-std` (or other ABI flags) than the rest |
 | [parse-error](#parse-error) | parse | file could not be read |
 
@@ -481,6 +482,29 @@ and let whoever builds the whole program set the exact version for all of it, on
 a preset, a toolchain file or the Conan profile (`compiler.cppstd`). In third party code a `set()` overrides what is
 passed from outside (`-DCMAKE_CXX_STANDARD=17`), so patch the line out (a Conan recipe or FetchContent's
 `PATCH_COMMAND` can) and report it upstream.
+
+### file-name-case-clash
+
+**Headers and sources whose directory and name only differ in case**, also in different parts of the tree. These are
+all reported, as one group:
+
+```
+src/liba/include/util/header.h
+src/libb/include/util/Header.h
+src/libb/include/Util/Header.h
+src/libb/include/Util/header.h
+```
+
+The last directory and the name (`util/header.h`) are compared, ignoring case; a group is reported when it is spelled
+in more than one way, and then every file in it. Files spelled the same everywhere (`liba/util/other.h` and
+`libb/util/other.h`) and the same name in another directory (`a/cosmetic.cc` and `b/Cosmetic.cc`) are not reported.
+
+A file system that ignores case (Windows, macOS) cannot hold two of them in one directory: git checks out one and
+shows the other as modified, so a developer there builds other code than the CI on Linux. And when the include path
+has both `src/liba/include` and `src/libb/include`, `#include "util/header.h"` finds whichever comes first, a
+different one depending on the file system. **Solve:** pick one spelling for the directory and the file; remove a
+stale file that is left over from a rename that only changed the case (use `git mv` for such a rename), and give
+headers that really are different a name, or a directory, that also differs when case is ignored.
 
 ### inconsistent-compile-flags
 
