@@ -144,13 +144,15 @@ def linked_description(description, parts):
 def create_top_table(issues):
     shared = shared_directories([html.unescape(parts[Column.FILE]).strip() for parts in issues])
     result = ['<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n']
-    result.append(header_row([("Prio", "right"), ("Source", "left"), ("Rule", "left"), ("Description", "left"), ("File", "left"),
+    result.append(header_row([("Prio", "right"), ("Source", "left"), ("Rule", "left"), ("Description / File", "left"),
                               ("Team", "left")]))
     for parts in issues:
         result.append("<tr>" + cell("td", html.escape(parts[Column.PRIO].strip()), "right") + cell("td", html.escape(name(parts, Column.SOURCE))))
         result.append(cell("td", html.escape(name(parts, Column.RULE))))
-        result.append(cell("td", html.escape(shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))))
-        result.append(cell("td", file_cell(parts, shared)) + cell("td", html.escape(name(parts, Column.TEAM))) + "</tr>\n")
+        # the description on the first line, the file below it
+        description = html.escape(shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))
+        result.append(cell("td", f"{description}<br/>{file_cell(parts, shared)}"))
+        result.append(cell("td", html.escape(name(parts, Column.TEAM))) + "</tr>\n")
     return "".join(result) + "</table>\n"
 
 

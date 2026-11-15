@@ -671,8 +671,9 @@ because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
   is left out.
 - One line of text: `<n> issues for <n> rules in <n> categories for <n> teams`.
 - **Top 10 issues**: the 10 most important issues, lowest priority number first; issues with the same priority keep
-  their input order (by file, as `sortby.py` writes them). Columns: priority, source, rule, description (cut like below), file
-  (a link to the `[3]` file link of the issue when it has one) and team. The leading directories that all ten files
+  their input order (by file, as `sortby.py` writes them). Columns: priority, source, rule, description / file and team; that
+  column has the description (cut like below) on the first line and the file below it (a link to the `[3]` file link
+  of the issue when it has one). The leading directories that all ten files
   share are left out, but never the two deepest directories of a file, so `src/infra/net/src/a.cc` and
   `src/infra/dip/src/b.cc` become `net/src/a.cc` and `dip/src/b.cc`; the full path is the tooltip of the link. The
   links still contain `[[permalink-prefix]]`; pipe the summary through `apply_environment.py` to fill it in, as
