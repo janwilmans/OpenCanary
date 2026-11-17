@@ -1,9 +1,11 @@
 # OpenCanary
-A set of scripts for aggregation, analysis and reporting of build and static analysis results.
-Its purpose is to give you a failing CI build if new issues are introduced and to generate a team specific prioritized list of issues to work on.
 
-The purpose of this repo is to provide a set of scripts that can be used to build your own build-canary.
-A build-canary is a system that gives you early warning when new problems have been introduced. (so code quality _as you define it_ has regressed). Also a (nightly?) report can be generated to provide you and your team guidance to start improving you code base. The report is a prioritized list (_you define you own team priorities_) of issues to solve.
+OpenCanary is a build-canary tool for monitoring and improving software quality.
+
+It aggregates compiler warnings, static analysis findings, sanitizer reports and other build diagnostics into a prioritized list of issues.
+OpenCanary helps development teams detect quality regressions early, prevent new issues from entering the codebase, and systematically reduce technical debt.
+
+A build-canary is a system that gives you early warning when new problems have been introduced. (so code quality _as you define it_ has regressed). Also a report can be generated to provide you and your team guidance to start improving you code base. The report is a prioritized list (_you define you own team priorities_) of issues to solve.
 
 Branches: `main` is the current version, `classic` (formerly `master`) has the original scripts, see
 [conversion_readme.md](conversion_readme.md) for converting a CI pipeline from `classic` to `main`.
