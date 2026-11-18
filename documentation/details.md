@@ -669,8 +669,10 @@ create_summary.py < issues.txt > summary.html
 
 Any other argument prints the usage and exits with code 1.
 
-Writes a short HTML page meant as the body of an e-mail. It only uses tables, HTML attributes and inline styles,
-because Outlook renders HTML with Word and ignores classes, flexbox and scripts.
+Writes a short HTML page meant as the body of an e-mail. It only uses tables and HTML attributes, no styles, because
+Outlook renders HTML with Word and ignores most CSS; the font is the one of the reader's mail client. The tables get
+their borders and padding from `border="1" cellpadding="4"`. Alignment is set once per row (`<tr valign="top">`); a
+cell only has its own `align="right"` for a number (Prio, Total, Issues), the other cells are left aligned by default.
 
 - `Branch: [[branch-id]]` and `Committer: [[user-name]]`, filled in by `apply_environment.py` (see its table below:
   the branch or tag name, and `GITLAB_USER_NAME`, the user who started the pipeline). A line whose value is missing

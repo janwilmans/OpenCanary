@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ create a short html summary of the issues: the number of issues per rule, team, component and category
-    the html is meant as the body of an e-mail, so it only uses tables, html attributes and inline styles,
-    which is what Outlook (it renders html with Word) supports
+    the html is meant as the body of an e-mail, so it only uses tables and html attributes, no styles: Outlook renders
+    html with Word, and the reader's mail client picks the font
 """
 
 import html
@@ -13,14 +13,14 @@ import util
 from util import Column
 from util import eprint
 
-FONT = "font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1d2330;"
-BORDER = "border: 1px solid #d0d5dd;"
-TOTAL_BACKGROUND = "#e8efff"
-HEADER_BACKGROUND = TOTAL_BACKGROUND
+HEADER_BACKGROUND = "#e8efff"  # also the total row
 NO_NAME = "(none)"
 DESCRIPTION_LIMIT = 100   # characters of the description shown per rule
 TOP_LIMIT = 10            # number of most important issues listed above the table per rule
-LINK_COLOR = "#1a56db"
+# the borders and the space around the text, as attributes; align and valign are set once per row (<tr>), a cell
+# only has its own align when it differs from the row: a number is right aligned
+TABLE = '<table border="1" cellpadding="4" cellspacing="0">\n'
+ROW = '<tr valign="top">'
 
 
 def plural(value, one, many=None):
@@ -77,11 +77,17 @@ def shorten(text, limit=DESCRIPTION_LIMIT):
     return text[:cut if cut > 0 else limit].rstrip() + "…"
 
 
-def cell(tag, text, align="left", bold=False, background=None, rowspan=1):
-    style = f"{BORDER} padding: 4px 10px; {FONT}" + (" font-weight: bold;" if bold else "")
-    bgcolor = f' bgcolor="{background}"' if background else ""
+def cell(tag, text, align=None, bold=False, rowspan=1):
+    """a cell; align only when it differs from the row"""
+    aligned = f' align="{align}"' if align else ""
     span = f' rowspan="{rowspan}"' if rowspan > 1 else ""
-    return f'<{tag} align="{align}" valign="top"{bgcolor}{span} style="{style}">{text}</{tag}>'
+    text = f"<b>{text}</b>" if bold and text else text
+    return f'<{tag}{aligned}{span}>{text}</{tag}>'
+
+
+def colored_row(cells):
+    """the header and the total row: a light blue background, left aligned (a <th> is centered otherwise)"""
+    return f'<tr align="left" valign="top" bgcolor="{HEADER_BACKGROUND}">{cells}</tr>\n'
 
 
 def file_link(parts):
@@ -96,12 +102,12 @@ def top_issues(issues, limit=TOP_LIMIT):
 
 
 def heading(text):
-    return f'<p style="margin: 16px 0 6px; {FONT} font-size: 15px; font-weight: bold;">{text}</p>\n'
+    return f'<h3>{text}</h3>\n'
 
 
 def header_row(columns):
-    """columns is a list of (heading, align)"""
-    return "<tr>" + "".join(cell("th", text, align, True, HEADER_BACKGROUND) for text, align in columns) + "</tr>\n"
+    """columns is a list of (heading, align), align None for the row's (left)"""
+    return colored_row("".join(cell("th", text, align) for text, align in columns))
 
 
 def shared_directories(files):
@@ -128,7 +134,7 @@ def file_cell(parts, shared=0):
     file = html.escape(without_directories(path, shared))
     url = file_link(parts)
     if url:
-        file = f'<a href="{html.escape(url)}" title="{html.escape(path)}" style="color: {LINK_COLOR};">{file}</a>'
+        file = f'<a href="{html.escape(url)}" title="{html.escape(path)}">{file}</a>'
     return file
 
 
@@ -138,16 +144,15 @@ def linked_description(description, parts):
     if not url:
         return description
     path = html.escape(html.unescape(parts[Column.FILE]).strip())
-    return f'<a href="{html.escape(url)}" title="{path}" style="color: {LINK_COLOR};">{description}</a>'
+    return f'<a href="{html.escape(url)}" title="{path}">{description}</a>'
 
 
 def create_top_table(issues):
     shared = shared_directories([html.unescape(parts[Column.FILE]).strip() for parts in issues])
-    result = ['<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n']
-    result.append(header_row([("Prio", "right"), ("Source", "left"), ("Rule", "left"), ("Description / File", "left"),
-                              ("Team", "left")]))
+    result = [TABLE]
+    result.append(header_row([("Prio", "right"), ("Source", None), ("Rule", None), ("Description / File", None), ("Team", None)]))
     for parts in issues:
-        result.append("<tr>" + cell("td", html.escape(parts[Column.PRIO].strip()), "right") + cell("td", html.escape(name(parts, Column.SOURCE))))
+        result.append(ROW + cell("td", html.escape(parts[Column.PRIO].strip()), "right") + cell("td", html.escape(name(parts, Column.SOURCE))))
         result.append(cell("td", html.escape(name(parts, Column.RULE))))
         # the description on the first line, the file below it
         description = html.escape(shorten(html.unescape(parts[Column.DESCRIPTION]).strip()))
@@ -158,7 +163,7 @@ def create_top_table(issues):
 
 # visible text, not tooltips: classic Outlook (Word) ignores the title attribute
 PER_RULE_EXPLANATION = (
-    f'<p style="margin: 0 0 8px; {FONT} color: #667085; max-width: 900px;">'
+    '<p>'
     '<b>Total</b> is the number of issues of the rule; <b>Issues</b> splits that total per team, component and category, '
     'so the two are the same when all issues of the rule have the same team, component and category. '
     '<b>Description</b> is an example: that of the first issue of the rule, it links to the file of that issue. When the '
@@ -174,16 +179,15 @@ def create_summary(issues, report_url=""):
     categories = {name(parts, Column.CATEGORY) for parts in issues}
 
     result = ['<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8"/>\n<title>OpenCanary summary</title>\n</head>\n']
-    result.append(f'<body style="margin: 0; padding: 16px; {FONT}">\n')
-    result.append(f'<p style="margin: 0 0 4px; {FONT} font-size: 18px; font-weight: bold;">Software Quality Summary</p>\n')
+    result.append('<body>\n')
+    result.append('<h2>Software Quality Summary</h2>\n')
     for label, key in (("Branch", "branch-id"), ("Committer", "user-name")):
         # one item per line: apply_environment.py removes a data-optional line when it has no value for its [[key]]
-        result.append(f'<p data-optional="" style="margin: 0 0 2px; {FONT}">{label}: <b>[[{key}]]</b></p>\n')
+        result.append(f'<p data-optional="">{label}: <b>[[{key}]]</b></p>\n')
     if report_url:
         # data-optional too, so the link disappears when a [[keyword]] in the url, such as [[job-url]], has no value
-        result.append(f'<p data-optional="" style="margin: 6px 0 0; {FONT}"><a href="{html.escape(report_url)}" '
-                      f'style="color: {LINK_COLOR};">Open the full report</a></p>\n')
-    result.append(f'<p style="margin: 8px 0 12px; {FONT} color: #667085;">{plural(total, "issue")} for '
+        result.append(f'<p data-optional=""><a href="{html.escape(report_url)}">Open the full report</a></p>\n')
+    result.append(f'<p>{plural(total, "issue")} for '
                   f'{plural(len(rules), "rule")} in {plural(len(categories), "category", "categories")} '
                   f'for {plural(len(teams), "team")}</p>\n')
     if total == 0:
@@ -193,14 +197,14 @@ def create_summary(issues, report_url=""):
     result.append(heading(f"Top {len(top)} issues") + create_top_table(top))
     result.append(heading("Issues per rule"))
     result.append(PER_RULE_EXPLANATION)
-    result.append('<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;">\n')
+    result.append(TABLE)
     # 'Total' is the number of issues of the rule, the order of the rules; 'Issues' the number per team, component and
     # category; the description is that of the first issue of the rule, an example, and links to its file
-    result.append(header_row([("Prio", "right"), ("Source", "left"), ("Rule", "left"), ("Total", "right"), ("Description (example)", "left"),
-                              ("Team", "left"), ("Component", "left"), ("Category", "left"), ("Issues", "right")]))
+    result.append(header_row([("Prio", "right"), ("Source", None), ("Rule", None), ("Total", "right"), ("Description (example)", None),
+                              ("Team", None), ("Component", None), ("Category", None), ("Issues", "right")]))
     for rule, priorities, sources, description, rule_total, rows, first in rules:
         for index, (team, component, category, count) in enumerate(rows):
-            result.append('<tr>')
+            result.append(ROW)
             if index == 0:
                 result.append(cell("td", html.escape(priorities), "right", rowspan=len(rows)))
                 result.append(cell("td", html.escape(sources), rowspan=len(rows)))
@@ -209,9 +213,9 @@ def create_summary(issues, report_url=""):
                 result.append(cell("td", linked_description(html.escape(description), first), rowspan=len(rows)))
             result.extend(cell("td", html.escape(value)) for value in (team, component, category))
             result.append(cell("td", str(count), "right") + '</tr>\n')
-    result.append('<tr>' + cell("td", "", background=TOTAL_BACKGROUND) * 2 + cell("td", "Total", bold=True, background=TOTAL_BACKGROUND))
-    result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + cell("td", "", background=TOTAL_BACKGROUND) * 4)
-    result.append(cell("td", str(total), "right", True, TOTAL_BACKGROUND) + '</tr>\n</table>\n</body>\n</html>\n')
+    total_cells = (cell("td", "") * 2 + cell("td", "Total", bold=True) + cell("td", str(total), "right", True)
+                   + cell("td", "") * 4 + cell("td", str(total), "right", True))
+    result.append(colored_row(total_cells) + '</table>\n</body>\n</html>\n')
     return "".join(result)
 
 
@@ -223,7 +227,7 @@ def show_usage():
     eprint("     " + str(DESCRIPTION_LIMIT) + " characters), team, component and category")
     eprint("   the rows of a rule are grouped, rules are ordered by number of issues (fewest first) and by name second")
     eprint("   [[keywords]] in the links, such as [[permalink-prefix]], are filled in by apply_environment.py")
-    eprint("   the html only uses tables and inline styles, so it works as an Outlook e-mail body (see send_email.py)")
+    eprint("   the html only uses tables and html attributes, no styles, so it works as an Outlook e-mail body (see send_email.py)")
     eprint("")
     eprint("   --report-url URL   add a link to the full report (create_report.py), for example in the artifacts of a GitLab job:")
     eprint("                      --report-url \"[[job-url]]/artifacts/file/report.html\"")

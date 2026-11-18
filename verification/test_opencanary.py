@@ -181,7 +181,7 @@ class TestSummary(unittest.TestCase):
         markup inside a cell is replaced by a space"""
         import html
         import re
-        rows = re.findall(r"<tr>(.*?)</tr>", re.findall(r"<table.*?</table>", summary, re.S)[index], re.S)
+        rows = re.findall(r"<tr[^>]*>(.*?)</tr>", re.findall(r"<table.*?</table>", summary, re.S)[index], re.S)
         return [[" ".join(html.unescape(re.sub(r"<[^>]+>", " ", text)).split())
                  for text in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", row)] for row in rows]
 
@@ -206,9 +206,14 @@ class TestSummary(unittest.TestCase):
             ["", "", "Total", "9", "", "", "", "", "9"],
         ])
         self.assertNotIn("#f1f3f6", summary)
-        self.assertEqual(summary.count('<th align='), 9 + 5)   # both tables have the header in the color of the total line
-        self.assertEqual(summary.count('<th align='), summary.count('<th align="left" valign="top" bgcolor="#e8efff"')
-                         + summary.count('<th align="right" valign="top" bgcolor="#e8efff"'))
+        # no styles, the e-mail client picks the font; the header rows of both tables and the total row have the same color
+        self.assertNotIn("style=", summary)
+        self.assertEqual(summary.count('<tr align="left" valign="top" bgcolor="#e8efff">'), 2 + 1)
+        # alignment once per row; a cell only has its own when it is right aligned (the numbers)
+        self.assertNotIn('<td align="left"', summary)
+        self.assertNotIn('<th align="left"', summary)
+        self.assertNotIn("<td valign", summary)
+        self.assertEqual(summary.count('<th align="right">'), 3 + 1)
         self.assertIn('rowspan="2"', summary)
         self.assertIn("9 issues for 3 rules in 3 categories for 4 teams", summary)
 
@@ -241,7 +246,7 @@ class TestSummary(unittest.TestCase):
         summary = run_script("create_summary.py", stdin=data)
         self.assertTrue(is_valid_xml(summary))
         per_rule = summary[summary.index("Issues per rule"):]
-        self.assertIn('<a href="[[permalink-prefix]]/src/b.cc#L7" title="src/b.cc:7" style="color: #1a56db;">x &lt; y</a>', per_rule)
+        self.assertIn('<a href="[[permalink-prefix]]/src/b.cc#L7" title="src/b.cc:7">x &lt; y</a>', per_rule)
         self.assertIn(">no link</td>", per_rule)
         # not shown without issues, there is no table then
         self.assertNotIn("<b>Total</b>", run_script("create_summary.py", stdin=""))
