@@ -8,7 +8,8 @@ first setup, read [getting_started.md](getting_started.md) first.
 - [opencanary.py, the entry point](#opencanarypy)
 - Gather: [parse_gcc.py](#parse_gccpy), [parse_msvc.py](#parse_msvcpy), [oc_cpp_issues.py](#oc_cpp_issuespy), [cppcheck.py](#cppcheckpy), [compile_flags.py](#compile_flagspy)
 - Transform: [tr_interest.py](#tr_interestpy), [tr_customize.py](#tr_customizepy), [apply_links.py](#apply_linkspy),
-  [apply_team_priorities.py](#apply_team_prioritiespy), [apply_low_hanging_fruit.py](#apply_low_hanging_fruitpy),
+  [apply_team_priorities.py](#apply_team_prioritiespy), [deduplicate.py](#deduplicatepy),
+  [apply_low_hanging_fruit.py](#apply_low_hanging_fruitpy),
   [sortby.py](#sortbypy)
 - Output: [create_report.py](#create_reportpy), [create_summary.py](#create_summarypy),
   [create_metrics.py](#create_metricspy),
@@ -22,7 +23,7 @@ first setup, read [getting_started.md](getting_started.md) first.
   (`python3 sortby.py < in.txt`) or through `opencanary.py <command>`.
 - On an unexpected error a script prints the Python traceback and its usage to stderr and exits with code 1.
   A broken pipe (for example piping into `head`) exits quietly.
-- Scripts that use `argparse` (`tr_interest.py`, `tr_customize.py`, `apply_team_priorities.py`,
+- Scripts that use `argparse` (`tr_interest.py`, `tr_customize.py`, `apply_team_priorities.py`, `deduplicate.py`,
   `apply_low_hanging_fruit.py`, `filter.py`) also accept `-h`/`--help`; `create_report.py` and `create_summary.py`
   accept `-h`/`--help` as well.
 
@@ -120,7 +121,7 @@ opencanary.py -h | --help                show the usage
 | `interest` | `tr_interest.py` | | `environment` | `apply_environment.py` |
 | `customize` | `tr_customize.py` | | `regression` | `tr_regression.py` |
 | `prioritize` | `apply_team_priorities.py` | | `metrics` | `create_metrics.py` |
-| `compile-flags` | `compile_flags.py` | | | |
+| `compile-flags` | `compile_flags.py` | | `deduplicate` | `deduplicate.py` |
 
 `opencanary.py <command>` passes the remaining arguments to the script and returns its exit code. When a command that
 reads stdin is started from a terminal without redirected input it does not wait, it prints how to redirect and exits
@@ -170,7 +171,8 @@ needs Python 3.11+ or the `tomli` package.
    `run` stops with `<path>:<line> is not an issue line` (a compiler log given as `issues` by mistake).
    `apply_links.py [--rules <links>]`
 5. `apply_team_priorities.py [--rules <priorities>]`
-6. `apply_low_hanging_fruit.py [--threshold N]`
+6. `deduplicate.py`, then `apply_low_hanging_fruit.py [--threshold N]`, so an issue found by both gcc and clang counts
+   once.
 7. `sortby.py`, the result is written to the `issues` file.
 8. `create_report.py`, then `apply_environment.py <environment>` when configured; written to the `report` file.
 9. When `summary` is configured: `create_summary.py [--report-url <report_url>]` on the issues, then `apply_environment.py <environment>` when
@@ -178,7 +180,8 @@ needs Python 3.11+ or the `tomli` package.
 10. When `metrics` is configured: `create_metrics.py` on the issues, written to the `metrics` file.
 
 Steps 4 to 7 work on the combined issues, so with `issues` inputs the priorities come from the `priorities` rules of
-this configuration, not from the earlier runs, and the low hanging fruit is counted over all of them. That lets a
+this configuration, not from the earlier runs, an issue that several jobs found is kept once, and the low hanging
+fruit is counted over all of them. That lets a
 collector job combine the issues of other CI jobs into one report, see [ci.md](ci.md#one-report-for-all-jobs); to
 keep the priorities of the earlier runs, see [the priorities in the collector](ci.md#the-priorities-in-the-collector).
 
@@ -584,6 +587,24 @@ For every issue, matched against the **rule** field:
 
 Guideline used in the default file: below 10 solve immediately, 11–50 likely a bug, 51–75 the wrong approach, 76–99
 style. The report's priority bands follow these numbers.
+
+### deduplicate.py
+
+```
+deduplicate.py < issues
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-h`, `--help` | | show the usage |
+
+Removes issues that more than one source reported: the same warning from gcc and clang, or from the issues files of
+several CI jobs. Two issues are the same when all fields are equal except the **source** and the **links** (which
+`apply_links.py` makes from the source). The first one is kept, with its source and links; the order is kept.
+An issue that differs in any other field, such as the line number, the team or the description, is kept.
+
+`sortby.py` only removes lines that are completely identical, so without this stage the warning of both compilers
+is in the report twice, and counts twice for the low hanging fruit.
 
 ### apply_low_hanging_fruit.py
 

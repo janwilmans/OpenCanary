@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 TESTDATA = os.path.join(HERE, "testdata")
 
-DEFAULT_STAGES = ["apply_team_priorities.py", "apply_low_hanging_fruit.py", "sortby.py"]
+DEFAULT_STAGES = ["apply_team_priorities.py", "deduplicate.py", "apply_low_hanging_fruit.py", "sortby.py"]
 
 
 def is_valid_xml(text):
@@ -1269,9 +1269,9 @@ class TestStages(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(d, "report.html")))
             self.assertTrue(os.path.exists(os.path.join(d, "summary.html")))
             # the paths were customized by the jobs, display_depth does not cut them again; the issues of every job
-            # are there with their own source and team
+            # are there with their own source and team, the warning of both gcc and clang once, from the first input
             self.assertEqual(sorted((row[3], row[4], row[2]) for row in rows),
-                             [("src/gui/b.cc:7", "cppcheck", "gui"), ("src/net/a.cc:3", "clang", "core"), ("src/net/a.cc:3", "gcc", "core")])
+                             [("src/gui/b.cc:7", "cppcheck", "gui"), ("src/net/a.cc:3", "gcc", "core")])
             # the priorities are set again for the combined issues: a rule without a priority gets 99, a rare one 7
             self.assertEqual([row[0] for row in rows if row[5] == "someUnknownId"], ["7"])
             # links are added, as for the other inputs
@@ -1309,6 +1309,15 @@ class TestStages(unittest.TestCase):
         self.assertEqual(out[1], important.rstrip("\n"))  # a more important priority than 7 is kept
         self.assertTrue(all(line.startswith("8|") for line in out[2:]))
         self.assertEqual(len(out), 23)
+
+    def test_deduplicate_ignores_the_source(self):
+        gcc = "5||core|a.cc:3|gcc|sign-compare|warning|comparison|[5]{gcc link}\n"
+        clang = "5||core|a.cc:3|clang|sign-compare|warning|comparison|[5]{clang link}\n"
+        other_line = "5||core|a.cc:4|clang|sign-compare|warning|comparison|[5]{clang link}\n"
+        other_team = "5|ui|core|a.cc:3|clang|sign-compare|warning|comparison|[5]{clang link}\n"
+        out = lines(run_script("deduplicate.py", stdin=other_line + gcc + clang + other_team + gcc))
+        # the first one is kept with its source and links, the order is kept, any other field still counts
+        self.assertEqual(out, [line.rstrip("\n") for line in (other_line, gcc, other_team)])
 
     def test_sortby_orders_and_deduplicates(self):
         data = self.row("20", file="b.cc:2") + self.row("5", file="z.cc:1") + self.row("20", file="b.cc:10") + self.row("20", file="b.cc:2")

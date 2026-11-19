@@ -124,7 +124,8 @@ summary = "../../summary.html"
 The issues of each job are used as they are: the interest and customize rules (and `display_depth`,
 `reference_depth`) of that job were applied when it wrote them, and are not applied again. The links, the priorities
 and the low hanging fruit are set again in the collector, with its own rules, so all issues get their priority from
-one `priorities.txt` and a rule that is rare over the whole pipeline is the low hanging fruit. A collector can also
+one `priorities.txt` and a rule that is rare over the whole pipeline is the low hanging fruit. A warning that both
+the gcc and the clang job found is in the report once, with the source of the first input. A collector can also
 have inputs of its own, such as `cpp-issues`; those go through all the steps as usual. Use `when: always` on the
 collector to get a report when a build job fails, together with `artifacts: when: always` on the build jobs.
 
@@ -151,7 +152,7 @@ To keep the priorities of the jobs, there are two ways:
    those of their job, including the low hanging fruit that each job counted on its own issues:
 
    ```sh
-   cat issues-gcc.txt issues-clang.txt issues-cppcheck.txt | $OC/opencanary.py sort > issues.txt
+   cat issues-gcc.txt issues-clang.txt issues-cppcheck.txt | $OC/opencanary.py deduplicate | $OC/opencanary.py sort > issues.txt
    $OC/opencanary.py report < issues.txt | $OC/opencanary.py environment env.txt > report.html
    $OC/opencanary.py summary --report-url "[[job-url]]/artifacts/file/report.html" < issues.txt | $OC/opencanary.py environment env.txt > summary.html
    $OC/opencanary.py metrics < issues.txt > metrics.txt

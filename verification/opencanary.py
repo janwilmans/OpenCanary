@@ -6,7 +6,7 @@
     opencanary.py <command> [args...]       run one stage, input/output is stdin/stdout like the scripts themselves
 
     commands: parse-gcc, parse-msvc, cpp-issues, cppcheck, compile-flags, interest, customize, links, prioritize,
-              low-hanging, sort, report, summary, metrics, environment, regression
+              deduplicate, low-hanging, sort, report, summary, metrics, environment, regression
 """
 
 import argparse
@@ -26,6 +26,7 @@ COMMANDS = {
     "customize": "tr_customize.py",
     "links": "apply_links.py",
     "prioritize": "apply_team_priorities.py",
+    "deduplicate": "deduplicate.py",
     "low-hanging": "apply_low_hanging_fruit.py",
     "sort": "sortby.py",
     "report": "create_report.py",
@@ -200,6 +201,8 @@ def run_pipeline(config, base):
     data += processed
     data = run_stage(script("links") + rules_option("links"), data)
     data = run_stage(script("prioritize") + rules_option("priorities"), data)
+    # the same issue from two compilers or two jobs is reported once, before the low hanging fruit counts it
+    data = run_stage(script("deduplicate"), data)
     data = run_stage(script("low-hanging") + threshold, data)
     data = run_stage(script("sort"), data)
 
