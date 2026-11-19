@@ -128,6 +128,38 @@ one `priorities.txt` and a rule that is rare over the whole pipeline is the low 
 have inputs of its own, such as `cpp-issues`; those go through all the steps as usual. Use `when: always` on the
 collector to get a report when a build job fails, together with `artifacts: when: always` on the build jobs.
 
+### The priorities in the collector
+
+The collector sets the priority of every issue again from its own `priorities.txt` (`[rules] priorities`, or the
+default `rules/priorities.txt`); the priority that a job gave an issue is not kept:
+
+- A rule that is not in the collector's file gets 99 (unassigned), also when a job gave it a priority, so the
+  collector's file needs every rule that matters, not only the ones it changes.
+- The `category:` lines of the collector's file are applied too.
+- The low hanging fruit is counted over the issues of all jobs, so a rule that is rare over the whole pipeline is
+  raised to 7.
+- The team and the component are kept: they come from the customize rules of the job, which the collector does not
+  apply again.
+
+To keep the priorities of the jobs, there are two ways:
+
+1. **One `priorities.txt` for all jobs and the collector** (recommended): point every configuration at the same
+   file, for example `[rules] priorities = "priorities.txt"` next to the configurations. The collector then gives
+   every issue the priority that its job gave it. Only the low hanging fruit can differ, as the collector counts it
+   over the whole pipeline instead of per job, which is usually what a combined report should show.
+2. **The stages instead of `opencanary.py run`** in the collector: nothing changes the priorities, so the issues keep
+   those of their job, including the low hanging fruit that each job counted on its own issues:
+
+   ```sh
+   cat issues-gcc.txt issues-clang.txt issues-cppcheck.txt | $OC/opencanary.py sort > issues.txt
+   $OC/opencanary.py report < issues.txt | $OC/opencanary.py environment env.txt > report.html
+   $OC/opencanary.py summary --report-url "[[job-url]]/artifacts/file/report.html" < issues.txt | $OC/opencanary.py environment env.txt > summary.html
+   $OC/opencanary.py metrics < issues.txt > metrics.txt
+   ```
+
+   The links rules and the inputs of the collector itself, such as `cpp-issues`, are then not applied; add those
+   stages to the commands when they are needed.
+
 ## Warning settings
 
 Most bugs that a compiler can find are behind a warning that is off by default. Turn the useful ones on in every

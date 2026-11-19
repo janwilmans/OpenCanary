@@ -179,7 +179,8 @@ needs Python 3.11+ or the `tomli` package.
 
 Steps 4 to 7 work on the combined issues, so with `issues` inputs the priorities come from the `priorities` rules of
 this configuration, not from the earlier runs, and the low hanging fruit is counted over all of them. That lets a
-collector job combine the issues of other CI jobs into one report, see [ci.md](ci.md#one-report-for-all-jobs).
+collector job combine the issues of other CI jobs into one report, see [ci.md](ci.md#one-report-for-all-jobs); to
+keep the priorities of the earlier runs, see [the priorities in the collector](ci.md#the-priorities-in-the-collector).
 
 Each step prints its stderr messages. If a step exits with a non-zero code, `run` stops with
 `opencanary: stage '<script>' failed with exit code N`. `run` does not run `tr_regression.py`; run it as a separate
