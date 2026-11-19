@@ -1251,6 +1251,41 @@ class TestStages(unittest.TestCase):
         self.assertEqual(missing, [cppcheck.normpath(os.path.join(d, "a_autogen", "mocs_compilation.cpp"))])
 
     @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
+    def test_run_combines_the_issues_of_earlier_runs(self):
+        import tempfile
+        jobs = {"issues-gcc.txt": "5||core|src/net/a.cc:3|gcc|sign-compare|warning|comparison of int and size_t|\n",
+                "issues-clang.txt": "5||core|src/net/a.cc:3|clang|sign-compare|warning|comparison of int and size_t|\n",
+                "issues-cppcheck.txt": "1||gui|src/gui/b.cc:7|cppcheck|someUnknownId|style|a message|\n"}
+        with tempfile.TemporaryDirectory() as d:
+            for name, text in jobs.items():
+                with open(os.path.join(d, name), "w", encoding="utf-8") as f:
+                    f.write(text)
+            with open(os.path.join(d, "oc.toml"), "w", encoding="utf-8") as f:
+                f.write("".join(f'[[input]]\nformat = "issues"\npath = "{name}"\n\n' for name in jobs)
+                        + '[customize]\ndisplay_depth = 1\n\n[output]\nsummary = "summary.html"\n')
+            run_script("opencanary.py", ["run", "-c", os.path.join(d, "oc.toml")])
+            with open(os.path.join(d, "issues.txt"), encoding="utf-8") as f:
+                rows = [line.split("|") for line in lines(f.read())]
+            self.assertTrue(os.path.exists(os.path.join(d, "report.html")))
+            self.assertTrue(os.path.exists(os.path.join(d, "summary.html")))
+            # the paths were customized by the jobs, display_depth does not cut them again; the issues of every job
+            # are there with their own source and team
+            self.assertEqual(sorted((row[3], row[4], row[2]) for row in rows),
+                             [("src/gui/b.cc:7", "cppcheck", "gui"), ("src/net/a.cc:3", "clang", "core"), ("src/net/a.cc:3", "gcc", "core")])
+            # the priorities are set again for the combined issues: a rule without a priority gets 99, a rare one 7
+            self.assertEqual([row[0] for row in rows if row[5] == "someUnknownId"], ["7"])
+            # links are added, as for the other inputs
+            self.assertTrue(all("[5]{" in row[8] for row in rows))
+
+            # a file that is not an issues.txt, such as a compiler log, stops the run
+            with open(os.path.join(d, "issues-gcc.txt"), "w", encoding="utf-8") as f:
+                f.write("src/net/a.cc:3:5: warning: comparison of integer expressions [-Wsign-compare]\n")
+            with self.assertRaises(subprocess.CalledProcessError) as error:
+                subprocess.run([sys.executable, os.path.join(HERE, "opencanary.py"), "run", "-c", os.path.join(d, "oc.toml")],
+                               capture_output=True, text=True, check=True)
+            self.assertIn("issues-gcc.txt:1 is not an issue line", error.exception.stderr)
+
+    @unittest.skipUnless(sys.version_info >= (3, 11), "opencanary.py run needs tomllib (python 3.11+)")
     @unittest.skipUnless(__import__("cppcheck").cppcheck_cmd and __import__("shutil").which(__import__("cppcheck").cppcheck_cmd),
                          "needs cppcheck")
     def test_run_cppcheck_input(self):

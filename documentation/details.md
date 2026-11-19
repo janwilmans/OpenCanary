@@ -134,8 +134,8 @@ All relative paths are relative to the directory of the configuration file.
 
 | Table | Key | Default | Meaning |
 |-------|-----|---------|---------|
-| `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues`, `cppcheck` or `compile-flags`; anything else stops the run |
-| | `path` | required | the log file (`gcc`, `msvc`), the directory to scan (`cpp-issues`, `cppcheck`) or `compile_commands.json` or its build directory (`compile-flags`, `cppcheck`) |
+| `[[input]]` (one or more) | `format` | required | `gcc`, `msvc`, `cpp-issues`, `cppcheck`, `compile-flags` or `issues`; anything else stops the run |
+| | `path` | required | the log file (`gcc`, `msvc`), the directory to scan (`cpp-issues`, `cppcheck`) or `compile_commands.json` or its build directory (`compile-flags`, `cppcheck`), or the issues file of an earlier run (`issues`) |
 | | `source` | the format | value for the source field (passed to the parser) |
 | | `macros` | none | `compile-flags` only: macros (globs) to compare as well, `--macro` of `compile_flags.py` |
 | | `ignore_settings` | none | `compile-flags` only: settings not to compare, `--ignore-setting` |
@@ -162,10 +162,13 @@ needs Python 3.11+ or the `tomli` package.
 
 1. For every `[[input]]`, in order, collect the issues:
    `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path`, `oc_cpp_issues.py <path>`, `cppcheck.py <path>` or `compile_flags.py <path>`.
-   The results are concatenated.
+   The results are concatenated. An `issues` input is read as it is and kept apart until step 4.
 2. `tr_interest.py [--rules <interest>] [--msvc]`
 3. `tr_customize.py [--rules <customize>] [--display-depth=N] [--reference-depth=N] [--msvc]`
-4. `apply_links.py [--rules <links>]`
+4. The issues of the `issues` inputs are added: the run that wrote them already applied interest and customize, and
+   customizing them again would cut their paths twice. Every line must have the 9 fields of an issue, otherwise
+   `run` stops with `<path>:<line> is not an issue line` (a compiler log given as `issues` by mistake).
+   `apply_links.py [--rules <links>]`
 5. `apply_team_priorities.py [--rules <priorities>]`
 6. `apply_low_hanging_fruit.py [--threshold N]`
 7. `sortby.py`, the result is written to the `issues` file.
@@ -173,6 +176,10 @@ needs Python 3.11+ or the `tomli` package.
 9. When `summary` is configured: `create_summary.py [--report-url <report_url>]` on the issues, then `apply_environment.py <environment>` when
    configured; written to the `summary` file.
 10. When `metrics` is configured: `create_metrics.py` on the issues, written to the `metrics` file.
+
+Steps 4 to 7 work on the combined issues, so with `issues` inputs the priorities come from the `priorities` rules of
+this configuration, not from the earlier runs, and the low hanging fruit is counted over all of them. That lets a
+collector job combine the issues of other CI jobs into one report, see [ci.md](ci.md#one-report-for-all-jobs).
 
 Each step prints its stderr messages. If a step exits with a non-zero code, `run` stops with
 `opencanary: stage '<script>' failed with exit code N`. `run` does not run `tr_regression.py`; run it as a separate

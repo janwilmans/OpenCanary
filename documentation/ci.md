@@ -64,6 +64,70 @@ path = "build/release"     # the build directory, or its compile_commands.json
 # ignore_targets = ["standalone_tool"] leave out targets that are built differently on purpose
 ```
 
+## One report for all jobs
+
+The compilers, cppcheck and the other tools often run in different CI jobs, in parallel. Each job runs
+`opencanary.py run` on what it has and keeps its `issues.txt` as an artifact; a collector job at the end of the
+pipeline reads them with `format = "issues"` and writes one report and one summary for all of them.
+
+```yaml
+gcc:
+  script:
+    - $OC/pype.py captured_gcc.txt build_summary -- cmake --build build/gcc -- -v
+    - $OC/opencanary.py run -c verification/opencanary/gcc.toml       # [output] issues = "../../issues-gcc.txt"
+  artifacts:
+    paths: [issues-gcc.txt]
+
+clang:
+  script:
+    - $OC/pype.py captured_clang.txt build_summary -- cmake --build build/clang -- -v
+    - $OC/opencanary.py run -c verification/opencanary/clang.toml     # [output] issues = "../../issues-clang.txt"
+  artifacts:
+    paths: [issues-clang.txt]
+
+cppcheck:
+  script:
+    - $OC/opencanary.py run -c verification/opencanary/cppcheck.toml  # [output] issues = "../../issues-cppcheck.txt"
+  artifacts:
+    paths: [issues-cppcheck.txt]
+
+report:
+  stage: report
+  needs: [gcc, clang, cppcheck]      # their artifacts are downloaded into this job
+  script:
+    - $OC/opencanary.py run -c verification/opencanary/report.toml
+  artifacts:
+    paths: [issues.txt, report.html, summary.html]
+```
+
+`report.toml`:
+
+```toml
+[[input]]
+format = "issues"
+path = "../../issues-gcc.txt"
+
+[[input]]
+format = "issues"
+path = "../../issues-clang.txt"
+
+[[input]]
+format = "issues"
+path = "../../issues-cppcheck.txt"
+
+[output]
+issues = "../../issues.txt"
+report = "../../report.html"
+summary = "../../summary.html"
+```
+
+The issues of each job are used as they are: the interest and customize rules (and `display_depth`,
+`reference_depth`) of that job were applied when it wrote them, and are not applied again. The links, the priorities
+and the low hanging fruit are set again in the collector, with its own rules, so all issues get their priority from
+one `priorities.txt` and a rule that is rare over the whole pipeline is the low hanging fruit. A collector can also
+have inputs of its own, such as `cpp-issues`; those go through all the steps as usual. Use `when: always` on the
+collector to get a report when a build job fails, together with `artifacts: when: always` on the build jobs.
+
 ## Warning settings
 
 Most bugs that a compiler can find are behind a warning that is off by default. Turn the useful ones on in every

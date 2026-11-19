@@ -49,6 +49,9 @@ STARTER_CONFIG = '''# OpenCanary configuration, all relative paths are relative 
 #                               with its flags (needs cppcheck, or set CPPCHECK to its path)
 #           compile-flags       compile_commands.json (or its build directory): targets with another language standard
 #                               or other ABI relevant flags than the rest, a cause of ODR violations
+#           issues              the issues.txt of an earlier opencanary.py run, such as another CI job: used as they
+#                               are (interest and customize were applied there), combined with the other inputs for
+#                               the links, the priorities, the low hanging fruit and the sorting
 #   source  name shown in the 'source' column (defaults to the format)
 [[input]]
 format = "gcc"
@@ -69,6 +72,10 @@ path = "build/gcc.log"
 # macros = ["MYLIB_CONFIG_*"]           also compare these macros (globs), project settings that change types
 # ignore_settings = ["runtime library"] do not compare these settings, as named in the report
 # ignore_targets = ["*_legacy"]         leave out these targets (globs), built differently on purpose
+
+# [[input]]
+# format = "issues"
+# path = "issues-cppcheck.txt"          the issues.txt of a CI job that ran cppcheck, in the artifacts of that job
 
 [rules]
 # all optional, shown with their defaults (the files in the verification/rules directory)
@@ -134,6 +141,22 @@ def compile_flags_options(item):
     return options
 
 
+# the number of fields of an issue line: priority|team|component|file|source|rule|category|description|links
+ISSUE_FIELDS = 9
+
+
+def read_issues(location):
+    """the issues of an earlier run (opencanary.py run, [output] issues); stops on a line that is not an issue, such
+    as a compiler log given as format = "issues" by mistake"""
+    with open(location, "rb") as f:
+        data = f.read()
+    for number, line in enumerate(data.decode("utf-8", errors="replace").splitlines(), 1):
+        if line.strip() and len(line.split("|")) != ISSUE_FIELDS:
+            raise SystemExit(f"opencanary: {location}:{number} is not an issue line ({ISSUE_FIELDS} fields separated by '|'), "
+                             f"format = \"issues\" takes the issues.txt of an earlier opencanary.py run")
+    return data if data.endswith(b"\n") or not data else data + b"\n"
+
+
 def run_pipeline(config, base):
     def path(value):
         return value if os.path.isabs(value) else os.path.join(base, value)
@@ -144,6 +167,7 @@ def run_pipeline(config, base):
         raise SystemExit("opencanary: no [[input]] defined in the configuration")
 
     data = b""
+    processed = b""  # issues of earlier runs, already through interest and customize
     for item in inputs:
         fmt, location = item.get("format"), path(item["path"])
         source = item.get("source", fmt)
@@ -156,8 +180,10 @@ def run_pipeline(config, base):
             data += run_stage(script("cppcheck") + [location])
         elif fmt == "compile-flags":
             data += run_stage(script("compile-flags") + [location] + compile_flags_options(item))
+        elif fmt == "issues":
+            processed += read_issues(location)
         else:
-            raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc, cpp-issues, cppcheck or compile-flags")
+            raise SystemExit(f"opencanary: unknown input format {fmt!r}, expected gcc, msvc, cpp-issues, cppcheck, compile-flags or issues")
 
     def rules_option(key):
         return ["--rules", path(rules[key])] if key in rules else []
@@ -169,6 +195,9 @@ def run_pipeline(config, base):
 
     data = run_stage(script("interest") + rules_option("interest") + (["--msvc"] if customize.get("msvc") else []), data)
     data = run_stage(script("customize") + rules_option("customize") + customize_args, data)
+    # the issues of earlier runs join here: their paths are already customized, and customizing them again would cut
+    # them twice; the priorities and the low hanging fruit are set again for the combined issues
+    data += processed
     data = run_stage(script("links") + rules_option("links"), data)
     data = run_stage(script("prioritize") + rules_option("priorities"), data)
     data = run_stage(script("low-hanging") + threshold, data)
