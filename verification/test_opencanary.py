@@ -1215,8 +1215,10 @@ class TestStages(unittest.TestCase):
         self.assertEqual([(row[3], row[5], row[6], row[7]) for row in rows],
                          [("C:/project/a.cc:12", "variableScope", "style", "The scope of the variable &#x27;x&#x27; can be reduced: see &#x27;f&#x27;."),
                           ("src/b.cc:3", "uninitvar", "warning", "Uninitialized variable: y")])
-        self.assertEqual(vars(cppcheck.parse_args(["env.txt", "src", "base"])), {"path": "src", "basepath": "base"})
-        self.assertEqual(vars(cppcheck.parse_args(["src"])), {"path": "src", "basepath": None})
+        self.assertEqual(vars(cppcheck.parse_args(["env.txt", "src", "base"])), {"path": "src", "basepath": "base", "option": []})
+        self.assertEqual(vars(cppcheck.parse_args(["src"])), {"path": "src", "basepath": None, "option": []})
+        self.assertEqual(vars(cppcheck.parse_args(["src", "--option=--library=qt", "--option=-DX"])),
+                         {"path": "src", "basepath": None, "option": ["--library=qt", "-DX"]})
 
     def test_cppcheck_defines_the_googletest_macros_only_for_a_directory(self):
         import json
@@ -1227,15 +1229,26 @@ class TestStages(unittest.TestCase):
         try:
             cppcheck.execute_popen = lambda command: calls.append(command) or ("", "", 0)
             with tempfile.TemporaryDirectory() as d:
-                cppcheck.run_cppcheck(d)
+                cppcheck.run_cppcheck(d, ["--library=qt"])
                 db = os.path.join(d, "compile_commands.json")
                 with open(db, "w", encoding="utf-8") as f:
                     json.dump([], f)
-                cppcheck.run_cppcheck(d)
+                cppcheck.run_cppcheck(d, ["--library=qt"])
         finally:
             cppcheck.execute_popen = original
         self.assertIn("-DTEST", calls[0])
+        self.assertIn("--library=qt", calls[0])
         self.assertNotIn("-DTEST", calls[1])
+        self.assertIn("--library=qt", calls[1])
+
+    def test_cppcheck_options_come_from_the_input(self):
+        import opencanary
+        self.assertEqual(opencanary.cppcheck_options({}), [])
+        self.assertEqual(opencanary.cppcheck_options({"options": "--library=qt"}), ["--option=--library=qt"])
+        self.assertEqual(opencanary.cppcheck_options({"options": ["--library=qt", "-DX"]}),
+                         ["--option=--library=qt", "--option=-DX"])
+        with self.assertRaises(SystemExit):
+            opencanary.cppcheck_options({"options": [1]})
 
     def test_cppcheck_runs_in_parallel_only_where_file_names_are_case_sensitive(self):
         import cppcheck

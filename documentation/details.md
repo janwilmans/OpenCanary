@@ -141,6 +141,7 @@ All relative paths are relative to the directory of the configuration file.
 | | `macros` | none | `compile-flags` only: macros (globs) to compare as well, `--macro` of `compile_flags.py` |
 | | `ignore_settings` | none | `compile-flags` only: settings not to compare, `--ignore-setting` |
 | | `ignore_targets` | none | `compile-flags` only: targets (globs) to leave out, `--ignore-target` |
+| | `options` | none | `cppcheck` only: extra options for cppcheck, such as `["--library=qt"]`, `--option` of `cppcheck.py` |
 | `[rules]` | `interest` | `verification/rules/interest.txt` | rules for `tr_interest.py` |
 | | `customize` | `verification/rules/customize.txt` | rules for `tr_customize.py` |
 | | `links` | `verification/rules/links.txt` | rules for `apply_links.py` |
@@ -162,7 +163,7 @@ needs Python 3.11+ or the `tomli` package.
 ### What `run` does
 
 1. For every `[[input]]`, in order, collect the issues:
-   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path`, `oc_cpp_issues.py <path>`, `cppcheck.py <path>` or `compile_flags.py <path>`.
+   `parse_gcc.py <source> < path`, `parse_msvc.py <source> < path`, `oc_cpp_issues.py <path>`, `cppcheck.py <path> [--option=...]` or `compile_flags.py <path>`.
    The results are concatenated. An `issues` input is read as it is and kept apart until step 4.
 2. `tr_interest.py [--rules <interest>] [--msvc]`
 3. `tr_customize.py [--rules <customize>] [--display-depth=N] [--reference-depth=N] [--msvc]`
@@ -364,8 +365,8 @@ applies to it too (and `.gitignore` does not). The default `rules/priorities.txt
 ### cppcheck.py
 
 ```
-cppcheck.py <path> [--basepath DIR]
-cppcheck.py cdb [--basepath DIR]
+cppcheck.py <path> [--basepath DIR] [--option=OPTION ...]
+cppcheck.py cdb [--basepath DIR] [--option=OPTION ...]
 cppcheck.py <env.txt> <path> <basepath>     the older form, the environment file is not used
 ```
 
@@ -374,6 +375,7 @@ cppcheck.py <env.txt> <path> <basepath>     the older form, the environment file
 | `<path>` | Directory that cppcheck analyses recursively, or a `compile_commands.json` (or the build directory that contains it): cppcheck then analyses its translation units with their include paths and macros. |
 | `cdb` | Instead of a directory: use the compile database `build_cppcheck/compile_commands.json` in the current directory, and `./suppressions.xml` when it exists. |
 | `--basepath DIR` | Optional. Removed from the start of every file name, so paths are relative to it. Without it the file names are as cppcheck prints them (absolute for `<path>`), like the compiler logs, so `tr_customize.py --reference-depth` treats them the same. |
+| `--option=OPTION` | Optional, repeatable. An extra option for cppcheck, such as `--option=--library=qt` for Qt's macros. |
 
 Runs cppcheck (the `CPPCHECK` environment variable, else `cppcheck` on the `PATH`, else
 `C:\Program Files\Cppcheck\cppcheck.exe`; when it is not found the script stops with exit code 1) with

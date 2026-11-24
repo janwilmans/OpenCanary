@@ -66,6 +66,7 @@ path = "build/gcc.log"
 # [[input]]
 # format = "cppcheck"
 # path = "."
+# options = ["--library=qt"]            extra options for cppcheck
 
 # [[input]]
 # format = "compile-flags"
@@ -142,6 +143,15 @@ def compile_flags_options(item):
     return options
 
 
+def cppcheck_options(item):
+    """the options of cppcheck.py from the options key of its [[input]]: a list of strings, or one string"""
+    values = item.get("options", [])
+    values = [values] if isinstance(values, str) else values
+    if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
+        raise SystemExit("opencanary: options of the cppcheck input must be a list of strings")
+    return [f"--option={value}" for value in values]
+
+
 # the number of fields of an issue line: priority|team|component|file|source|rule|category|description|links
 ISSUE_FIELDS = 9
 
@@ -178,7 +188,7 @@ def run_pipeline(config, base):
         elif fmt == "cpp-issues":
             data += run_stage(script("cpp-issues") + [location])
         elif fmt == "cppcheck":
-            data += run_stage(script("cppcheck") + [location])
+            data += run_stage(script("cppcheck") + [location] + cppcheck_options(item))
         elif fmt == "compile-flags":
             data += run_stage(script("compile-flags") + [location] + compile_flags_options(item))
         elif fmt == "issues":

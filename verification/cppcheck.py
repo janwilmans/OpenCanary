@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """ Run cppcheck and write its issues in the OpenCanary format.
 
-    Usage: cppcheck.py <path> [--basepath DIR]
-           cppcheck.py cdb [--basepath DIR]
+    Usage: cppcheck.py <path> [--basepath DIR] [--option=OPTION ...]
+           cppcheck.py cdb [--basepath DIR] [--option=OPTION ...]
       <path>          directory that cppcheck analyses recursively, or a compile_commands.json (or the build directory
                       that contains it) whose translation units cppcheck analyses with their flags; on Linux on every
                       core (-j, with a temporary --cppcheck-build-dir so the whole program checks such as
@@ -13,6 +13,7 @@
       --basepath DIR  remove DIR from the start of the file names; without it the file names are as cppcheck prints
                       them (absolute for <path>), like the compiler logs, so tr_customize.py --reference-depth
                       handles both the same way
+      --option=OPTION an extra option for cppcheck, such as --option=--library=qt; repeat it for more options
 
     A directory is analysed with -DTEST -DTEST_F: without include paths cppcheck does not know googletest's macros. A
     compile database is not: it has the include paths, and those defines would break googletest's TEST(...) macros.
@@ -108,16 +109,14 @@ def existing_entries(database):
     return kept, [normpath(entry_file(entry)) for entry in missing]
 
 
-def run_cppcheck(path):
+def run_cppcheck(path, extra=()):
     db_path = compile_db_path(path)
     if db_path:
-        return run_cppcheck_compile_db(db_path, [])
-    return execute_popen([cppcheck_cmd, os.path.realpath(path)] + OPTIONS + DIRECTORY_OPTIONS)
+        return run_cppcheck_compile_db(db_path, list(extra))
+    return execute_popen([cppcheck_cmd, os.path.realpath(path)] + OPTIONS + DIRECTORY_OPTIONS + list(extra))
 
 
-def run_cppcheck_compile_db(db_path='build_cppcheck/compile_commands.json', extra=None):
-    if extra is None:
-        extra = ['--suppress-xml=./suppressions.xml'] if os.path.exists('./suppressions.xml') else []
+def run_cppcheck_compile_db(db_path, extra):
     with open(db_path, encoding="utf-8") as f:
         kept, missing = existing_entries(json.load(f))
     if missing:
@@ -149,19 +148,21 @@ def show_usage():
 
 def parse_args(argv):
     if len(argv) == 3 and not any(arg.startswith("-") for arg in argv):
-        return argparse.Namespace(path=argv[1], basepath=argv[2])  # the older form: <env.txt> <path> <basepath>
+        return argparse.Namespace(path=argv[1], basepath=argv[2], option=[])  # the older form: <env.txt> <path> <basepath>
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("path", help="directory to analyse, compile_commands.json or its build directory, or cdb")
     parser.add_argument("--basepath", help="remove this directory from the start of the file names")
+    parser.add_argument("--option", action="append", default=[], help="an extra option for cppcheck (repeatable)")
     return parser.parse_args(argv)
 
 
 def main():
     args = parse_args(sys.argv[1:])
     if args.path == "cdb":
-        std_out, std_err, exitcode = run_cppcheck_compile_db()
+        suppressions = ['--suppress-xml=./suppressions.xml'] if os.path.exists('./suppressions.xml') else []
+        std_out, std_err, exitcode = run_cppcheck_compile_db('build_cppcheck/compile_commands.json', suppressions + args.option)
     else:
-        std_out, std_err, exitcode = run_cppcheck(os.path.abspath(args.path))
+        std_out, std_err, exitcode = run_cppcheck(os.path.abspath(args.path), args.option)
 
     basepath = normpath(os.path.abspath(args.basepath)) if args.basepath else ""
     # cppcheck reports its own errors on stdout, we redirect them to stderr
