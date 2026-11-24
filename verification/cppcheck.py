@@ -14,6 +14,9 @@
                       them (absolute for <path>), like the compiler logs, so tr_customize.py --reference-depth
                       handles both the same way
 
+    A directory is analysed with -DTEST -DTEST_F: without include paths cppcheck does not know googletest's macros. A
+    compile database is not: it has the include paths, and those defines would break googletest's TEST(...) macros.
+
     cppcheck stops when a file in the compile database does not exist, such as the generated file of a target that
     was not built (mocs_compilation.cpp of Qt's AUTOMOC); those entries are left out, with a warning.
 
@@ -42,7 +45,8 @@ cppcheck_cmd = os.environ.get("CPPCHECK") or shutil.which("cppcheck") or r'c:\Pr
 
 # tab separated: a file name can contain ':' (C:\...), and so can a message
 TEMPLATE = "--template={file}\\t{line}\\t{severity}\\t{id}\\t{message}"
-OPTIONS = ['-q', '-DTEST', '-DTEST_F', TEMPLATE, '--enable=all']
+OPTIONS = ['-q', TEMPLATE, '--enable=all']
+DIRECTORY_OPTIONS = ['-DTEST', '-DTEST_F']
 
 # With -j cppcheck skips the whole program checks (unusedFunction) unless it gets a --cppcheck-build-dir; it names the
 # files in that directory after the source files, so on a file system that ignores case (Windows, macOS) cosmetic.cc
@@ -108,7 +112,7 @@ def run_cppcheck(path):
     db_path = compile_db_path(path)
     if db_path:
         return run_cppcheck_compile_db(db_path, [])
-    return execute_popen([cppcheck_cmd, os.path.realpath(path)] + OPTIONS)
+    return execute_popen([cppcheck_cmd, os.path.realpath(path)] + OPTIONS + DIRECTORY_OPTIONS)
 
 
 def run_cppcheck_compile_db(db_path='build_cppcheck/compile_commands.json', extra=None):

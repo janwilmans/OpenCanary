@@ -377,8 +377,11 @@ cppcheck.py <env.txt> <path> <basepath>     the older form, the environment file
 
 Runs cppcheck (the `CPPCHECK` environment variable, else `cppcheck` on the `PATH`, else
 `C:\Program Files\Cppcheck\cppcheck.exe`; when it is not found the script stops with exit code 1) with
-`-q -DTEST -DTEST_F --enable=all` and a tab separated template (`{file}`, `{line}`, `{severity}`, `{id}`,
-`{message}`; a file name such as `C:\...` and a message can contain `:`), and converts every reported line.
+`-q --enable=all` and a tab separated template (`{file}`, `{line}`, `{severity}`, `{id}`,
+`{message}`; a file name such as `C:\...` and a message can contain `:`), and converts every reported line. A
+directory is analysed with `-DTEST -DTEST_F` as well: without include paths cppcheck does not know googletest's macros.
+A compile database is not, it has the include paths, and those defines would turn `TEST(Suite, Name)` into
+`1(Suite, Name)`, a syntax error that stops the analysis of the file.
 
 On Linux cppcheck runs on every core (`-j<cores>`). With `-j` it only runs the checks that look at the whole program,
 such as `unusedFunction`, when it has a build directory, so every run gets a new, empty one (`--cppcheck-build-dir`) in

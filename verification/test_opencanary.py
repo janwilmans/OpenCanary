@@ -1218,6 +1218,25 @@ class TestStages(unittest.TestCase):
         self.assertEqual(vars(cppcheck.parse_args(["env.txt", "src", "base"])), {"path": "src", "basepath": "base"})
         self.assertEqual(vars(cppcheck.parse_args(["src"])), {"path": "src", "basepath": None})
 
+    def test_cppcheck_defines_the_googletest_macros_only_for_a_directory(self):
+        import json
+        import tempfile
+        import cppcheck
+        calls = []
+        original = cppcheck.execute_popen
+        try:
+            cppcheck.execute_popen = lambda command: calls.append(command) or ("", "", 0)
+            with tempfile.TemporaryDirectory() as d:
+                cppcheck.run_cppcheck(d)
+                db = os.path.join(d, "compile_commands.json")
+                with open(db, "w", encoding="utf-8") as f:
+                    json.dump([], f)
+                cppcheck.run_cppcheck(d)
+        finally:
+            cppcheck.execute_popen = original
+        self.assertIn("-DTEST", calls[0])
+        self.assertNotIn("-DTEST", calls[1])
+
     def test_cppcheck_runs_in_parallel_only_where_file_names_are_case_sensitive(self):
         import cppcheck
         self.assertEqual(cppcheck.PARALLEL, sys.platform not in ("win32", "darwin"))
